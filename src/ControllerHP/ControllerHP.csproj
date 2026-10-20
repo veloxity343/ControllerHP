@@ -16,6 +16,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>ControllerHP</AssemblyName>
     <RootNamespace>ControllerHP</RootNamespace>
+    <!-- Shown for the exe in Explorer, Task Manager and Startup apps; the tray icon is drawn at runtime. -->
+    <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
 
   <PropertyGroup>
