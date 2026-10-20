@@ -1,0 +1,78 @@
+name: Build and release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    # Windows-targeted builds work on Linux via EnableWindowsTargeting.
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      PROJECT: src/ControllerHP/ControllerHP.csproj
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Work out version
+        id: version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=0.0.0-ci.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build
+        run: dotnet build "$PROJECT" -c Release -p:Version=${{ steps.version.outputs.version }}
+
+      - name: Publish (needs .NET 8 Desktop Runtime)
+        run: >
+          dotnet publish "$PROJECT" -c Release -o out/framework
+          -p:Version=${{ steps.version.outputs.version }}
+          -p:PublishSingleFile=true -p:DebugType=none
+
+      - name: Publish (standalone)
+        run: >
+          dotnet publish "$PROJECT" -c Release -o out/standalone
+          -p:Version=${{ steps.version.outputs.version }}
+          --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none
+
+      - name: Package
+        run: |
+          v=${{ steps.version.outputs.version }}
+          mkdir dist
+          (cd out/framework && zip -q "../../dist/ControllerHP-$v-win-x64.zip" ControllerHP.exe)
+          (cd out/standalone && zip -q "../../dist/ControllerHP-$v-win-x64-standalone.zip" ControllerHP.exe)
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ControllerHP-${{ steps.version.outputs.version }}
+          path: dist/*.zip
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true

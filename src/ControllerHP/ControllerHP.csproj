@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- The 10.0.19041 TFM pulls in the WinRT projection used for Windows.Gaming.Input. -->
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <UseWindowsForms>true</UseWindowsForms>
+    <!-- Allows building from Linux/WSL. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>ControllerHP</AssemblyName>
+    <RootNamespace>ControllerHP</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Overridden by CI from the release tag (v1.2.3 -> 1.2.3). -->
+    <Version>0.1.0</Version>
+    <Product>ControllerHP</Product>
+    <Title>ControllerHP</Title>
+    <Description>Battery meter for game controllers in the Windows taskbar.</Description>
+    <Authors>rcheong</Authors>
+    <Copyright>Copyright © 2026 rcheong</Copyright>
+  </PropertyGroup>
+
+</Project>
