@@ -72,11 +72,18 @@ Unhandled errors are logged to `%LOCALAPPDATA%\ControllerHP\error.log`, and ever
 
 ### Releasing
 
-Push a version tag and GitHub Actions builds both zips and publishes a release with generated notes:
+Push a version tag and GitHub Actions builds both zips and publishes a release with generated notes. The version number comes from the tag, so nothing needs editing first.
 
 ```bash
 git tag v0.1.0
 git push origin v0.1.0
+```
+
+Tags with a suffix (e.g. `v0.2.0-beta.1`) are published as pre-releases. If a release build fails, fix it, then move the tag and push again:
+
+```bash
+git tag -f v0.1.0
+git push -f origin v0.1.0
 ```
 
 ### Adding other controllers
