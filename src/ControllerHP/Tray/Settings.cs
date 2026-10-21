@@ -54,6 +54,20 @@ internal static class Settings
         set => Write(nameof(CriticalWarning), value);
     }
 
+    /// <summary>Whether the "Battery low" pop-up shows at all.</summary>
+    public static bool LowWarningEnabled
+    {
+        get => Read(nameof(LowWarningEnabled)) is not int value || value != 0;
+        set => Write(nameof(LowWarningEnabled), value ? 1 : 0);
+    }
+
+    /// <summary>Whether the "Battery critical" pop-up shows at all.</summary>
+    public static bool CriticalWarningEnabled
+    {
+        get => Read(nameof(CriticalWarningEnabled)) is not int value || value != 0;
+        set => Write(nameof(CriticalWarningEnabled), value ? 1 : 0);
+    }
+
     private static int ReadWarning(string name, int fallback, int min, int max) =>
         Read(name) is int value ? Math.Clamp(value, min, max) : Math.Clamp(fallback, min, max);
 

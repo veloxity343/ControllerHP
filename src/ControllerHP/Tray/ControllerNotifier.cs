@@ -17,8 +17,13 @@ internal sealed class ControllerNotifier : IDisposable
     /// <summary>Controllers already on when the app starts don't get a "connected" toast.</summary>
     private static readonly TimeSpan StartupQuietTime = TimeSpan.FromSeconds(5);
 
-    /// <summary>Battery warning levels, most lenient first: "low", then "critical".</summary>
-    public int[] LowThresholds { get; set; } = [20, 10];
+    /// <summary>The "Battery low" level in percent, or null when that warning is off.</summary>
+    public int? LowWarning { get; set; } = 20;
+
+    /// <summary>The "Battery critical" level in percent, or null when that warning is off.</summary>
+    public int? CriticalWarning { get; set; } = 10;
+
+    private IEnumerable<int> Thresholds => new[] { LowWarning, CriticalWarning }.OfType<int>();
     private const int RearmMargin = 5;
     private const int NoneNotified = int.MaxValue;
 
@@ -94,7 +99,7 @@ internal sealed class ControllerNotifier : IDisposable
             }
             else if (crossed is int threshold && reading.EffectivePercent is int percent)
             {
-                string title = threshold <= LowThresholds[^1] ? "Battery critical" : "Battery low";
+                string title = threshold == CriticalWarning ? "Battery critical" : "Battery low";
                 _toasts.Show(new ToastContent(reading.Name, $"{title} · {percent}%", reading,
                     BatteryIconRenderer.FillColor(percent)));
             }
@@ -114,7 +119,7 @@ internal sealed class ControllerNotifier : IDisposable
             return null;
         }
 
-        int severest = LowThresholds.Where(t => percent <= t).DefaultIfEmpty(NoneNotified).Min();
+        int severest = Thresholds.Where(t => percent <= t).DefaultIfEmpty(NoneNotified).Min();
 
         // Recovered well above the last warning (e.g. batteries swapped): allow it to warn again.
         if (tracked.Notified != NoneNotified && percent >= tracked.Notified + RearmMargin)

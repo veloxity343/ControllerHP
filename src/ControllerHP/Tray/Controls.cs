@@ -16,14 +16,26 @@ internal abstract class ThemedControl : Control
             ControlStyles.ResizeRedraw | ControlStyles.UserPaint | ControlStyles.SupportsTransparentBackColor, true);
     }
 
+    /// <summary>Setting it passes it on to any themed controls inside, so nested controls follow theme changes.</summary>
     public Palette Palette
     {
         get => _palette;
         set
         {
             _palette = value;
+            foreach (var child in Controls.OfType<ThemedControl>())
+                child.Palette = value;
+            OnPaletteChanged();
             Invalidate();
         }
+    }
+
+    protected virtual void OnPaletteChanged() { }
+
+    protected override void OnEnabledChanged(EventArgs e)
+    {
+        base.OnEnabledChanged(e);
+        Invalidate();
     }
 
     protected int S(float logicalPixels) => (int)Math.Round(logicalPixels * DeviceDpi / 96f);
@@ -219,11 +231,13 @@ internal sealed class SettingCard : ThemedControl
     /// <summary>Height for the current DPI; the card lays out its control to match.</summary>
     public int PreferredHeight => _stacked ? S(70) + _control.Height + S(14) : S(70);
 
+    // The control sits on the card, so whatever it doesn't paint (its anti-aliased edges) should blend
+    // into the card. Set on every palette change; a stale colour shows as fringes after a theme switch.
+    protected override void OnPaletteChanged() => _control.BackColor = Palette.Surface;
+
     protected override void OnLayout(LayoutEventArgs e)
     {
         base.OnLayout(e);
-        _control.Palette = Palette;
-        // The control sits on the card, so whatever it doesn't paint should match the card.
         _control.BackColor = Palette.Surface;
         _control.Location = _stacked
             ? new Point(S(16), S(62))
@@ -458,7 +472,7 @@ internal sealed class Stepper : ThemedControl
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
-        Cursor = Minus.Contains(e.Location) || Plus.Contains(e.Location) ? Cursors.Hand : Cursors.Default;
+        Cursor = Enabled && (Minus.Contains(e.Location) || Plus.Contains(e.Location)) ? Cursors.Hand : Cursors.Default;
     }
 
     protected override void OnPaint(PaintEventArgs e)
@@ -470,24 +484,50 @@ internal sealed class Stepper : ThemedControl
             TextRenderer.DrawText(g, Text, labelFont, new Rectangle(0, 0, (int)Box.X - S(8), Height), Palette.Text, TextFlags);
         }
 
-        Fill(g, Box, S(5), Palette.Background);
-        Outline(g, Box, S(5), Palette.Border, S(1));
-        foreach (var (r, enabled) in new[] { (Minus, Value > Minimum), (Plus, Value < Maximum) })
+        // Disabled: greyed out and inert, but still showing the level it'll use when switched back on.
+        Fill(g, Box, S(5), Enabled ? Palette.Background : Palette.Surface);
+        Outline(g, Box, S(5), Enabled ? Palette.Border : Palette.Separator, S(1));
+        foreach (var (r, canStep) in new[] { (Minus, Value > Minimum), (Plus, Value < Maximum) })
         {
-            if (enabled && Hover is Point p && r.Contains(p))
+            if (Enabled && canStep && Hover is Point p && r.Contains(p))
                 Fill(g, RectangleF.Inflate(r, -S(3), -S(3)), S(3), Palette.Hover);
         }
 
         var flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix |
             TextFormatFlags.SingleLine;
+        Color Sign(bool canStep) => Enabled && canStep ? Palette.Text : Palette.Separator;
         using var signFont = MakeFont(16);
-        TextRenderer.DrawText(g, "−", signFont, Rectangle.Round(Minus),
-            Value > Minimum ? Palette.Text : Palette.Separator, flags);
-        TextRenderer.DrawText(g, "+", signFont, Rectangle.Round(Plus),
-            Value < Maximum ? Palette.Text : Palette.Separator, flags);
+        TextRenderer.DrawText(g, "−", signFont, Rectangle.Round(Minus), Sign(Value > Minimum), flags);
+        TextRenderer.DrawText(g, "+", signFont, Rectangle.Round(Plus), Sign(Value < Maximum), flags);
         using var valueFont = MakeFont(13, semibold: true);
         TextRenderer.DrawText(g, $"{Value}%", valueFont,
-            Rectangle.Round(new RectangleF(Minus.Right, Box.Y, Plus.X - Minus.Right, Box.Height)), Palette.Text, flags);
+            Rectangle.Round(new RectangleF(Minus.Right, Box.Y, Plus.X - Minus.Right, Box.Height)),
+            Enabled ? Palette.Text : Palette.SubtleText, flags);
         DrawFocus(g, Box, S(5));
+    }
+}
+
+/// <summary>A warning level with its own on/off switch; the level is greyed out and locked while off.</summary>
+internal sealed class SwitchedStepper : ThemedControl
+{
+    public SwitchedStepper(int min, int max, int step)
+    {
+        Stepper = new Stepper("", min, max, step);
+        Controls.Add(Stepper);
+        Controls.Add(Switch);
+        Switch.CheckedChanged += (_, _) => Stepper.Enabled = Switch.Checked;
+        ResizeForDpi();
+    }
+
+    public Stepper Stepper { get; }
+    public ToggleSwitch Switch { get; } = new();
+
+    protected override Size? LogicalSize => new Size(110 + 16 + 84, 32);
+
+    protected override void OnLayout(LayoutEventArgs e)
+    {
+        base.OnLayout(e);
+        Stepper.Location = new Point(0, (Height - Stepper.Height) / 2);
+        Switch.Location = new Point(Width - Switch.Width, (Height - Switch.Height) / 2);
     }
 }

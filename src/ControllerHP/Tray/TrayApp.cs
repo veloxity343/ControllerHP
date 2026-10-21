@@ -282,7 +282,8 @@ internal sealed class TrayApp : ApplicationContext
     private void ApplySettings()
     {
         _notifier.ConnectionToasts = Settings.ConnectionToasts;
-        _notifier.LowThresholds = [Settings.LowWarning, Settings.CriticalWarning];
+        _notifier.LowWarning = Settings.LowWarningEnabled ? Settings.LowWarning : null;
+        _notifier.CriticalWarning = Settings.CriticalWarningEnabled ? Settings.CriticalWarning : null;
 
         var corner = Settings.ToastCorner;
         if (corner != _notifier.Corner)

@@ -23,8 +23,8 @@ internal sealed class SettingsWindow : Form
     private readonly SegmentedControl _iconLimit = new(["1", "2", "One per controller"], 130);
     private readonly SegmentedControl _corner = new(["Top left", "Top right", "Bottom left", "Bottom right"], 105);
     private readonly ToggleSwitch _connectionToasts = new();
-    private readonly Stepper _lowWarning = new("", Settings.MinWarning + Settings.WarningStep, Settings.MaxWarning, Settings.WarningStep);
-    private readonly Stepper _criticalWarning = new("", Settings.MinWarning, Settings.MaxWarning - Settings.WarningStep, Settings.WarningStep);
+    private readonly SwitchedStepper _low = new(Settings.MinWarning + Settings.WarningStep, Settings.MaxWarning, Settings.WarningStep);
+    private readonly SwitchedStepper _critical = new(Settings.MinWarning, Settings.MaxWarning - Settings.WarningStep, Settings.WarningStep);
     private readonly ToggleSwitch _startWithWindows = new();
 
     private static readonly int[] IconLimits = [1, 2, 0];
@@ -75,9 +75,9 @@ internal sealed class SettingsWindow : Form
         _pageItems.Add(new SettingCard("Connection pop-ups", "When a controller connects or disconnects.", _connectionToasts));
 
         _pageItems.Add(new Heading("Battery warnings", 15));
-        _pageItems.Add(new Note("These pop-ups always show, whatever the connection pop-ups setting."));
-        _pageItems.Add(new SettingCard("Low battery", "Warn when a controller drops to this level.", _lowWarning));
-        _pageItems.Add(new SettingCard("Critical battery", "Warn again at this level. Always below the low level.", _criticalWarning));
+        _pageItems.Add(new Note("Pop-ups when a controller's battery runs down, whatever the connection pop-ups setting."));
+        _pageItems.Add(new SettingCard("Low battery", "Warn when a controller drops to this level.", _low));
+        _pageItems.Add(new SettingCard("Critical battery", "Warn again at this lower level.", _critical));
 
         _pageItems.Add(new Heading("Startup", 15));
         _pageItems.Add(new SettingCard("Start with Windows", "Run ControllerHP when you sign in.", _startWithWindows));
@@ -95,9 +95,13 @@ internal sealed class SettingsWindow : Form
         _iconLimit.SelectedIndex = Math.Max(0, Array.IndexOf(IconLimits, Settings.TrayIconLimit));
         _corner.SelectedIndex = Math.Max(0, Array.IndexOf(Corners, Settings.ToastCorner));
         _connectionToasts.Checked = Settings.ConnectionToasts;
-        _lowWarning.Value = Settings.LowWarning;
-        _criticalWarning.Maximum = _lowWarning.Value - Settings.WarningStep;
-        _criticalWarning.Value = Settings.CriticalWarning;
+        _low.Switch.Checked = Settings.LowWarningEnabled;
+        _low.Stepper.Enabled = _low.Switch.Checked;
+        _critical.Switch.Checked = Settings.CriticalWarningEnabled;
+        _critical.Stepper.Enabled = _critical.Switch.Checked;
+        _low.Stepper.Value = Settings.LowWarning;
+        _critical.Stepper.Maximum = _low.Stepper.Value - Settings.WarningStep;
+        _critical.Stepper.Value = Settings.CriticalWarning;
         _startWithWindows.Checked = Settings.StartWithWindows;
         _loading = false;
     }
@@ -119,21 +123,31 @@ internal sealed class SettingsWindow : Form
             if (!_loading)
                 Settings.ConnectionToasts = _connectionToasts.Checked;
         };
-        _lowWarning.ValueChanged += (_, _) =>
+        _low.Stepper.ValueChanged += (_, _) =>
         {
             if (_loading)
                 return;
-            Settings.LowWarning = _lowWarning.Value;
+            Settings.LowWarning = _low.Stepper.Value;
             // Keep critical below low; lowering low can push critical down with it.
-            _criticalWarning.Maximum = _lowWarning.Value - Settings.WarningStep;
-            if (_criticalWarning.Value > _criticalWarning.Maximum)
-                _criticalWarning.Value = _criticalWarning.Maximum;
-            _criticalWarning.Invalidate();
+            _critical.Stepper.Maximum = _low.Stepper.Value - Settings.WarningStep;
+            if (_critical.Stepper.Value > _critical.Stepper.Maximum)
+                _critical.Stepper.Value = _critical.Stepper.Maximum;
+            _critical.Stepper.Invalidate();
         };
-        _criticalWarning.ValueChanged += (_, _) =>
+        _critical.Stepper.ValueChanged += (_, _) =>
         {
             if (!_loading)
-                Settings.CriticalWarning = _criticalWarning.Value;
+                Settings.CriticalWarning = _critical.Stepper.Value;
+        };
+        _low.Switch.CheckedChanged += (_, _) =>
+        {
+            if (!_loading)
+                Settings.LowWarningEnabled = _low.Switch.Checked;
+        };
+        _critical.Switch.CheckedChanged += (_, _) =>
+        {
+            if (!_loading)
+                Settings.CriticalWarningEnabled = _critical.Switch.Checked;
         };
         _startWithWindows.CheckedChanged += (_, _) =>
         {
@@ -165,12 +179,9 @@ internal sealed class SettingsWindow : Form
         _page.BackColor = _palette.Background;
         Theme.SetTitleBar(Handle, _palette.Light);
         Theme.SetControlTheme(_page.Handle, _palette.Light);
+        // Each control passes the palette on to the controls inside it.
         foreach (var control in _nav.Concat(_pageItems).OfType<ThemedControl>())
-        {
             control.Palette = _palette;
-            foreach (var child in control.Controls.OfType<ThemedControl>())
-                child.Palette = _palette;
-        }
         Invalidate(true);
     }
 
