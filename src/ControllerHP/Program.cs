@@ -53,6 +53,7 @@ internal static partial class Program
         if (!isFirst)
             return 0;
 
+        TrimLogs();
         Application.ThreadException += (_, e) => Log($"Unhandled UI exception: {e.Exception}");
         AppDomain.CurrentDomain.UnhandledException += (_, e) => Log($"Unhandled exception: {e.ExceptionObject}");
 
@@ -77,6 +78,68 @@ internal static partial class Program
         }
         catch (IOException) { }
         catch (UnauthorizedAccessException) { }
+    }
+
+    public static readonly TimeSpan HistoryLogKept = TimeSpan.FromDays(30);
+    public const long ErrorLogLimit = 1024 * 1024;
+
+    /// <summary>
+    /// Keeps the logs from growing forever: history.log to its last 30 days (battery.csv has the long-term
+    /// record), error.log to its newest megabyte. Run at startup.
+    /// </summary>
+    internal static void TrimLogs()
+    {
+        TrimByAge(Path.Combine(LogDirectory, HistoryLogFile), DateTime.Now - HistoryLogKept);
+        TrimBySize(Path.Combine(LogDirectory, ErrorLogFile), ErrorLogLimit);
+    }
+
+    /// <summary>Drops lines dated before <paramref name="cutoff"/>; each line starts with its timestamp.</summary>
+    internal static void TrimByAge(string path, DateTime cutoff)
+    {
+        try
+        {
+            if (!File.Exists(path))
+                return;
+            var lines = File.ReadAllLines(path);
+            int first = Array.FindIndex(lines, line => LineTime(line) is DateTime t && t >= cutoff);
+            if (first == 0)
+                return;
+            File.WriteAllLines(path, first < 0 ? [] : lines[first..]);
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    /// <summary>
+    /// Keeps roughly the newest <paramref name="limit"/> bytes, starting at a whole entry: error entries can
+    /// run over several lines (stack traces), so the cut moves forward to the next line with a timestamp.
+    /// </summary>
+    internal static void TrimBySize(string path, long limit)
+    {
+        try
+        {
+            var info = new FileInfo(path);
+            if (!info.Exists || info.Length <= limit)
+                return;
+            string tail;
+            using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                stream.Seek(-limit, SeekOrigin.End);
+                tail = new StreamReader(stream).ReadToEnd();
+            }
+            var lines = tail.Split('\n');
+            int first = Array.FindIndex(lines, 1, line => LineTime(line) is not null); // line 0 is likely cut mid-way
+            File.WriteAllText(path, first < 0 ? "" : string.Join('\n', lines[first..]));
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
+    }
+
+    private static DateTime? LineTime(string line)
+    {
+        int space = line.IndexOf(' ');
+        return space > 0 && DateTime.TryParse(line[..space], System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.RoundtripKind, out var t) ? t : null;
     }
 
     private static readonly HashSet<string> LoggedOnce = [];
