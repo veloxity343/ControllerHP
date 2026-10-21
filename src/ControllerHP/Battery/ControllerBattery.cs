@@ -11,10 +11,13 @@ public enum ChargeState
     Wired,
 }
 
+public enum Connection { Unknown, Usb, Bluetooth, WirelessAdapter }
+
 /// <summary>A point-in-time battery reading for one controller.</summary>
 /// <param name="Id">Stable identifier used to keep one tray icon per physical controller.</param>
 /// <param name="Percent">Exact charge if the source reports it; null for coarse-level sources like XInput.</param>
 /// <param name="Hardware">USB vendor/product ids ("VID:PID") when known, for identifying the controller family.</param>
+/// <param name="Connection">How it's connected, when the source can tell.</param>
 public sealed record ControllerBattery(
     string Id,
     string Name,
@@ -22,7 +25,8 @@ public sealed record ControllerBattery(
     int? Percent,
     BatteryLevel Level,
     ChargeState Power,
-    string? Hardware = null)
+    string? Hardware = null,
+    Connection Connection = Connection.Unknown)
 {
     /// <summary>
     /// The percentage to display: the exact value when known, otherwise a representative value for the

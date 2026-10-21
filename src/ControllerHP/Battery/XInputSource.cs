@@ -46,9 +46,12 @@ public sealed partial class XInputSource : IBatterySource
             string name = $"Xbox Controller {i + 1}";
             readings.Add(info.BatteryType switch
             {
-                BatteryTypeWired => new(id, name, Name, null, BatteryLevel.Unknown, ChargeState.Wired),
+                BatteryTypeWired => new(id, name, Name, null, BatteryLevel.Unknown, ChargeState.Wired,
+                    Connection: Connection.Usb),
                 BatteryTypeAlkaline or BatteryTypeNimh =>
-                    new(id, name, Name, null, (BatteryLevel)(info.BatteryLevel + 1), ChargeState.Discharging),
+                    // XInput doesn't see Bluetooth pads, so a battery-powered one is on the adapter.
+                    new(id, name, Name, null, (BatteryLevel)(info.BatteryLevel + 1), ChargeState.Discharging,
+                        Connection: Connection.WirelessAdapter),
                 _ => new(id, name, Name, null, BatteryLevel.Unknown, ChargeState.Unknown),
             });
         }

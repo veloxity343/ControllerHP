@@ -56,6 +56,8 @@ public sealed class PlayStationSource : IBatterySource, IDisposable
         public volatile Status? Latest;
         /// <summary>Whether the calibration read that turns on the full Bluetooth report has succeeded.</summary>
         public bool FullReportRequested;
+        /// <summary>Unknown until the device is first opened.</summary>
+        public volatile Connection Connection;
     }
 
     public string Name => "PlayStation HID";
@@ -87,7 +89,7 @@ public sealed class PlayStationSource : IBatterySource, IDisposable
         var status = controller.Latest ?? new Status(null, ChargeState.Unknown);
         var level = status.Percent is int p ? ControllerBattery.LevelFromPercent(p) : BatteryLevel.Unknown;
         return new(controller.Id, Models[controller.ProductId].Name, Name, status.Percent, level, status.Power,
-            $"{SonyVendorId:X4}:{controller.ProductId:X4}");
+            $"{SonyVendorId:X4}:{controller.ProductId:X4}", controller.Connection);
     }
 
     private void OnAdded(DeviceInformation device)
@@ -184,6 +186,7 @@ public sealed class PlayStationSource : IBatterySource, IDisposable
         timeout.CancelAfter(ReadTimeout);
         // Reads come back padded to the longest input report, which is 64 bytes only over USB.
         bool bluetooth = caps.InputReportByteLength > UsbReportLength;
+        controller.Connection = bluetooth ? Connection.Bluetooth : Connection.Usb;
         while (true)
         {
             int read = await stream.ReadAsync(buffer, timeout.Token);

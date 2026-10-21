@@ -70,7 +70,7 @@ public sealed class GamingInputSource : IBatterySource, IDisposable
             readings.Add(new ControllerBattery(BluetoothId(ble), ble.Name, "Bluetooth LE", ble.Percent,
                 ControllerBattery.LevelFromPercent(ble.Percent),
                 InferCharging(ble) ? ChargeState.Charging : ChargeState.Discharging,
-                $"{ble.VendorId:X4}:{ble.ProductId:X4}"));
+                $"{ble.VendorId:X4}:{ble.ProductId:X4}", Connection.Bluetooth));
         }
         return readings;
     }
@@ -97,7 +97,12 @@ public sealed class GamingInputSource : IBatterySource, IDisposable
 
         string id = raw.NonRoamableId is { Length: > 0 } nid ? nid : $"wgi:{pad.GetHashCode()}";
         string hardware = $"{raw.HardwareVendorId:X4}:{raw.HardwareProductId:X4}";
-        var reading = ToReading(id, DisplayName(raw), pad.TryGetBatteryReport()) with { Hardware = hardware };
+        var reading = ToReading(id, DisplayName(raw), pad.TryGetBatteryReport()) with
+        {
+            Hardware = hardware,
+            // Bluetooth pads are matched below; any other wireless pad is on the Xbox Wireless Adapter.
+            Connection = raw.IsWireless ? Connection.WirelessAdapter : Connection.Usb,
+        };
 
         // Windows.Gaming.Input doesn't say which device a pad is, so pair by VID/PID. Two identical
         // controllers, one on Bluetooth and one not, could be swapped; accepted for now.
@@ -110,6 +115,7 @@ public sealed class GamingInputSource : IBatterySource, IDisposable
         {
             Id = BluetoothId(ble),
             Name = ble.Name,
+            Connection = Connection.Bluetooth,
             Percent = ble.Percent,
             Level = ControllerBattery.LevelFromPercent(ble.Percent),
             Power = reading.Power == ChargeState.Charging || InferCharging(ble)
