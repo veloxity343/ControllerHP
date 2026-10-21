@@ -6,16 +6,22 @@ namespace ControllerHP.Tray;
 /// The full window behind the flyout's gear: navigation on the left, a page on the right. Follows
 /// Windows' app mode, light or dark, and stays in step with the tray menu through <see cref="Settings"/>.
 /// </summary>
-internal sealed class SettingsWindow : Form
+internal sealed class SettingsWindow : Form, IMessageFilter
 {
     private const int NavWidth = 220, PagePadding = 32, CardGap = 4, SectionGap = 24;
 
     private readonly List<NavItem> _nav = [];
     private readonly Panel _page = new() { AutoScroll = true };
-    private readonly List<Control> _pageItems = [];
+    /// <summary>Each nav item's page: the controls stacked on it, shown only while it's selected.</summary>
+    private readonly List<List<Control>> _pages = [];
+    private int _current;
+    private readonly int _historyPage;
+    private List<Control> CurrentPage => _pages[_current];
     private Palette _palette;
     /// <summary>Set for the --preview-settings render, which fixes the palette instead of following Windows.</summary>
     private readonly bool _fixedPalette;
+    /// <summary>Where the history chart's data comes from; the preview swaps in sample data.</summary>
+    private readonly Func<DateTime, List<HistorySeries>> _loadHistory;
     /// <summary>Set while controls are filled from Settings, so they don't write the same values back.</summary>
     private bool _loading;
 
@@ -27,14 +33,36 @@ internal sealed class SettingsWindow : Form
     private readonly SwitchedStepper _critical = new(Settings.MinWarning, Settings.MaxWarning - Settings.WarningStep, Settings.WarningStep);
     private readonly ToggleSwitch _startWithWindows = new();
 
+    // The Battery history page.
+    private readonly SegmentedControl _range = new(["2 hours", "6 hours", "24 hours", "7 days"], 95) { SelectedIndex = 1 };
+    private static readonly TimeSpan[] Ranges =
+        [TimeSpan.FromHours(2), TimeSpan.FromHours(6), TimeSpan.FromHours(24), TimeSpan.FromDays(7)];
+    private readonly HistoryChart _chart = new();
+    private readonly Note _statsNote = new("Averages and totals cover the range above. Predictions and health use recent history.");
+    private readonly Note _historyNote = new($"Recorded whenever a controller's battery changes, and kept for {BatteryHistory.Kept.Days} days.");
+    private readonly List<StatsCard> _statsCards = [];
+    /// <summary>
+    /// Which controller's figures to show: whichever has the lowest battery until the user picks a
+    /// controller or all of them, then their pick.
+    /// </summary>
+    private readonly DropDown _controllerPicker = new(340);
+    private const string AllControllers = "all";
+    /// <summary>A controller id or <see cref="AllControllers"/>; null follows the lowest battery.</summary>
+    private string? _pickerChoice;
+    /// <summary>What each of the picker's items stands for: a controller id, then <see cref="AllControllers"/>.</summary>
+    private List<string> _pickerKeys = [];
+    /// <summary>Keeps the chart's "now" edge moving while the history page is open.</summary>
+    private readonly System.Windows.Forms.Timer _historyTimer = new() { Interval = 30_000 };
+
     private static readonly int[] IconLimits = [1, 2, 0];
     private static readonly ToastCorner[] Corners =
         [ToastCorner.TopLeft, ToastCorner.TopRight, ToastCorner.BottomLeft, ToastCorner.BottomRight];
 
-    public SettingsWindow(Palette? palette = null)
+    public SettingsWindow(Palette? palette = null, Func<DateTime, List<HistorySeries>>? loadHistory = null)
     {
         _palette = palette ?? Theme.For(Theme.AppsUseLight());
         _fixedPalette = palette is not null;
+        _loadHistory = loadHistory ?? BatteryHistory.Load;
         Text = "ControllerHP";
         Icon = Icon.ExtractAssociatedIcon(Environment.ProcessPath!);
         StartPosition = FormStartPosition.CenterScreen;
@@ -45,12 +73,12 @@ internal sealed class SettingsWindow : Form
         ClientSize = new Size(S(780), S(600));
         MinimumSize = SizeFromClientSize(new Size(S(640), S(420)));
 
-        var nav = new NavItem("Settings") { Selected = true };
-        _nav.Add(nav);
-        Controls.Add(nav);
         Controls.Add(_page);
+        AddPage("Settings", BuildSettingsPage());
+        AddPage("Battery history", BuildHistoryPage());
+        _historyPage = _pages.Count - 1;
+        ShowPage(0);
 
-        BuildSettingsPage();
         LoadValues();
         WireEvents();
         ApplyPalette();
@@ -61,32 +89,126 @@ internal sealed class SettingsWindow : Form
 
     private int S(float logicalPixels) => (int)Math.Round(logicalPixels * DeviceDpi / 96f);
 
-    private void BuildSettingsPage()
+    private void AddPage(string title, List<Control> items)
     {
-        _pageItems.Add(new Heading("Settings", 26));
+        // Registered before anything is added: adding a control triggers a layout pass, which reads the pages.
+        int index = _pages.Count;
+        _pages.Add(items);
+        foreach (var item in items)
+        {
+            item.Visible = false;
+            _page.Controls.Add(item);
+        }
+        var nav = new NavItem(title);
+        nav.Click += (_, _) => ShowPage(index);
+        _nav.Add(nav);
+        Controls.Add(nav);
+    }
 
-        _pageItems.Add(new Heading("Tray", 15));
-        _pageItems.Add(new SettingCard("Tray icons",
+    public int PageCount => _pages.Count;
+
+
+    public void ShowPage(int index)
+    {
+        _current = index;
+        for (int i = 0; i < _pages.Count; i++)
+        {
+            _nav[i].Selected = i == index;
+            foreach (var item in _pages[i])
+                item.Visible = i == index;
+        }
+        _page.AutoScrollPosition = Point.Empty;
+        if (CurrentPage.Contains(_chart))
+        {
+            ReloadHistory();
+            _historyTimer.Start();
+        }
+        else
+        {
+            _historyTimer.Stop();
+        }
+        PerformLayout();
+    }
+
+    private List<Control> BuildSettingsPage()
+    {
+        var items = new List<Control> { new Heading("Settings", 26) };
+
+        items.Add(new Heading("Tray", 15));
+        items.Add(new SettingCard("Tray icons",
             "How many controllers get their own icon. The rest are listed when you hover or click.",
             _iconLimit, stacked: true));
 
-        _pageItems.Add(new Heading("Pop-ups", 15));
-        _pageItems.Add(new SettingCard("Position", "Which corner of the screen pop-ups appear in.", _corner, stacked: true));
-        _pageItems.Add(new SettingCard("Connection pop-ups", "When a controller connects or disconnects.", _connectionToasts));
+        items.Add(new Heading("Pop-ups", 15));
+        items.Add(new SettingCard("Position", "Which corner of the screen pop-ups appear in.", _corner, stacked: true));
+        items.Add(new SettingCard("Connection pop-ups", "When a controller connects or disconnects.", _connectionToasts));
 
-        _pageItems.Add(new Heading("Battery warnings", 15));
-        _pageItems.Add(new Note("Pop-ups when a controller's battery runs down, whatever the connection pop-ups setting."));
-        _pageItems.Add(new SettingCard("Low battery", "Warn when a controller drops to this level.", _low));
-        _pageItems.Add(new SettingCard("Critical battery", "Warn again at this lower level.", _critical));
+        items.Add(new Heading("Battery warnings", 15));
+        items.Add(new Note("Pop-ups when a controller's battery runs down, whatever the connection pop-ups setting."));
+        items.Add(new SettingCard("Low battery", "Warn when a controller drops to this level.", _low));
+        items.Add(new SettingCard("Critical battery", "Warn again at this lower level.", _critical));
 
-        _pageItems.Add(new Heading("Startup", 15));
-        _pageItems.Add(new SettingCard("Start with Windows", "Run ControllerHP when you sign in.", _startWithWindows));
+        items.Add(new Heading("Startup", 15));
+        items.Add(new SettingCard("Start with Windows", "Run ControllerHP when you sign in.", _startWithWindows));
 
         string version = Application.ProductVersion.Split('+')[0];
-        _pageItems.Add(new Note($"ControllerHP {version}"));
+        items.Add(new Note($"ControllerHP {version}"));
+        return items;
+    }
 
-        foreach (var item in _pageItems)
-            _page.Controls.Add(item);
+    private List<Control> BuildHistoryPage()
+    {
+        _range.SelectedChanged += (_, _) => ReloadHistory();
+        _historyTimer.Tick += (_, _) => ReloadHistory();
+        _controllerPicker.SelectedChanged += (_, _) =>
+        {
+            _pickerChoice = _pickerKeys[_controllerPicker.SelectedIndex];
+            ReloadHistory();
+        };
+        return [new Heading("Battery history", 26), _range, _chart, _controllerPicker, _statsNote, _historyNote];
+    }
+
+    private void ReloadHistory()
+    {
+        var now = DateTime.Now;
+        var since = now - Ranges[_range.SelectedIndex];
+        var shown = _loadHistory(since);
+        _chart.SetData(shown, since, now);
+
+        // A card per controller in the chart, its figures worked out from its whole retained history.
+        var page = _pages[_historyPage];
+        foreach (var card in _statsCards)
+        {
+            page.Remove(card);
+            _page.Controls.Remove(card);
+            card.Dispose();
+        }
+        _statsCards.Clear();
+
+        // The picker lists each controller, then all; until the user picks, it follows the lowest battery.
+        if (_pickerChoice is not (null or AllControllers) && !shown.Any(s => s.Id == _pickerChoice))
+            _pickerChoice = null; // the chosen controller isn't in this range
+        string? lowest = LowestFirst(shown).FirstOrDefault()?.Id;
+        string? showing = _pickerChoice ?? lowest;
+        _pickerKeys = [.. shown.Select(s => s.Id), AllControllers];
+        _controllerPicker.SetItems([.. shown.Select(s => s.Name), "All controllers"], Math.Max(0, _pickerKeys.IndexOf(showing ?? "")));
+        _controllerPicker.Visible = _current == _historyPage && shown.Count > 0;
+
+        var cards = showing == AllControllers ? shown : shown.Where(s => s.Id == showing).ToList();
+
+        var full = _loadHistory(now - BatteryHistory.Kept).ToDictionary(s => s.Id);
+        int? lowWarning = Settings.LowWarningEnabled ? Settings.LowWarning : null;
+        int insertAt = page.IndexOf(_statsNote) + 1;
+        foreach (var series in cards)
+        {
+            var stats = BatteryStats.Compute(full.GetValueOrDefault(series.Id, series), since, now, lowWarning);
+            var card = new StatsCard(series, stats) { Palette = _palette, Visible = _current == _historyPage };
+            _statsCards.Add(card);
+            page.Insert(insertAt++, card);
+            _page.Controls.Add(card);
+        }
+        _statsNote.Visible = _current == _historyPage && shown.Count > 0;
+        PerformLayout();
     }
 
     private void LoadValues()
@@ -173,6 +295,49 @@ internal sealed class SettingsWindow : Form
             });
     }
 
+    /// <summary>
+    /// The tray icon's order: on battery, lowest first; then charging; then disconnected or level unknown
+    /// (history can't tell those apart). Ties keep the chart's order.
+    /// </summary>
+    private static List<HistorySeries> LowestFirst(IEnumerable<HistorySeries> series) =>
+        [.. series.OrderBy(s => s.Points[^1] switch
+            {
+                { Percent: null } => 2,
+                { Charging: true } => 1,
+                _ => 0,
+            })
+            .ThenBy(s => s.Points[^1].Percent ?? 100)];
+
+    // WinForms sends the mouse wheel to the focused control, usually a nav item outside the scrolling page,
+    // so the page never scrolled. Catch the wheel for the whole window and scroll the page under the pointer.
+    private const int WmMouseWheel = 0x020A;
+
+    public bool PreFilterMessage(ref Message m)
+    {
+        if (m.Msg != WmMouseWheel || !Visible || Form.ActiveForm != this)
+            return false;
+        var pointer = _page.PointToClient(Cursor.Position);
+        if (!_page.ClientRectangle.Contains(pointer) || !_page.VerticalScroll.Visible)
+            return false;
+        // 120 per notch; touchpads send smaller amounts, so scroll in proportion rather than whole notches.
+        int delta = (short)((long)m.WParam >> 16);
+        int y = -_page.AutoScrollPosition.Y - delta * S(60) / 120;
+        _page.AutoScrollPosition = new Point(0, Math.Max(0, y));
+        return true;
+    }
+
+    protected override void OnActivated(EventArgs e)
+    {
+        base.OnActivated(e);
+        Application.AddMessageFilter(this);
+    }
+
+    protected override void OnDeactivate(EventArgs e)
+    {
+        base.OnDeactivate(e);
+        Application.RemoveMessageFilter(this);
+    }
+
     private void ApplyPalette()
     {
         BackColor = _palette.Background;
@@ -180,7 +345,7 @@ internal sealed class SettingsWindow : Form
         Theme.SetTitleBar(Handle, _palette.Light);
         Theme.SetControlTheme(_page.Handle, _palette.Light);
         // Each control passes the palette on to the controls inside it.
-        foreach (var control in _nav.Concat(_pageItems).OfType<ThemedControl>())
+        foreach (var control in _nav.Concat(_pages.SelectMany(p => p)).OfType<ThemedControl>())
             control.Palette = _palette;
         Invalidate(true);
     }
@@ -188,7 +353,7 @@ internal sealed class SettingsWindow : Form
     protected override void OnLayout(LayoutEventArgs levent)
     {
         base.OnLayout(levent);
-        if (_nav.Count == 0)
+        if (_nav.Count == 0 || _pages.Count == 0)
             return;
 
         int navWidth = S(NavWidth);
@@ -209,17 +374,21 @@ internal sealed class SettingsWindow : Form
         int x = S(PagePadding) - _page.HorizontalScroll.Value;
         int y = S(PagePadding) + _page.AutoScrollPosition.Y;
         Control? previous = null;
-        foreach (var item in _pageItems)
+        foreach (var item in CurrentPage)
         {
             if (item is Heading && previous is not null)
                 y += S(SectionGap) - S(CardGap);
             int height = item is SettingCard card ? card.PreferredHeight : item.Height;
-            item.Bounds = new Rectangle(x, y, width, height);
+            // Choice rows keep their own width; everything else spans the page.
+            item.Bounds = new Rectangle(x, y, item is SegmentedControl or DropDown ? item.Width : width, height);
             y += height + S(CardGap);
             previous = item;
         }
         // Room below the last item, so the page can scroll it clear of the window edge.
         _page.AutoScrollMinSize = new Size(0, y - _page.AutoScrollPosition.Y + S(PagePadding));
+        // Setting the same size again doesn't recalculate the scroll bars, which then keep a stale range
+        // from before the page changed (e.g. ending above stats cards added since). Force it.
+        _page.PerformLayout();
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -231,6 +400,8 @@ internal sealed class SettingsWindow : Form
 
     protected override void OnFormClosed(FormClosedEventArgs e)
     {
+        _historyTimer.Dispose();
+        Application.RemoveMessageFilter(this);
         Settings.Changed -= OnSettingsChanged;
         SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
         base.OnFormClosed(e);

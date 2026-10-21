@@ -531,3 +531,128 @@ internal sealed class SwitchedStepper : ThemedControl
         Switch.Location = new Point(Width - Switch.Width, (Height - Switch.Height) / 2);
     }
 }
+
+/// <summary>
+/// A themed dropdown: a box showing the current choice, opening the choices as a menu styled like the
+/// tray menu. WinForms' ComboBox can't follow dark mode.
+/// </summary>
+internal sealed class DropDown : ThemedControl
+{
+    private IReadOnlyList<string> _items = [];
+    private int _selected;
+    private ContextMenuStrip? _open;
+
+    public event EventHandler? SelectedChanged;
+
+    public DropDown(int logicalWidth)
+    {
+        LogicalWidth = logicalWidth;
+        Cursor = Cursors.Hand;
+        TabStop = true;
+        ResizeForDpi();
+    }
+
+    private int LogicalWidth { get; }
+
+    protected override Size? LogicalSize => new Size(LogicalWidth, 32);
+
+    /// <summary>Replaces the choices without raising <see cref="SelectedChanged"/>.</summary>
+    public void SetItems(IReadOnlyList<string> items, int selected)
+    {
+        _items = items;
+        _selected = Math.Clamp(selected, 0, Math.Max(0, items.Count - 1));
+        Invalidate();
+    }
+
+    public int SelectedIndex => _selected;
+
+    private void Open()
+    {
+        var menu = new ContextMenuStrip { ShowCheckMargin = true, ShowImageMargin = false };
+        for (int i = 0; i < _items.Count; i++)
+        {
+            int index = i;
+            menu.Items.Add(new ToolStripMenuItem(_items[i], null, (_, _) =>
+            {
+                if (index == _selected)
+                    return;
+                _selected = index;
+                Invalidate();
+                SelectedChanged?.Invoke(this, EventArgs.Empty);
+            })
+            { Checked = i == _selected });
+        }
+        MenuRenderer.Apply(menu, Palette);
+        menu.Closed += (_, _) =>
+        {
+            _open = null;
+            BeginInvoke(menu.Dispose);
+        };
+        // Exactly as wide as the box, with every row spanning that width: widening only the menu's window
+        // leaves the rows at their text width, and clicks to the right of the text miss.
+        // The menu sizes its window from the rows' text, not their set width, so fix the window's size too.
+        // Rows start at the menu's left edge (the tick column is inside them), so only the right edge is spare.
+        int rowWidth = Width - menu.Padding.Right - 1;
+        int height = menu.Padding.Vertical;
+        foreach (ToolStripItem item in menu.Items)
+        {
+            item.AutoSize = false;
+            item.Size = new Size(rowWidth, item.GetPreferredSize(Size.Empty).Height);
+            height += item.Height + item.Margin.Vertical;
+        }
+        menu.AutoSize = false;
+        menu.Size = new Size(Width, height);
+        _open = menu;
+        menu.Show(this, ListLocation);
+    }
+
+    private Point ListLocation => new(0, Height + S(2));
+
+
+    /// <summary>
+    /// The page scrolled under an open list: keep the list attached to the box, or close it once the box
+    /// has scrolled out of view rather than leave it floating over the page.
+    /// </summary>
+    protected override void OnLocationChanged(EventArgs e)
+    {
+        base.OnLocationChanged(e);
+        if (_open is null || Parent is null)
+            return;
+        if (!Parent.ClientRectangle.IntersectsWith(Bounds))
+            _open.Close();
+        else
+            _open.Location = PointToScreen(ListLocation);
+    }
+
+    protected override void OnClick(EventArgs e)
+    {
+        base.OnClick(e);
+        Focus();
+        Open();
+    }
+
+    protected override bool IsInputKey(Keys keyData) => keyData is Keys.Down or Keys.Up || base.IsInputKey(keyData);
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (e.KeyCode is Keys.Space or Keys.Enter or Keys.Down || (e.Alt && e.KeyCode == Keys.Down))
+            Open();
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        var box = new RectangleF(S(0.5f), S(0.5f), Width - S(1), Height - S(1));
+        Fill(g, box, S(5), Hover is not null ? Palette.Hover : Palette.Background);
+        Outline(g, box, S(5), Palette.Border, S(1));
+        using var font = MakeFont(13);
+        string text = _items.Count > 0 ? _items[_selected] : "";
+        TextRenderer.DrawText(g, text, font, new Rectangle(S(12), 0, Width - S(44), Height), Palette.Text, TextFlags);
+        // Segoe MDL2 Assets' chevron, as in Windows' own dropdowns.
+        using var chevron = new Font("Segoe MDL2 Assets", 10f * DeviceDpi / 96f, GraphicsUnit.Pixel);
+        TextRenderer.DrawText(g, "", chevron, new Rectangle(Width - S(32), 0, S(20), Height), Palette.SubtleText,
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
+        DrawFocus(g, box, S(5));
+    }
+}

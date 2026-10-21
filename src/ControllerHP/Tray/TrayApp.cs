@@ -23,6 +23,7 @@ internal sealed class TrayApp : ApplicationContext
     private readonly System.Windows.Forms.Timer _timer = new();
     private readonly System.Windows.Forms.Timer _settleTimer = new();
     private readonly ControllerNotifier _notifier = new();
+    private readonly BatteryHistory _history = new();
     private IReadOnlyList<ControllerBattery> _readings = [];
     private bool _lightTaskbar = Theme.SystemUsesLight();
     private Flyout? _flyout;
@@ -37,6 +38,8 @@ internal sealed class TrayApp : ApplicationContext
         _menu.Opening += (_, _) => BuildMenu();
         ApplySettings();
         Settings.Changed += OnSettingsChanged;
+        BatteryHistory.Trim();
+        BatteryHistory.CloseOpenSessions();
 
         _slots.Add(new TrayEntry(_menu, ToggleFlyout));
         _slotIds.Add(null);
@@ -80,7 +83,11 @@ internal sealed class TrayApp : ApplicationContext
         var previous = _readings;
         _readings = ReadAllSources();
         if (!_readings.SequenceEqual(previous))
+        {
             LogHistory(_readings);
+            _history.Record(_readings);
+        }
+        BatteryHistory.Heartbeat();
 
         UpdateSlots();
         _flyout?.SetReadings(Prioritise(_readings).ToList());
@@ -316,6 +323,7 @@ internal sealed class TrayApp : ApplicationContext
         }
         _flyout?.Close();
         _settingsWindow?.Close();
+        _history.Record([]); // close every controller's session on a clean exit
         foreach (var slot in _slots)
             slot.Dispose();
         _menu.Dispose();

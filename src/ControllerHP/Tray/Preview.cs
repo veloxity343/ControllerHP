@@ -96,17 +96,21 @@ internal static partial class Preview
         sheet.Save(path, System.Drawing.Imaging.ImageFormat.Png);
     }
 
-    /// <summary>Renders the settings window in dark and light mode, side by side.</summary>
+    /// <summary>Renders each page of the settings window, one row per page, in dark and light mode side by side.</summary>
     public static void WriteSettingsSheet(string path)
     {
         var shots = new List<Bitmap>();
-        foreach (var palette in new[] { Palette.Dark, Palette.LightMode })
+        int pages;
+        using (var probe = new SettingsWindow(Palette.Dark))
+            pages = probe.PageCount;
+        foreach (var (page, palette) in Enumerable.Range(0, pages).SelectMany(p => new[] { (p, Palette.Dark), (p, Palette.LightMode) }))
         {
             // Shown off-screen so its child controls exist; PrintWindow captures it there, title bar included.
-            using var window = new SettingsWindow(palette) { StartPosition = FormStartPosition.Manual, Location = new Point(-20000, 0) };
+            using var window = new SettingsWindow(palette, SampleHistory) { StartPosition = FormStartPosition.Manual, Location = new Point(-20000, 0) };
+            window.ShowPage(page);
             window.Show();
             // Tall enough to show the whole page without scrolling.
-            window.Height = window.LogicalToDeviceUnits(1000);
+            window.Height = window.LogicalToDeviceUnits(1300);
             // Paint it and its children now, then let the compositor pick that up: PrintWindow copies the
             // composed window, and capturing a brand-new window too early comes out black.
             window.Refresh();
@@ -124,17 +128,46 @@ internal static partial class Preview
             window.Close();
         }
 
-        using var sheet = new Bitmap(shots.Sum(s => s.Width) + 20, shots.Max(s => s.Height),
+        int width = shots[0].Width, height = shots[0].Height;
+        using var sheet = new Bitmap(width * 2 + 20, (height + 20) * pages - 20,
             System.Drawing.Imaging.PixelFormat.Format24bppRgb);
         using (var g = Graphics.FromImage(sheet))
         {
             g.Clear(Color.FromArgb(128, 128, 128));
-            g.DrawImage(shots[0], 0, 0);
-            g.DrawImage(shots[1], shots[0].Width + 20, 0);
+            for (int i = 0; i < shots.Count; i++)
+                g.DrawImage(shots[i], i % 2 * (width + 20), i / 2 * (height + 20));
         }
         sheet.Save(path, System.Drawing.Imaging.ImageFormat.Png);
         foreach (var shot in shots)
             shot.Dispose();
+    }
+
+    /// <summary>
+    /// A day of made-up history: an Xbox pad draining in 1% steps with a disconnected stretch, and a
+    /// DualSense dropping in 10% steps, then charging.
+    /// </summary>
+    private static List<HistorySeries> SampleHistory(DateTime since)
+    {
+        var now = DateTime.Now;
+        var xbox = new List<HistoryPoint>();
+        for (int i = 0; i <= 60; i++)
+            xbox.Add(new(now.AddHours(-22 + i * 0.25), 100 - i, false));
+        xbox.Add(new(now.AddHours(-6.75), null, false));
+        xbox.Add(new(now.AddHours(-4), 40, false));
+        for (int i = 1; i <= 16; i++)
+            xbox.Add(new(now.AddHours(-4 + i * 0.25), 40 - i, false));
+
+        var dualSense = new List<HistoryPoint>();
+        for (int i = 0; i <= 8; i++)
+            dualSense.Add(new(now.AddHours(-18 + i * 1.5), 85 - i * 10, false));
+        for (int i = 1; i <= 7; i++)
+            dualSense.Add(new(now.AddHours(-6 + i * 0.6), 5 + i * 10, true));
+
+        return
+        [
+            new("xbox", "Xbox Wireless Controller", 0, [.. xbox.Where(p => p.Time >= since)]),
+            new("dualsense", "DualSense Wireless Controller", 1, [.. dualSense.Where(p => p.Time >= since)]),
+        ];
     }
 
     private const uint PwRenderFullContent = 2;

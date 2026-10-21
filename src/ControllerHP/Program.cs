@@ -64,7 +64,7 @@ internal static partial class Program
     internal const string ErrorLogFile = "error.log";
     internal const string HistoryLogFile = "history.log";
 
-    private static readonly string LogDirectory = Path.Combine(
+    internal static readonly string LogDirectory = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ControllerHP");
 
     /// <summary>Appends to a log in %LOCALAPPDATA%\ControllerHP, since a tray app has nowhere else to report.</summary>

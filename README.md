@@ -70,11 +70,11 @@ dotnet build ControllerHP.sln
 |---|---|
 | `--list` | Prints what every battery source reports for each controller, raw values included |
 | `--preview <file.png>` | Renders every icon state and pop-up to an image |
-| `--preview-settings <file.png>` | Renders the settings window in dark and light mode to an image |
+| `--preview-settings <file.png>` | Renders each page of the settings window, in dark and light mode, to an image |
 | `--demo` | Plays the sample pop-ups on screen |
 | `--hid-probe` | Dumps the raw HID reports of connected Xbox and PlayStation controllers, and Xbox GATT services |
 
-Unhandled errors are logged to `%LOCALAPPDATA%\ControllerHP\error.log`, and every reading change is logged with a timestamp to `history.log` in the same folder.
+Unhandled errors are logged to `%LOCALAPPDATA%\ControllerHP\error.log`, and every reading change is logged with a timestamp to `history.log` in the same folder. `battery.csv` there holds the last 90 days of readings per controller, for the Battery history page.
 
 ### Contributing
 
