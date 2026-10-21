@@ -171,7 +171,7 @@ internal sealed class TrayApp : ApplicationContext
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"{source.Name} failed: {ex}");
+                Program.LogOnce($"{source.Name} failed: {ex.GetType().Name}: {ex.Message}");
             }
         }
         return readings;

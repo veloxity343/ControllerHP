@@ -72,6 +72,19 @@ internal static partial class Program
         catch (UnauthorizedAccessException) { }
     }
 
+    private static readonly HashSet<string> LoggedOnce = [];
+
+    /// <summary>Logs a recurring problem the first time it appears, rather than on every 30-second poll.</summary>
+    internal static void LogOnce(string message)
+    {
+        lock (LoggedOnce)
+        {
+            if (!LoggedOnce.Add(message))
+                return;
+        }
+        Log(message);
+    }
+
     [LibraryImport("kernel32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool AttachConsole(int processId);
