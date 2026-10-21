@@ -15,6 +15,13 @@ internal static class Settings
         set => Write(nameof(ToastCorner), value.ToString());
     }
 
+    /// <summary>How many controllers get their own tray icon; 0 means one per controller.</summary>
+    public static int TrayIconLimit
+    {
+        get => Read(nameof(TrayIconLimit)) is int value && value >= 0 ? value : 1;
+        set => Write(nameof(TrayIconLimit), value);
+    }
+
     /// <summary>Whether connecting and disconnecting show a pop-up; battery warnings always do.</summary>
     public static bool ConnectionToasts
     {

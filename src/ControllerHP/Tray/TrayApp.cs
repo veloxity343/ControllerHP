@@ -15,8 +15,13 @@ internal sealed class TrayApp : ApplicationContext
     private readonly IReadOnlyList<IBatterySource> _sources;
     private readonly ContextMenuStrip _menu = new();
     private readonly SynchronizationContext _ui;
-    private readonly Dictionary<string, TrayEntry> _entries = [];
-    private readonly TrayEntry _placeholder;
+    /// <summary>
+    /// Tray icons are slots reused as controllers come and go, so they keep their place in the taskbar.
+    /// The first slot always exists and shows the placeholder when nothing is connected.
+    /// </summary>
+    private readonly List<TrayEntry> _slots = [];
+    private readonly List<string?> _slotIds = [];
+    private int _iconLimit = Settings.TrayIconLimit;
     private readonly System.Windows.Forms.Timer _timer = new();
     private readonly System.Windows.Forms.Timer _settleTimer = new();
     private readonly ControllerNotifier _notifier = new();
@@ -32,8 +37,9 @@ internal sealed class TrayApp : ApplicationContext
         _notifier.Corner = Settings.ToastCorner;
         _notifier.ConnectionToasts = Settings.ConnectionToasts;
 
-        _placeholder = new TrayEntry(_menu);
-        _placeholder.Update(null, _lightTaskbar);
+        _slots.Add(new TrayEntry(_menu));
+        _slotIds.Add(null);
+        _slots[0].Update(null, _lightTaskbar);
 
         foreach (var source in _sources)
             source.ControllersChanged += OnControllersChanged;
@@ -63,7 +69,6 @@ internal sealed class TrayApp : ApplicationContext
         _ui.Post(_ =>
         {
             _lightTaskbar = IsLightTaskbar();
-            _placeholder.Update(null, _lightTaskbar);
             Refresh();
         }, null);
     }
@@ -75,26 +80,79 @@ internal sealed class TrayApp : ApplicationContext
         if (!_readings.SequenceEqual(previous))
             LogHistory(_readings);
 
-        var seen = new HashSet<string>();
-        foreach (var reading in _readings)
-        {
-            seen.Add(reading.Id);
-            if (!_entries.TryGetValue(reading.Id, out var entry))
-                _entries[reading.Id] = entry = new TrayEntry(_menu);
-            entry.Update(reading, _lightTaskbar);
-        }
-
-        foreach (var id in _entries.Keys.Where(id => !seen.Contains(id)).ToList())
-        {
-            _entries[id].Dispose();
-            _entries.Remove(id);
-        }
-
-        _placeholder.Visible = _entries.Count == 0;
+        UpdateSlots();
 
         if (_notifier.Update(_readings))
             _settleTimer.Start();
     }
+
+    /// <summary>
+    /// Shows the controllers that most need attention, up to the icon limit: lowest battery first,
+    /// charging ones last. The rest are listed in the last icon's tooltip and in the menu.
+    /// </summary>
+    private void UpdateSlots()
+    {
+        var shown = Prioritise(_readings).ToList();
+        var hidden = new List<ControllerBattery>();
+        if (_iconLimit > 0 && shown.Count > _iconLimit)
+        {
+            hidden = shown[_iconLimit..];
+            shown = shown[.._iconLimit];
+        }
+
+        int count = Math.Max(1, shown.Count);
+        while (_slots.Count < count)
+        {
+            _slots.Add(new TrayEntry(_menu));
+            _slotIds.Add(null);
+        }
+        while (_slots.Count > count)
+        {
+            _slots[^1].Dispose();
+            _slots.RemoveAt(_slots.Count - 1);
+            _slotIds.RemoveAt(_slotIds.Count - 1);
+        }
+
+        // Controllers still shown keep their slot; newcomers fill the free ones.
+        var assigned = new ControllerBattery?[count];
+        var unplaced = new List<ControllerBattery>();
+        foreach (var reading in shown)
+        {
+            int slot = _slotIds.IndexOf(reading.Id);
+            if (slot >= 0 && assigned[slot] is null)
+                assigned[slot] = reading;
+            else
+                unplaced.Add(reading);
+        }
+        foreach (var reading in unplaced)
+            assigned[Array.IndexOf(assigned, null)] = reading;
+
+        string? more = hidden.Count == 0
+            ? null
+            : $"+{hidden.Count} more: {string.Join("; ", hidden.Select(r => r.Describe()))}";
+        for (int i = 0; i < count; i++)
+        {
+            _slotIds[i] = assigned[i]?.Id;
+            _slots[i].Update(assigned[i], _lightTaskbar, i == count - 1 ? more : null);
+        }
+    }
+
+    /// <summary>
+    /// Another controller takes a shown one's icon once it's this many points lower, so batteries that
+    /// report in 1% steps don't trade places on every step, while 10% steps switch straight away.
+    /// </summary>
+    private const int TakeOverMargin = 3;
+
+    private IEnumerable<ControllerBattery> Prioritise(IEnumerable<ControllerBattery> readings) =>
+        readings
+            .Select((reading, index) => (reading, index, shown: _slotIds.Contains(reading.Id)))
+            .OrderBy(r => r.reading.Power is ChargeState.Charging or ChargeState.Wired ? 2
+                : r.reading.EffectivePercent is null ? 1 : 0)
+            // Half a point under the margin, so exactly the margin lower takes over.
+            .ThenBy(r => (r.reading.EffectivePercent ?? 0) - (r.shown ? TakeOverMargin - 0.5 : 0))
+            .ThenBy(r => r.shown ? 0 : 1)
+            .ThenBy(r => r.index)
+            .Select(r => r.reading);
 
     /// <summary>Records every change so battery behaviour (step sizes, update latency) can be checked later.</summary>
     private static void LogHistory(IReadOnlyList<ControllerBattery> readings) =>
@@ -131,6 +189,16 @@ internal sealed class TrayApp : ApplicationContext
         _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add(new ToolStripMenuItem("Refresh now", null, (_, _) => Refresh()));
 
+        var icons = new ToolStripMenuItem("Tray icons");
+        foreach (var (limit, label) in IconLimitLabels)
+        {
+            icons.DropDownItems.Add(new ToolStripMenuItem(label, null, (_, _) => SetIconLimit(limit))
+            {
+                Checked = _iconLimit == limit,
+            });
+        }
+        _menu.Items.Add(icons);
+
         var position = new ToolStripMenuItem("Pop-up position");
         foreach (var (corner, label) in CornerLabels)
         {
@@ -152,6 +220,15 @@ internal sealed class TrayApp : ApplicationContext
             Checked = StartsWithWindows(),
         });
         _menu.Items.Add(new ToolStripMenuItem("Exit", null, (_, _) => ExitThread()));
+    }
+
+    private static readonly (int Limit, string Label)[] IconLimitLabels =
+        [(1, "1"), (2, "2"), (3, "3"), (4, "4"), (0, "One per controller")];
+
+    private void SetIconLimit(int limit)
+    {
+        Settings.TrayIconLimit = _iconLimit = limit;
+        UpdateSlots();
     }
 
     private static readonly (ToastCorner Corner, string Label)[] CornerLabels =
@@ -198,9 +275,8 @@ internal sealed class TrayApp : ApplicationContext
             source.ControllersChanged -= OnControllersChanged;
             (source as IDisposable)?.Dispose();
         }
-        foreach (var entry in _entries.Values)
-            entry.Dispose();
-        _placeholder.Dispose();
+        foreach (var slot in _slots)
+            slot.Dispose();
         _menu.Dispose();
         base.ExitThreadCore();
     }
@@ -215,22 +291,18 @@ internal sealed class TrayEntry : IDisposable
     private OwnedIcon? _image;
     private ControllerBattery? _shown;
     private bool? _shownLightTaskbar;
+    private string? _shownMore;
 
     public TrayEntry(ContextMenuStrip menu)
     {
         _notifyIcon = new NotifyIcon { ContextMenuStrip = menu, Visible = true };
     }
 
-    public bool Visible
-    {
-        get => _notifyIcon.Visible;
-        set => _notifyIcon.Visible = value;
-    }
-
     /// <param name="battery">null shows the "no controllers" placeholder.</param>
-    public void Update(ControllerBattery? battery, bool lightTaskbar)
+    /// <param name="more">Controllers without an icon of their own, appended to the tooltip.</param>
+    public void Update(ControllerBattery? battery, bool lightTaskbar, string? more = null)
     {
-        if (_image is not null && battery == _shown && lightTaskbar == _shownLightTaskbar)
+        if (_image is not null && battery == _shown && lightTaskbar == _shownLightTaskbar && more == _shownMore)
             return;
 
         var image = BatteryIconRenderer.Render(battery, lightTaskbar);
@@ -239,10 +311,13 @@ internal sealed class TrayEntry : IDisposable
         _image = image;
 
         string text = battery?.Describe() ?? "ControllerHP: no controllers connected";
+        if (more is not null)
+            text += "\n" + more;
         _notifyIcon.Text = text.Length > MaxTooltipLength ? text[..MaxTooltipLength] : text;
 
         _shown = battery;
         _shownLightTaskbar = lightTaskbar;
+        _shownMore = more;
     }
 
     public void Dispose()
