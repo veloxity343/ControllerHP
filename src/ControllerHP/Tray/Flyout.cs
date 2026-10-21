@@ -28,6 +28,10 @@ internal sealed partial class Flyout : Form
     private Point _restingLocation;
     private Size _slideFrom;
     private bool _closing;
+    private bool _gearHover;
+
+    /// <summary>The gear in the header was clicked; the flyout is already closing.</summary>
+    public event Action? SettingsRequested;
 
     public Flyout(IReadOnlyList<ControllerBattery> readings, Palette palette)
     {
@@ -255,11 +259,48 @@ internal sealed partial class Flyout : Form
     }
 
     protected override void OnPaint(PaintEventArgs e) =>
-        PaintContent(e.Graphics, ClientRectangle, _readings, _palette, DeviceDpi / 96f);
+        PaintContent(e.Graphics, ClientRectangle, _readings, _palette, DeviceDpi / 96f, _gearHover);
+
+    /// <summary>The settings gear at the right of the header.</summary>
+    private static Rectangle GearBounds(Rectangle bounds, float scale)
+    {
+        int size = (int)Math.Round(32 * scale);
+        int inset = (int)Math.Round(8 * scale);
+        return new Rectangle(bounds.Right - size - inset, bounds.Y + ((int)Math.Round(HeaderHeight * scale) - size) / 2, size, size);
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+        bool hover = GearBounds(ClientRectangle, DeviceDpi / 96f).Contains(e.Location);
+        if (hover != _gearHover)
+        {
+            _gearHover = hover;
+            Cursor = hover ? Cursors.Hand : Cursors.Default;
+            Invalidate();
+        }
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        base.OnMouseLeave(e);
+        _gearHover = false;
+        Invalidate();
+    }
+
+    protected override void OnMouseClick(MouseEventArgs e)
+    {
+        base.OnMouseClick(e);
+        if (e.Button == MouseButtons.Left && GearBounds(ClientRectangle, DeviceDpi / 96f).Contains(e.Location))
+        {
+            Dismiss();
+            SettingsRequested?.Invoke();
+        }
+    }
 
     /// <summary>Draws the flyout's contents; shared with the --preview sheet.</summary>
     public static void PaintContent(Graphics g, Rectangle bounds, IReadOnlyList<ControllerBattery> readings,
-        Palette palette, float scale)
+        Palette palette, float scale, bool gearHover = false)
     {
         int S(float v) => (int)Math.Round(v * scale);
         g.SmoothingMode = SmoothingMode.AntiAlias;
@@ -276,6 +317,18 @@ internal sealed partial class Flyout : Form
 
         TextRenderer.DrawText(g, "Controllers", headerFont,
             new Rectangle(left, bounds.Y, right - left, S(HeaderHeight)), palette.Text, flags);
+
+        var gear = GearBounds(bounds, scale);
+        if (gearHover)
+        {
+            using var hover = new SolidBrush(palette.Hover);
+            using var path = RoundedRect(gear, S(4));
+            g.FillPath(hover, path);
+        }
+        // Segoe MDL2 Assets ships with Windows 10 and 11; E713 is its Settings gear.
+        using (var iconFont = new Font("Segoe MDL2 Assets", 15f * scale, GraphicsUnit.Pixel))
+            TextRenderer.DrawText(g, "\uE713", iconFont, gear, palette.Text,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
 
         int y = bounds.Y + S(HeaderHeight);
         if (readings.Count == 0)

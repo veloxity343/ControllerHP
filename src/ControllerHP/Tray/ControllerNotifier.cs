@@ -17,7 +17,8 @@ internal sealed class ControllerNotifier : IDisposable
     /// <summary>Controllers already on when the app starts don't get a "connected" toast.</summary>
     private static readonly TimeSpan StartupQuietTime = TimeSpan.FromSeconds(5);
 
-    private static readonly int[] LowThresholds = [20, 10];
+    /// <summary>Battery warning levels, most lenient first: "low", then "critical".</summary>
+    public int[] LowThresholds { get; set; } = [20, 10];
     private const int RearmMargin = 5;
     private const int NoneNotified = int.MaxValue;
 
@@ -103,7 +104,7 @@ internal sealed class ControllerNotifier : IDisposable
     }
 
     /// <returns>The threshold newly crossed downwards, if any.</returns>
-    private static int? CheckThresholds(Tracked tracked)
+    private int? CheckThresholds(Tracked tracked)
     {
         var reading = tracked.Reading;
         if (reading.Power is ChargeState.Charging or ChargeState.Wired || reading.EffectivePercent is not int percent)

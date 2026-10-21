@@ -35,6 +35,13 @@ internal static partial class Program
             return 0;
         }
 
+        if (args.Length == 2 && args[0] == "--preview-settings")
+        {
+            ApplicationConfiguration.Initialize();
+            Preview.WriteSettingsSheet(args[1]);
+            return 0;
+        }
+
         if (args.Contains("--demo"))
         {
             ApplicationConfiguration.Initialize();

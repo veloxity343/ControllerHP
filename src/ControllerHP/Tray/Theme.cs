@@ -78,6 +78,13 @@ internal static partial class Theme
         }
     }
 
+    [LibraryImport("uxtheme.dll", StringMarshalling = StringMarshalling.Utf16)]
+    private static partial int SetWindowTheme(IntPtr hwnd, string? subAppName, string? subIdList);
+
+    /// <summary>Dark or light native parts (scroll bars) for a window and its children.</summary>
+    public static void SetControlTheme(IntPtr handle, bool light) =>
+        _ = SetWindowTheme(handle, light ? "Explorer" : "DarkMode_Explorer", null);
+
     /// <summary>Dark or light title bar for a normal window.</summary>
     public static void SetTitleBar(IntPtr handle, bool light)
     {

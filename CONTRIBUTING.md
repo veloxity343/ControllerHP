@@ -31,6 +31,7 @@ There are no automated tests; changes are checked against real controllers. The 
 |---|---|
 | `--list` | See what every battery source reports, raw values included |
 | `--preview <file.png>` | Check icon and pop-up rendering without a controller |
+| `--preview-settings <file.png>` | Check the settings window's layout in both modes |
 | `--demo` | Watch the sample pop-ups on screen |
 | `--hid-probe` | Dump raw HID reports, when working out a new controller's format |
 

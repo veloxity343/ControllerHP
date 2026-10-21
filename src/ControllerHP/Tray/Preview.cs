@@ -4,7 +4,7 @@ using ControllerHP.Battery;
 namespace ControllerHP.Tray;
 
 /// <summary>Design aids: a PNG sheet of every icon state, and a live run of sample toasts.</summary>
-internal static class Preview
+internal static partial class Preview
 {
     private static ControllerBattery Sample(int? percent, ChargeState power = ChargeState.Discharging) =>
         new("preview", "Xbox Wireless Controller", "preview", percent,
@@ -95,6 +95,48 @@ internal static class Preview
 
         sheet.Save(path, System.Drawing.Imaging.ImageFormat.Png);
     }
+
+    /// <summary>Renders the settings window in dark and light mode, side by side.</summary>
+    public static void WriteSettingsSheet(string path)
+    {
+        var shots = new List<Bitmap>();
+        foreach (var palette in new[] { Palette.Dark, Palette.LightMode })
+        {
+            // Shown off-screen so its child controls exist; PrintWindow captures it there, title bar included.
+            using var window = new SettingsWindow(palette) { StartPosition = FormStartPosition.Manual, Location = new Point(-20000, 0) };
+            window.Show();
+            // Tall enough to show the whole page without scrolling.
+            window.Height = window.LogicalToDeviceUnits(1000);
+            Application.DoEvents();
+            var shot = new Bitmap(window.Width, window.Height);
+            using (var g = Graphics.FromImage(shot))
+            {
+                IntPtr hdc = g.GetHdc();
+                PrintWindow(window.Handle, hdc, PwRenderFullContent);
+                g.ReleaseHdc(hdc);
+            }
+            shots.Add(shot);
+            window.Close();
+        }
+
+        using var sheet = new Bitmap(shots.Sum(s => s.Width) + 20, shots.Max(s => s.Height),
+            System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+        using (var g = Graphics.FromImage(sheet))
+        {
+            g.Clear(Color.FromArgb(128, 128, 128));
+            g.DrawImage(shots[0], 0, 0);
+            g.DrawImage(shots[1], shots[0].Width + 20, 0);
+        }
+        sheet.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+        foreach (var shot in shots)
+            shot.Dispose();
+    }
+
+    private const uint PwRenderFullContent = 2;
+
+    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static partial bool PrintWindow(IntPtr hwnd, IntPtr hdc, uint flags);
 
     /// <summary>Shows each sample toast for real, one after another, then exits.</summary>
     public static void RunToastDemo()

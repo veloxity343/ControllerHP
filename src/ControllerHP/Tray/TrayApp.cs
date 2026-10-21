@@ -9,8 +9,6 @@ internal sealed class TrayApp : ApplicationContext
     // Connects, disconnects and Bluetooth battery changes arrive as events. Polling only catches battery
     // drift on sources without change events (USB / Xbox Wireless Adapter) and anything an event missed.
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(30);
-    private const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    private const string RunValueName = "ControllerHP";
 
     private readonly IReadOnlyList<IBatterySource> _sources;
     private readonly ContextMenuStrip _menu = new();
@@ -28,6 +26,7 @@ internal sealed class TrayApp : ApplicationContext
     private IReadOnlyList<ControllerBattery> _readings = [];
     private bool _lightTaskbar = Theme.SystemUsesLight();
     private Flyout? _flyout;
+    private SettingsWindow? _settingsWindow;
     private DateTime _flyoutClosedAt;
 
     public TrayApp(IReadOnlyList<IBatterySource> sources)
@@ -36,8 +35,8 @@ internal sealed class TrayApp : ApplicationContext
         // Creating the ContextMenuStrip installs the WinForms SynchronizationContext on this thread.
         _ui = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
         _menu.Opening += (_, _) => BuildMenu();
-        _notifier.Corner = Settings.ToastCorner;
-        _notifier.ConnectionToasts = Settings.ConnectionToasts;
+        ApplySettings();
+        Settings.Changed += OnSettingsChanged;
 
         _slots.Add(new TrayEntry(_menu, ToggleFlyout));
         _slotIds.Add(null);
@@ -109,7 +108,22 @@ internal sealed class TrayApp : ApplicationContext
             _flyoutClosedAt = DateTime.UtcNow;
             _flyout = null;
         };
+        _flyout.SettingsRequested += ShowSettings;
         _flyout.ShowAt(Cursor.Position);
+    }
+
+    /// <summary>Opens the settings window, or brings it forward if it's already open.</summary>
+    private void ShowSettings()
+    {
+        if (_settingsWindow is null)
+        {
+            _settingsWindow = new SettingsWindow();
+            _settingsWindow.FormClosed += (_, _) => _settingsWindow = null;
+            _settingsWindow.Show();
+        }
+        if (_settingsWindow.WindowState == FormWindowState.Minimized)
+            _settingsWindow.WindowState = FormWindowState.Normal;
+        _settingsWindow.Activate();
     }
 
     /// <summary>
@@ -218,7 +232,7 @@ internal sealed class TrayApp : ApplicationContext
         var icons = new ToolStripMenuItem("Tray icons");
         foreach (var (limit, label) in IconLimitLabels)
         {
-            icons.DropDownItems.Add(new ToolStripMenuItem(label, null, (_, _) => SetIconLimit(limit))
+            icons.DropDownItems.Add(new ToolStripMenuItem(label, null, (_, _) => Settings.TrayIconLimit = limit)
             {
                 Checked = _iconLimit == limit,
             });
@@ -228,7 +242,7 @@ internal sealed class TrayApp : ApplicationContext
         var position = new ToolStripMenuItem("Pop-up position");
         foreach (var (corner, label) in CornerLabels)
         {
-            position.DropDownItems.Add(new ToolStripMenuItem(label, null, (_, _) => SetToastCorner(corner))
+            position.DropDownItems.Add(new ToolStripMenuItem(label, null, (_, _) => Settings.ToastCorner = corner)
             {
                 Checked = _notifier.Corner == corner,
             });
@@ -236,15 +250,17 @@ internal sealed class TrayApp : ApplicationContext
         _menu.Items.Add(position);
         _menu.Items.Add(new ToolStripMenuItem("Connection pop-ups", null, (_, _) =>
         {
-            Settings.ConnectionToasts = _notifier.ConnectionToasts = !_notifier.ConnectionToasts;
+            Settings.ConnectionToasts = !_notifier.ConnectionToasts;
         })
         {
             Checked = _notifier.ConnectionToasts,
         });
-        _menu.Items.Add(new ToolStripMenuItem("Start with Windows", null, (_, _) => SetStartWithWindows(!StartsWithWindows()))
+        _menu.Items.Add(new ToolStripMenuItem("Start with Windows", null, (_, _) => Settings.StartWithWindows = !Settings.StartWithWindows)
         {
-            Checked = StartsWithWindows(),
+            Checked = Settings.StartWithWindows,
         });
+        _menu.Items.Add(new ToolStripSeparator());
+        _menu.Items.Add(new ToolStripMenuItem("Settings…", null, (_, _) => ShowSettings()));
         _menu.Items.Add(new ToolStripMenuItem("Exit", null, (_, _) => ExitThread()));
 
         MenuRenderer.Apply(_menu, Theme.For(_lightTaskbar));
@@ -253,11 +269,6 @@ internal sealed class TrayApp : ApplicationContext
     private static readonly (int Limit, string Label)[] IconLimitLabels =
         [(1, "1"), (2, "2"), (0, "One per controller")];
 
-    private void SetIconLimit(int limit)
-    {
-        Settings.TrayIconLimit = _iconLimit = limit;
-        UpdateSlots();
-    }
 
     private static readonly (ToastCorner Corner, string Label)[] CornerLabels =
     [
@@ -265,25 +276,29 @@ internal sealed class TrayApp : ApplicationContext
         (ToastCorner.BottomRight, "Bottom right"), (ToastCorner.BottomLeft, "Bottom left"),
     ];
 
-    private void SetToastCorner(ToastCorner corner)
-    {
-        Settings.ToastCorner = _notifier.Corner = corner;
-        _notifier.ShowSample();
-    }
+    private void OnSettingsChanged() => _ui.Post(_ => ApplySettings(), null);
 
-    private static bool StartsWithWindows()
+    /// <summary>Applies the saved settings, from the tray menu or the settings window.</summary>
+    private void ApplySettings()
     {
-        using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath);
-        return key?.GetValue(RunValueName) is string;
-    }
+        _notifier.ConnectionToasts = Settings.ConnectionToasts;
+        _notifier.LowThresholds = [Settings.LowWarning, Settings.CriticalWarning];
 
-    private static void SetStartWithWindows(bool enabled)
-    {
-        using var key = Registry.CurrentUser.CreateSubKey(RunKeyPath);
-        if (enabled)
-            key.SetValue(RunValueName, $"\"{Environment.ProcessPath}\"");
-        else
-            key.DeleteValue(RunValueName, throwOnMissingValue: false);
+        var corner = Settings.ToastCorner;
+        if (corner != _notifier.Corner)
+        {
+            _notifier.Corner = corner;
+            // At startup, before the tray icons exist, the saved corner is just restored without a sample.
+            if (_slots.Count > 0)
+                _notifier.ShowSample();
+        }
+
+        int limit = Settings.TrayIconLimit;
+        if (limit != _iconLimit)
+        {
+            _iconLimit = limit;
+            UpdateSlots();
+        }
     }
 
     protected override void ExitThreadCore()
@@ -292,12 +307,14 @@ internal sealed class TrayApp : ApplicationContext
         _settleTimer.Dispose();
         _notifier.Dispose();
         SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
+        Settings.Changed -= OnSettingsChanged;
         foreach (var source in _sources)
         {
             source.ControllersChanged -= OnControllersChanged;
             (source as IDisposable)?.Dispose();
         }
         _flyout?.Close();
+        _settingsWindow?.Close();
         foreach (var slot in _slots)
             slot.Dispose();
         _menu.Dispose();
