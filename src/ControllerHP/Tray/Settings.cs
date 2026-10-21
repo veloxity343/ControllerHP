@@ -38,6 +38,13 @@ internal static class Settings
         set => Write(nameof(ConnectionToasts), value ? 1 : 0);
     }
 
+    /// <summary>Hold pop-ups while a fullscreen app runs; they're always held in exclusive fullscreen.</summary>
+    public static bool HoldInFullscreen
+    {
+        get => Read(nameof(HoldInFullscreen)) is int value && value != 0;
+        set => Write(nameof(HoldInFullscreen), value ? 1 : 0);
+    }
+
     public const int MinWarning = 5, MaxWarning = 50, WarningStep = 5;
 
     /// <summary>The "Battery low" warning level, in percent.</summary>

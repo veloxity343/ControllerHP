@@ -24,7 +24,7 @@ The panel and Settings show each controller's connection: USB, Bluetooth or Xbox
 - **PlayStation controllers held by another tool:** if a tool like DS4Windows with HidHide takes exclusive control of a controller, ControllerHP can't read it, and it shows as *battery unknown*.
 - **Xbox controllers over Bluetooth:** Windows gives no charging signal, so ControllerHP works it out. The bolt appears at the first rise in percentage, and clears at 100% or after 5 minutes without a rise.
 - **Two identical Xbox controllers**, one on Bluetooth and one not, may have their readings swapped.
-- **Exclusive fullscreen:** pop-ups can't appear over games running in exclusive fullscreen. Borderless and windowed modes are fine.
+- **Exclusive fullscreen:** pop-ups can't appear over games running in exclusive fullscreen, so they're held and shown once the game closes. Borderless and windowed modes are fine.
 
 ## How batteries are read
 

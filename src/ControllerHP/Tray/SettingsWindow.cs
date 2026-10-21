@@ -31,6 +31,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
     private readonly SegmentedControl _iconLimit = new(["1", "2", "One per controller"], 130);
     private readonly SegmentedControl _corner = new(["Top left", "Top right", "Bottom left", "Bottom right"], 105);
     private readonly ToggleSwitch _connectionToasts = new();
+    private readonly ToggleSwitch _holdInFullscreen = new();
     private readonly SwitchedStepper _low = new(Settings.MinWarning + Settings.WarningStep, Settings.MaxWarning, Settings.WarningStep);
     private readonly SwitchedStepper _critical = new(Settings.MinWarning, Settings.MaxWarning - Settings.WarningStep, Settings.WarningStep);
     private readonly ToggleSwitch _startWithWindows = new();
@@ -150,6 +151,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
         items.Add(new Heading("Pop-ups", 15));
         items.Add(new SettingCard("Position", "Which corner of the screen pop-ups appear in.", _corner, stacked: true));
         items.Add(new SettingCard("Connection pop-ups", "When a controller connects or disconnects.", _connectionToasts));
+        items.Add(new SettingCard("Hold while a game is fullscreen", "Show them once the game closes.", _holdInFullscreen));
 
         items.Add(new Heading("Battery warnings", 15));
         items.Add(new Note("Pop-ups when a controller's battery runs down, whatever the connection pop-ups setting."));
@@ -239,6 +241,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
         _iconLimit.SelectedIndex = Math.Max(0, Array.IndexOf(IconLimits, Settings.TrayIconLimit));
         _corner.SelectedIndex = Math.Max(0, Array.IndexOf(Corners, Settings.ToastCorner));
         _connectionToasts.Checked = Settings.ConnectionToasts;
+        _holdInFullscreen.Checked = Settings.HoldInFullscreen;
         _low.Switch.Checked = Settings.LowWarningEnabled;
         _low.Stepper.Enabled = _low.Switch.Checked;
         _critical.Switch.Checked = Settings.CriticalWarningEnabled;
@@ -266,6 +269,11 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
         {
             if (!_loading)
                 Settings.ConnectionToasts = _connectionToasts.Checked;
+        };
+        _holdInFullscreen.CheckedChanged += (_, _) =>
+        {
+            if (!_loading)
+                Settings.HoldInFullscreen = _holdInFullscreen.Checked;
         };
         _low.Stepper.ValueChanged += (_, _) =>
         {

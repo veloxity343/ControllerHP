@@ -5,6 +5,7 @@ namespace ControllerHP.Tray;
 /// <summary>
 /// Turns successive readings into toasts: controller connected/disconnected and battery crossing the
 /// low thresholds. Each threshold fires once and re-arms after the battery recovers or starts charging.
+/// While a game is fullscreen, toasts can be held and shown once it closes.
 /// </summary>
 internal sealed class ControllerNotifier : IDisposable
 {
@@ -43,6 +44,68 @@ internal sealed class ControllerNotifier : IDisposable
     private readonly Dictionary<string, Tracked> _tracked = [];
     private readonly DateTime _startedAt = DateTime.UtcNow;
 
+    private enum ToastKind { Connection, Warning }
+
+    /// <summary>Toasts waiting for a fullscreen game to close: the latest per controller, in arrival order.</summary>
+    private readonly Dictionary<string, (ToastContent Content, ToastKind Kind)> _held = [];
+    private readonly System.Windows.Forms.Timer _heldTimer = new() { Interval = 2000 };
+
+    /// <summary>
+    /// Hold toasts while a fullscreen app (usually a borderless game) is running. Toasts are always held in
+    /// exclusive fullscreen, where they couldn't be seen anyway.
+    /// </summary>
+    public bool HoldInFullscreen { get; set; }
+
+    /// <summary>How the fullscreen state is checked; replaceable so holding can be tested without a game.</summary>
+    public Func<FullscreenState> QueryFullscreen { get; set; } = Fullscreen.Query;
+
+    public ControllerNotifier()
+    {
+        _heldTimer.Tick += (_, _) => ShowHeldIfClear();
+    }
+
+    private bool ShouldHold() => QueryFullscreen() switch
+    {
+        FullscreenState.ExclusiveGame => true,
+        FullscreenState.App => HoldInFullscreen,
+        _ => false,
+    };
+
+    private void Show(string id, ToastContent content, ToastKind kind)
+    {
+        if (!ShouldHold())
+        {
+            _toasts.Show(content);
+            return;
+        }
+        // One per controller: a newer toast (say Disconnected after Battery low) replaces the older one.
+        _held.Remove(id);
+        _held[id] = (content, kind);
+        _heldTimer.Start();
+    }
+
+    /// <summary>Once nothing is fullscreen, shows what was held, minus warnings for controllers charged since.</summary>
+    private void ShowHeldIfClear()
+    {
+        if (_held.Count == 0 || ShouldHold())
+        {
+            if (_held.Count == 0)
+                _heldTimer.Stop();
+            return;
+        }
+        _heldTimer.Stop();
+        foreach (var (id, (content, kind)) in _held.ToList())
+        {
+            bool chargedSince = _tracked.TryGetValue(id, out var tracked) &&
+                (tracked.Reading.Power is ChargeState.Charging or ChargeState.Wired || tracked.Notified == NoneNotified);
+            if (kind == ToastKind.Warning && chargedSince)
+                continue;
+            _toasts.Show(content);
+        }
+        _held.Clear();
+    }
+
+
     /// <summary>Whether connecting and disconnecting show a toast; battery warnings always do.</summary>
     public bool ConnectionToasts { get; set; } = true;
 
@@ -68,7 +131,7 @@ internal sealed class ControllerNotifier : IDisposable
             _tracked.Remove(gone);
             // A controller that vanished before it was announced was a blip; stay quiet.
             if (tracked.Announced && ConnectionToasts)
-                _toasts.Show(new ToastContent(tracked.Reading.Name, "Disconnected", null, DisconnectedAccent));
+                Show(gone, new ToastContent(tracked.Reading.Name, "Disconnected", null, DisconnectedAccent), ToastKind.Connection);
         }
 
         foreach (var reading in readings)
@@ -95,13 +158,14 @@ internal sealed class ControllerNotifier : IDisposable
                 var accent = crossed is not null && reading.EffectivePercent is int p
                     ? BatteryIconRenderer.FillColor(p)
                     : ConnectedAccent;
-                _toasts.Show(new ToastContent(reading.Name, $"Connected · {Status(reading)}", reading, accent));
+                Show(reading.Id, new ToastContent(reading.Name, $"Connected · {Status(reading)}", reading, accent),
+                    crossed is null ? ToastKind.Connection : ToastKind.Warning);
             }
             else if (crossed is int threshold && reading.EffectivePercent is int percent)
             {
                 string title = threshold == CriticalWarning ? "Battery critical" : "Battery low";
-                _toasts.Show(new ToastContent(reading.Name, $"{title} · {percent}%", reading,
-                    BatteryIconRenderer.FillColor(percent)));
+                Show(reading.Id, new ToastContent(reading.Name, $"{title} · {percent}%", reading,
+                    BatteryIconRenderer.FillColor(percent)), ToastKind.Warning);
             }
         }
 
@@ -142,5 +206,9 @@ internal sealed class ControllerNotifier : IDisposable
         _ => "battery unknown",
     };
 
-    public void Dispose() => _toasts.Dispose();
+    public void Dispose()
+    {
+        _heldTimer.Dispose();
+        _toasts.Dispose();
+    }
 }

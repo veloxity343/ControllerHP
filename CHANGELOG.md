@@ -11,6 +11,10 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 
 ## [Unreleased]
 
+### Added
+
+- **Pop-ups during fullscreen games:** in exclusive fullscreen, where pop-ups can't appear, they're now held and shown once the game closes, instead of being lost. A new **Hold while a game is fullscreen** setting does the same for borderless games. At most one shows per controller, and a held battery warning is dropped if the controller was charged meanwhile.
+
 ## [0.3.0] - 2026-10-21
 
 ### Added

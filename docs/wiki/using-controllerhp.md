@@ -61,7 +61,11 @@ Each warning shows once per discharge. It can show again after the controller ch
 
 Pop-ups disappear after a few seconds; click one to dismiss it sooner. You can move them to another corner, turn off the connection ones, or change or turn off the warnings: see [Settings](#settings).
 
-Pop-ups can't appear over games running in *exclusive* fullscreen. Borderless and windowed modes are fine.
+**While you're playing fullscreen:**
+- **Exclusive fullscreen:** pop-ups can't appear over the game, so they're held and shown once it closes.
+- **Borderless fullscreen:** pop-ups show over the game as normal. If you'd rather not be interrupted, turn on **Hold while a game is fullscreen** in Settings.
+
+Held pop-ups show once the game closes, at most one per controller, the latest for each. A held battery warning is dropped if the controller was charged in the meantime.
 
 ## The right-click menu
 
@@ -88,6 +92,7 @@ Open it from the panel's gear or **Settings…** in the right-click menu. It fol
 | **Tray icons** | 1 | 1, 2, or one per controller |
 | **Position** | Top right | Any corner of the screen |
 | **Connection pop-ups** | On | On or off |
+| **Hold while a game is fullscreen** | Off | On or off. Pop-ups are always held in exclusive fullscreen, where they can't show |
 | **Low battery** | On, 20% | On or off; 10% to 50%, in 5% steps |
 | **Critical battery** | On, 10% | On or off; 5% to 45%, always below the low level |
 | **Start with Windows** | Off | On or off |

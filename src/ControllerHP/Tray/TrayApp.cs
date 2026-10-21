@@ -341,6 +341,7 @@ internal sealed class TrayApp : ApplicationContext
     private void ApplySettings()
     {
         _notifier.ConnectionToasts = Settings.ConnectionToasts;
+        _notifier.HoldInFullscreen = Settings.HoldInFullscreen;
         _notifier.LowWarning = Settings.LowWarningEnabled ? Settings.LowWarning : null;
         _notifier.CriticalWarning = Settings.CriticalWarningEnabled ? Settings.CriticalWarning : null;
 

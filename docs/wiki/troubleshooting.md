@@ -70,7 +70,8 @@ If it's still missing, run `ControllerHP.exe --list` (see [Reporting a bug](#rep
 ## Pop-ups don't appear while I'm playing
 
 **Causes and fixes:**
-- **The game is in exclusive fullscreen**, which nothing can draw over. Switch the game to borderless or windowed mode.
+- **The game is in exclusive fullscreen**, which nothing can draw over. ControllerHP holds the pop-ups and shows them once the game closes. To see them during play, switch the game to borderless or windowed mode.
+- **Hold while a game is fullscreen is on** in Settings, which also holds them in borderless games until the game closes.
 - **The pop-up is turned off.** Check **Connection pop-ups** and **Battery warnings** in the right-click menu, or the levels in Settings.
 - **Each warning only shows once per discharge.** It shows again after the controller charges.
 
