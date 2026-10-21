@@ -50,6 +50,9 @@ public sealed class GamingInputSource : IBatterySource, IDisposable
         foreach (var pad in pads)
         {
             var raw = RawGameController.FromGameController(pad);
+            // PlayStationSource reads these from their HID reports, which carry the real battery.
+            if (raw is not null && raw.HardwareVendorId == PlayStationSource.SonyVendorId)
+                continue;
             string id = raw?.NonRoamableId is { Length: > 0 } nid ? nid : $"wgi:{pad.GetHashCode()}";
             string? hardware = raw is null ? null : $"{raw.HardwareVendorId:X4}:{raw.HardwareProductId:X4}";
             var reading = ToReading(id, DisplayName(raw), pad.TryGetBatteryReport()) with { Hardware = hardware };

@@ -11,42 +11,12 @@ namespace ControllerHP.Battery;
 /// </summary>
 internal static partial class HidProbe
 {
-    private const uint GenericRead = 0x80000000;
-    private const uint FileShareReadWrite = 0x00000003;
-    private const uint OpenExisting = 3;
-    private const uint FileFlagOverlapped = 0x40000000;
-
-    [LibraryImport("kernel32.dll", EntryPoint = "CreateFileW", StringMarshalling = StringMarshalling.Utf16, SetLastError = true)]
-    private static partial SafeFileHandle CreateFile(string path, uint access, uint share, IntPtr security,
-        uint creation, uint flags, IntPtr template);
-
     [LibraryImport("hid.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool HidD_GetInputReport(SafeFileHandle device, byte[] buffer, int length);
 
     [LibraryImport("hid.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool HidD_GetPreparsedData(SafeFileHandle device, out IntPtr preparsed);
-
-    [LibraryImport("hid.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool HidD_FreePreparsedData(IntPtr preparsed);
-
-    [LibraryImport("hid.dll")]
-    private static partial int HidP_GetCaps(IntPtr preparsed, out HidpCaps caps);
-
-    [LibraryImport("hid.dll")]
     private static partial int HidP_GetValueCaps(int reportType, [Out] HidpValueCaps[] caps, ref ushort length, IntPtr preparsed);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private unsafe struct HidpCaps
-    {
-        public ushort Usage, UsagePage, InputReportByteLength, OutputReportByteLength, FeatureReportByteLength;
-        public fixed ushort Reserved[17];
-        public ushort NumberLinkCollectionNodes, NumberInputButtonCaps, NumberInputValueCaps, NumberInputDataIndices,
-            NumberOutputButtonCaps, NumberOutputValueCaps, NumberOutputDataIndices,
-            NumberFeatureButtonCaps, NumberFeatureValueCaps, NumberFeatureDataIndices;
-    }
 
     /// <summary>HIDP_VALUE_CAPS (72 bytes); only the leading fields are read.</summary>
     [StructLayout(LayoutKind.Sequential, Size = 72)]
@@ -66,14 +36,14 @@ internal static partial class HidProbe
 
     private static void DescribeCaps(SafeFileHandle handle)
     {
-        if (!HidD_GetPreparsedData(handle, out var preparsed))
+        if (!Hid.HidD_GetPreparsedData(handle, out var preparsed))
         {
             Console.WriteLine("    no preparsed data");
             return;
         }
         try
         {
-            HidP_GetCaps(preparsed, out var caps);
+            Hid.HidP_GetCaps(preparsed, out var caps);
             Console.WriteLine($"    caps: input={caps.InputReportByteLength}B output={caps.OutputReportByteLength}B feature={caps.FeatureReportByteLength}B");
             foreach (var (type, name, count) in new[] { (0, "input", caps.NumberInputValueCaps), (2, "feature", caps.NumberFeatureValueCaps) })
             {
@@ -88,7 +58,7 @@ internal static partial class HidProbe
         }
         finally
         {
-            HidD_FreePreparsedData(preparsed);
+            Hid.HidD_FreePreparsedData(preparsed);
         }
     }
 
@@ -122,8 +92,7 @@ internal static partial class HidProbe
         foreach (var device in devices)
         {
             Console.WriteLine($"  {device.Name}: {device.Id}");
-            using var handle = CreateFile(device.Id, GenericRead, FileShareReadWrite, IntPtr.Zero, OpenExisting,
-                FileFlagOverlapped, IntPtr.Zero);
+            using var handle = Hid.Open(device.Id, Hid.GenericRead);
             if (handle.IsInvalid)
             {
                 Console.WriteLine($"    open failed: error {Marshal.GetLastWin32Error()}");

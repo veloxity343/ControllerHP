@@ -23,17 +23,20 @@ Requires Windows 10 1809 or later.
 |---|---|---|---|
 | Xbox One / Series | Bluetooth | Exact % | Inferred from the % rising (a minute or two after plugging in) |
 | Xbox One / Series | USB, Xbox Wireless Adapter | Exact % or 4 levels | Yes |
-| DualSense / DualShock 4 | — | Planned | Planned |
+| DualSense / DualSense Edge | USB, Bluetooth | 10% steps | Yes |
+| DualShock 4 | USB, Bluetooth | 10% steps | Yes |
 
 ### Known limitations
 
 - Pop-ups can't appear over games running in exclusive fullscreen (borderless and windowed are fine).
 - Over Bluetooth, Windows exposes no charging flag for Xbox controllers, so charging is inferred: the bolt appears at the first percentage rise and clears at 100% or after 5 minutes without one.
-- Two identical controllers, one on Bluetooth and one not, may have their readings swapped.
+- Two identical Xbox controllers, one on Bluetooth and one not, may have their readings swapped.
+- Over Bluetooth, PlayStation controllers only report their battery after being switched to their full input report, which ControllerHP does when one connects (as Steam does). Until the controller reconnects, games that read it through DirectInput (some emulators and older games) don't see its input. Steam Input and games with native DualSense / DualShock 4 support are unaffected.
+- PlayStation controllers held exclusively by another tool (e.g. DS4Windows with HidHide) show as "battery unknown".
 
 ## How batteries are read
 
-Sources are tried in order, and the first one that finds any controller is used:
+For Xbox controllers, sources are tried in order, and the first one that finds any controller is used:
 
 | Source | Covers | Detail |
 |---|---|---|
@@ -41,7 +44,13 @@ Sources are tried in order, and the first one that finds any controller is used:
 | ↳ Bluetooth LE battery | Xbox controllers over Bluetooth | Overrides the percentage above, which is wrong over Bluetooth (always 100/1000 mWh). Read from the same devnode property the Settings app shows, watched for instant updates. |
 | `XInput` | Xbox controllers via USB / Wireless Adapter (not Bluetooth) | 4 coarse levels, no charging state |
 
-Everything is event-driven; a 30-second poll only catches battery drift on sources without change events.
+PlayStation controllers are read separately, so they show alongside Xbox ones:
+
+| Source | Covers | Detail |
+|---|---|---|
+| Raw HID input reports | DualSense, DualSense Edge, DualShock 4 over USB and Bluetooth | Battery level and charging state from the controller's status byte, sampled every 5 seconds |
+
+Connects and disconnects are event-driven; a 30-second poll only catches battery drift on Xbox sources without change events.
 
 ## Development
 
@@ -66,7 +75,7 @@ This publishes the app, installs it to `%LOCALAPPDATA%\Programs\ControllerHP` an
 | `--list` | Prints what every battery source reports for each controller, raw values included |
 | `--preview <file.png>` | Renders every icon state and pop-up to an image |
 | `--demo` | Plays the sample pop-ups on screen |
-| `--hid-probe` | Dumps the Xbox controller's raw HID reports and GATT services |
+| `--hid-probe` | Dumps the raw HID reports of connected Xbox and PlayStation controllers, and Xbox GATT services |
 
 Unhandled errors are logged to `%LOCALAPPDATA%\ControllerHP\error.log`, and every reading change is logged with a timestamp to `history.log` in the same folder.
 

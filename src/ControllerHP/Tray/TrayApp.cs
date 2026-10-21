@@ -69,7 +69,7 @@ internal sealed class TrayApp : ApplicationContext
     private void Refresh()
     {
         var previous = _readings;
-        _readings = ReadFirstAvailableSource();
+        _readings = ReadAllSources();
         if (!_readings.SequenceEqual(previous))
             LogHistory(_readings);
 
@@ -99,26 +99,22 @@ internal sealed class TrayApp : ApplicationContext
         Program.Log(readings.Count == 0 ? "no controllers" : string.Join(" | ", readings.Select(r => r.Describe())),
             Program.HistoryLogFile);
 
-    /// <summary>
-    /// Sources are ordered best-first; the first one that sees any controller wins so the same
-    /// controller isn't shown twice (e.g. once by Windows.Gaming.Input and again by XInput).
-    /// </summary>
-    private IReadOnlyList<ControllerBattery> ReadFirstAvailableSource()
+    /// <summary>Each source covers different controllers; overlapping ones are grouped in a <see cref="FirstAvailableSource"/>.</summary>
+    private List<ControllerBattery> ReadAllSources()
     {
+        var readings = new List<ControllerBattery>();
         foreach (var source in _sources)
         {
             try
             {
-                var readings = source.Read();
-                if (readings.Count > 0)
-                    return readings;
+                readings.AddRange(source.Read());
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"{source.Name} failed: {ex}");
             }
         }
-        return [];
+        return readings;
     }
 
     private void BuildMenu()

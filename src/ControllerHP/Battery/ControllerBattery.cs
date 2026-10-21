@@ -60,8 +60,7 @@ public sealed record ControllerBattery(
 
 /// <summary>
 /// A way of discovering controllers and reading their batteries. Xbox controllers are covered by
-/// Windows.Gaming.Input and XInput; other families (DualSense, Switch Pro, ...) will need their own
-/// HID-based sources.
+/// Windows.Gaming.Input and XInput, PlayStation controllers by their raw HID reports.
 /// </summary>
 public interface IBatterySource
 {

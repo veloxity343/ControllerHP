@@ -9,16 +9,20 @@ internal static partial class Program
     [STAThread]
     private static int Main(string[] args)
     {
-        // Ordered best-first; see TrayApp.ReadFirstAvailableSource.
-        IBatterySource[] sources = [new GamingInputSource(), new XInputSource()];
+        // The Xbox sources see the same controllers, so only the best one that finds any is used.
+        var xbox = new FirstAvailableSource("Xbox", new GamingInputSource(), new XInputSource());
+        var playStation = new PlayStationSource();
+        IBatterySource[] sources = [xbox, playStation];
 
         if (args.Contains("--list"))
-            return ListControllers(sources);
+            return ListControllers([.. xbox.Sources, playStation]);
 
         if (args.Contains("--hid-probe"))
         {
             AttachConsole(-1);
             HidProbe.Dump(0x045E, 0x0B13, TimeSpan.FromSeconds(5));
+            foreach (ushort productId in PlayStationSource.ProductIds)
+                HidProbe.Dump(PlayStationSource.SonyVendorId, productId, TimeSpan.FromSeconds(5));
             foreach (var b in BluetoothLeBattery.QueryConnected())
                 foreach (var line in BluetoothLeBattery.DescribeGatt(b.Address))
                     Console.WriteLine($"  {line}");
