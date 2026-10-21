@@ -1,0 +1,15 @@
+# Groups the release notes GitHub generates from merged pull requests, by label.
+changelog:
+  exclude:
+    labels: [skip-release-notes]
+  categories:
+    - title: New
+      labels: [enhancement]
+    - title: Fixes
+      labels: [bug]
+    - title: Documentation
+      labels: [documentation]
+    - title: Dependencies
+      labels: [dependencies]
+    - title: Other changes
+      labels: ["*"]

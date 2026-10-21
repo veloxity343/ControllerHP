@@ -1,0 +1,22 @@
+name: Feature request
+description: An idea for ControllerHP, or a controller you'd like supported.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like to do?
+      description: The problem or situation, rather than a particular solution.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How might it work?
+  - type: checkboxes
+    id: testing
+    attributes:
+      label: Hardware
+      description: For a new controller, support needs someone who has one to test with.
+      options:
+        - label: I have the controller and can help test.

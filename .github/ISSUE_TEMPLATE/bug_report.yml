@@ -1,0 +1,68 @@
+name: Bug report
+description: Something isn't working as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this. [Troubleshooting](https://github.com/veloxity343/ControllerHP/blob/main/docs/wiki/troubleshooting.md) covers common problems, and explains how to get the details asked for below. Please follow the [Code of Conduct](https://github.com/veloxity343/ControllerHP/blob/main/CODE_OF_CONDUCT.md).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did the tray icon, panel or pop-up show, and when?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: dropdown
+    id: controller
+    attributes:
+      label: Controller
+      options:
+        - Xbox One / Series
+        - DualSense
+        - DualSense Edge
+        - DualShock 4
+        - Other (say which above)
+    validations:
+      required: true
+  - type: dropdown
+    id: connection
+    attributes:
+      label: Connection
+      options:
+        - Bluetooth
+        - USB
+        - Xbox Wireless Adapter
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: ControllerHP version
+      description: Shown at the bottom of Settings.
+      placeholder: "0.2.0"
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 24H2
+  - type: textarea
+    id: list-output
+    attributes:
+      label: Output of `ControllerHP.exe --list`
+      description: Run it from a terminal in the folder containing ControllerHP.exe, with the controller connected.
+      render: text
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: The relevant part of `history.log`, and anything in `error.log`, from `%LOCALAPPDATA%\ControllerHP`.
+      render: text
