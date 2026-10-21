@@ -27,7 +27,7 @@
 
   <PropertyGroup>
     <!-- Overridden by CI from the release tag (v1.2.3 -> 1.2.3). -->
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
     <Product>ControllerHP</Product>
     <Title>ControllerHP</Title>
     <Description>Battery meter for game controllers in the Windows taskbar.</Description>
