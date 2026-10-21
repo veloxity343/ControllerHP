@@ -44,7 +44,7 @@ Windows hides new tray icons in the overflow area (the **^** arrow) by default. 
 
 ## Starting with Windows
 
-Right-click the tray icon and tick **Start with Windows**, or turn it on under **Settings…** → Startup. It's off by default. It adds ControllerHP to your own startup apps only, not anyone else's on the PC.
+Right-click the tray icon and tick **Start with Windows**, or turn it on under **Settings** → Startup. It's off by default. It adds ControllerHP to your own startup apps only, not anyone else's on the PC.
 
 If you move `ControllerHP.exe` later, turn this off and on again so Windows starts it from the new place.
 

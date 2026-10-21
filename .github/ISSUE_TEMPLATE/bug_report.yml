@@ -55,14 +55,8 @@ body:
       label: Windows version
       placeholder: Windows 11 24H2
   - type: textarea
-    id: list-output
+    id: diagnostics
     attributes:
-      label: Output of `ControllerHP.exe --list`
-      description: Run it from a terminal in the folder containing ControllerHP.exe, with the controller connected.
-      render: text
-  - type: textarea
-    id: logs
-    attributes:
-      label: Logs
-      description: The relevant part of `history.log`, and anything in `error.log`, from `%LOCALAPPDATA%\ControllerHP`.
+      label: Diagnostics report
+      description: With the controller connected, right-click the tray icon, choose Diagnostics, and paste the report it opens. Bluetooth addresses in it are already partly masked.
       render: text

@@ -15,7 +15,7 @@ internal static partial class Program
         IBatterySource[] sources = [xbox, playStation];
 
         if (args.Contains("--list"))
-            return ListControllers([.. xbox.Sources, playStation]);
+            return ListControllers(sources);
 
         if (args.Contains("--hid-probe"))
         {
@@ -166,42 +166,7 @@ internal static partial class Program
 
         // Windows.Gaming.Input reports already-connected pads asynchronously after startup.
         Thread.Sleep(TimeSpan.FromSeconds(1.5));
-
-        foreach (var source in sources)
-        {
-            Console.WriteLine($"[{source.Name}]");
-            try
-            {
-                var readings = source.Read();
-                if (readings.Count == 0)
-                    Console.WriteLine("  (no controllers)");
-                foreach (var r in readings)
-                    Console.WriteLine($"  {r.Describe()}  [hw={r.Hardware ?? "?"}, level={r.Level}, power={r.Power}, id={r.Id}]");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"  error: {ex.Message}");
-            }
-        }
-        Console.WriteLine("[Raw Windows.Gaming.Input reports]");
-        foreach (var line in GamingInputSource.DescribeRawReports())
-            Console.WriteLine($"  {line}");
-        Console.WriteLine("[Raw Bluetooth LE battery properties]");
-        foreach (var line in BluetoothLeBattery.DescribeRawProperties())
-            Console.WriteLine($"  {line}");
-        Console.WriteLine("[Connected Bluetooth LE batteries]");
-        foreach (var b in BluetoothLeBattery.QueryConnected())
-        {
-            Console.WriteLine($"  {b.Name}: {b.Percent}%  [hw={b.VendorId:X4}:{b.ProductId:X4}, address={b.Address}]");
-            try
-            {
-                Console.WriteLine($"    live GATT read: {BluetoothLeBattery.ReadLive(b.Address)}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"    live GATT read error: {ex.Message}");
-            }
-        }
+        Diagnostics.WriteSources(Console.Out, sources);
         return 0;
     }
 }

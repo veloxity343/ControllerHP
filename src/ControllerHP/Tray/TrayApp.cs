@@ -160,6 +160,34 @@ internal sealed class TrayApp : ApplicationContext
         _flyout.ShowAt(Cursor.Position);
     }
 
+    private bool _writingDiagnostics;
+
+    /// <summary>
+    /// Writes the diagnostics report and opens it, for bug reports. Off the UI thread: a live Bluetooth
+    /// read can take a few seconds.
+    /// </summary>
+    private async void WriteDiagnostics()
+    {
+        if (_writingDiagnostics)
+            return;
+        _writingDiagnostics = true;
+        try
+        {
+            string path = await Task.Run(() => Diagnostics.WriteReport(_sources));
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            Program.Log($"Diagnostics report failed: {ex}");
+            MessageBox.Show($"Couldn't write the diagnostics report: {ex.Message}", "ControllerHP",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        finally
+        {
+            _writingDiagnostics = false;
+        }
+    }
+
     /// <summary>Opens the settings window, or brings it forward if it's already open.</summary>
     private void ShowSettings()
     {
@@ -319,7 +347,8 @@ internal sealed class TrayApp : ApplicationContext
             Checked = Settings.StartWithWindows,
         });
         _menu.Items.Add(new ToolStripSeparator());
-        _menu.Items.Add(new ToolStripMenuItem("Settings…", null, (_, _) => ShowSettings()));
+        _menu.Items.Add(new ToolStripMenuItem("Settings", null, (_, _) => ShowSettings()));
+        _menu.Items.Add(new ToolStripMenuItem("Diagnostics", null, (_, _) => WriteDiagnostics()));
         _menu.Items.Add(new ToolStripMenuItem("Exit", null, (_, _) => ExitThread()));
 
         MenuRenderer.Apply(_menu, Theme.For(_lightTaskbar));

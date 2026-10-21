@@ -8,7 +8,7 @@
 - [Removing a controller](#removing-a-controller)
 - [What's stored on your PC](#whats-stored-on-your-pc)
 
-The Controllers page shows each controller's battery history and stats, and lets you remove controllers you no longer use. Open **Settings…** from the right-click menu (or the gear in the panel) and choose **Controllers**.
+The Controllers page shows each controller's battery history and stats, and lets you remove controllers you no longer use. Open **Settings** from the right-click menu (or the gear in the panel) and choose **Controllers**.
 
 ## The chart
 
@@ -88,6 +88,7 @@ Nothing leaves your PC: ControllerHP makes no network connections at all.
 | "Still running" time, used to close history neatly after a crash | `%LOCALAPPDATA%\ControllerHP\battery.alive` | Overwritten every 30 seconds | A few bytes |
 | Readable change log, for bug reports | `%LOCALAPPDATA%\ControllerHP\history.log` | 30 days | Under 1 MB |
 | Errors, if any | `%LOCALAPPDATA%\ControllerHP\error.log` | Newest 1 MB | Usually a few KB |
+| The last diagnostics report, if you've made one | `%LOCALAPPDATA%\ControllerHP\diagnostics.txt` | Replaced each time | A few KB |
 | Settings | Registry: `HKEY_CURRENT_USER\Software\ControllerHP` | Until you change them | Tiny |
 
 Older entries are trimmed each time ControllerHP starts. A row is written only when a reading changes, so a controller sitting at the same level writes nothing.

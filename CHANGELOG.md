@@ -14,6 +14,7 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 ### Added
 
 - **Pop-ups during fullscreen games:** in exclusive fullscreen, where pop-ups can't appear, they're now held and shown once the game closes, instead of being lost. A new **Hold while a game is fullscreen** setting does the same for borderless games. At most one shows per controller, and a held battery warning is dropped if the controller was charged meanwhile.
+- **Diagnostics** in the right-click menu writes a report of what ControllerHP sees and opens it, for bug reports, instead of running `--list` from a terminal. Bluetooth addresses in it are partly masked, so it can be posted as it is.
 
 ### Changed
 

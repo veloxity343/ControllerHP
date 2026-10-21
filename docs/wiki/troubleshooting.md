@@ -96,15 +96,15 @@ If it's still missing, run `ControllerHP.exe --list` (see [Reporting a bug](#rep
 
 [Open a bug report](https://github.com/veloxity343/ControllerHP/issues/new/choose). The form asks for what helps most:
 
-1. **Your controller and connection,** such as *DualSense over Bluetooth*, and your ControllerHP version (Settings shows it at the bottom).
-2. **The output of `--list`.** Open the folder containing `ControllerHP.exe`, type `cmd` in File Explorer's address bar, press Enter, and run:
+1. **Your controller and connection,** such as *DualSense over Bluetooth*.
+2. **A diagnostics report.** With the controller connected, right-click the tray icon and choose **Diagnostics**. ControllerHP writes a report and opens it. It includes:
+   - your ControllerHP and Windows versions, and your settings;
+   - what each battery source sees, raw values included;
+   - the recent battery log and any errors.
 
-   ```
-   ControllerHP.exe --list
-   ```
+   Bluetooth addresses in it are partly masked, so you can paste it as it is, but have a quick look through first. The report is saved as `%LOCALAPPDATA%\ControllerHP\diagnostics.txt`.
 
-   It prints what each battery source sees, without changing anything.
-3. **The logs** from `%LOCALAPPDATA%\ControllerHP`: `history.log` shows every reading change with its time, which usually shows exactly when something went wrong. Include `error.log` if it has anything in it.
+If ControllerHP won't start, you can still get the battery part of the report: open the folder containing `ControllerHP.exe`, type `cmd` in File Explorer's address bar, press Enter, and run `ControllerHP.exe --list`.
 
 Security problems are different: please report them privately, as described in [SECURITY.md](../../SECURITY.md).
 

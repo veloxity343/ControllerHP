@@ -78,14 +78,15 @@ Held pop-ups show once the game closes, at most one per controller, the latest f
 | **Connection pop-ups** | Turns the Connected and Disconnected pop-ups on or off. |
 | **Battery warnings** | Turns both the low and critical warnings on or off together. Your warning levels are kept. |
 | **Start with Windows** | Runs ControllerHP when you sign in. |
-| **Settings…** | Opens the settings window. |
+| **Settings** | Opens the settings window. |
+| **Diagnostics** | Writes a report of what ControllerHP sees, for bug reports, and opens it. See [Reporting a bug](troubleshooting.md#reporting-a-bug). |
 | **Exit** | Closes ControllerHP. |
 
 The menu follows your taskbar's light or dark mode.
 
 ## Settings
 
-Open it from the panel's gear or **Settings…** in the right-click menu. It follows Windows' app mode, light or dark, and changes take effect straight away. The window has two pages: **Settings**, and **[Controllers](controllers.md)**.
+Open it from the panel's gear or **Settings** in the right-click menu. It follows Windows' app mode, light or dark, and changes take effect straight away. The window has two pages: **Settings**, and **[Controllers](controllers.md)**.
 
 | Setting | Default | Options |
 |---|---|---|
