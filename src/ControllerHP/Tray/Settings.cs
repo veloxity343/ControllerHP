@@ -71,6 +71,54 @@ internal static class Settings
     private static int ReadWarning(string name, int fallback, int min, int max) =>
         Read(name) is int value ? Math.Clamp(value, min, max) : Math.Clamp(fallback, min, max);
 
+    /// <summary>
+    /// Controllers the user removed from the history page, with when. Removing hides rather than deletes:
+    /// the history stays in battery.csv until it expires, and a controller that connects again is unhidden.
+    /// </summary>
+    public static IReadOnlyDictionary<string, DateTime> HiddenControllers
+    {
+        get
+        {
+            var hidden = new Dictionary<string, DateTime>();
+            if (Read(nameof(HiddenControllers)) is string[] entries)
+            {
+                foreach (var entry in entries)
+                {
+                    // "id<TAB>time"; ids are device paths or Bluetooth addresses, which never contain a tab.
+                    int tab = entry.LastIndexOf('\t');
+                    if (tab > 0 && DateTime.TryParse(entry[(tab + 1)..], System.Globalization.CultureInfo.InvariantCulture,
+                            System.Globalization.DateTimeStyles.RoundtripKind, out var when))
+                        hidden[entry[..tab]] = when;
+                }
+            }
+            return hidden;
+        }
+    }
+
+    public static void Hide(string id) => WriteHidden(HiddenControllers.Append(new(id, DateTime.Now)));
+
+    public static void Unhide(string id)
+    {
+        var hidden = HiddenControllers;
+        if (hidden.ContainsKey(id))
+            WriteHidden(hidden.Where(kv => kv.Key != id));
+    }
+
+    /// <summary>Drops entries for controllers whose history has expired, so the list doesn't keep strangers.</summary>
+    public static void ForgetHidden(IEnumerable<string> ids)
+    {
+        var gone = ids.ToHashSet();
+        var hidden = HiddenControllers;
+        if (hidden.Keys.Any(gone.Contains))
+            WriteHidden(hidden.Where(kv => !gone.Contains(kv.Key)));
+    }
+
+    private static void WriteHidden(IEnumerable<KeyValuePair<string, DateTime>> hidden) =>
+        Write(nameof(HiddenControllers), hidden
+            .GroupBy(kv => kv.Key).Select(g => g.Last()) // a re-hidden controller keeps its latest time
+            .Select(kv => $"{kv.Key}\t{kv.Value.ToString("O", System.Globalization.CultureInfo.InvariantCulture)}")
+            .ToArray());
+
     /// <summary>Whether Windows starts the app at sign-in, via the current user's Run key.</summary>
     public static bool StartWithWindows
     {

@@ -21,7 +21,13 @@ internal sealed class StatsCard : ThemedControl
     private readonly HistorySeries _series;
     private readonly ControllerStats _stats;
     private readonly List<Tile> _tiles;
+    private readonly ActionButton _remove = new("Remove");
+    private readonly ToolTip _removeHint = new();
+    private bool _removeHintShown;
     private bool _helpHover;
+
+    /// <summary>The Remove button was clicked; only possible while the controller is off.</summary>
+    public event EventHandler? RemoveRequested;
 
     private sealed record Tile(string Label, string Value, string Detail, bool Help = false, bool Muted = false);
 
@@ -30,7 +36,28 @@ internal sealed class StatsCard : ThemedControl
         _series = series;
         _stats = stats;
         _tiles = BuildTiles();
+        Controls.Add(_remove);
+        _remove.Click += (_, _) => RemoveRequested?.Invoke(this, EventArgs.Empty);
+        // A connected controller would come straight back, so only an off one can be removed.
+        if (series.Connected)
+            _remove.Enabled = false;
         ResizeForDpi();
+    }
+
+    protected override void OnPaletteChanged() => _remove.BackColor = Palette.Surface;
+
+    protected override void OnLayout(LayoutEventArgs e)
+    {
+        base.OnLayout(e);
+        _remove.BackColor = Palette.Surface;
+        _remove.Location = new Point(Width - S(Padding_) - _remove.Width, (S(HeaderHeight) - _remove.Height) / 2 + S(4));
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+            _removeHint.Dispose();
+        base.Dispose(disposing);
     }
 
     protected override Size? LogicalSize =>
@@ -139,7 +166,7 @@ internal sealed class StatsCard : ThemedControl
             g.DrawLine(key, S(Padding_), S(HeaderHeight) / 2f, S(Padding_) + S(14), S(HeaderHeight) / 2f);
         using (var nameFont = MakeFont(14, semibold: true))
             TextRenderer.DrawText(g, _series.Name, nameFont,
-                new Rectangle(S(Padding_) + S(22), 0, Width - S(Padding_) * 2 - S(22), S(HeaderHeight)), Palette.Text, TextFlags);
+                new Rectangle(S(Padding_) + S(22), 0, _remove.Left - S(Padding_) - S(30), S(HeaderHeight)), Palette.Text, TextFlags);
 
         using var labelFont = MakeFont(12);
         using var valueFont = MakeFont(17, semibold: true);
@@ -187,9 +214,26 @@ internal sealed class StatsCard : ThemedControl
         TextRenderer.DrawText(g, HealthDisclaimer, font, Rectangle.Inflate(box, -S(12), -S(10)), Palette.Text, flags);
     }
 
+    /// <summary>
+    /// Explains a greyed-out Remove while hovering it. A disabled control gets no mouse input (it goes to the
+    /// card instead), so the card shows the hint itself, only over the button.
+    /// </summary>
+    private void UpdateRemoveHint(Point location)
+    {
+        bool over = !_remove.Enabled && _remove.Bounds.Contains(location);
+        if (over == _removeHintShown)
+            return;
+        _removeHintShown = over;
+        if (over)
+            _removeHint.Show("Turn the controller off to remove it", this, _remove.Left, _remove.Bottom + S(4));
+        else
+            _removeHint.Hide(this);
+    }
+
     protected override void OnMouseMove(MouseEventArgs e)
     {
         base.OnMouseMove(e);
+        UpdateRemoveHint(e.Location);
         int help = _tiles.FindIndex(t => t.Help);
         bool hover = help >= 0 && Rectangle.Inflate(HelpBounds(help), S(4), S(4)).Contains(e.Location);
         if (hover != _helpHover)
@@ -203,6 +247,8 @@ internal sealed class StatsCard : ThemedControl
     protected override void OnMouseLeave(EventArgs e)
     {
         base.OnMouseLeave(e);
+        _removeHint.Hide(this);
+        _removeHintShown = false;
         _helpHover = false;
         Invalidate();
     }

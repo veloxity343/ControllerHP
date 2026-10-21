@@ -656,3 +656,118 @@ internal sealed class DropDown : ThemedControl
         DrawFocus(g, box, S(5));
     }
 }
+
+/// <summary>A compact text button with a hover wash, e.g. Remove, Undo, Restore.</summary>
+internal sealed class ActionButton : ThemedControl
+{
+    public ActionButton(string text)
+    {
+        Text = text;
+        Cursor = Cursors.Hand;
+        TabStop = true;
+        ResizeForDpi();
+    }
+
+    protected override Size? LogicalSize => new Size(Math.Max(72, Text.Length * 8 + 24), 30);
+
+    protected override void OnEnabledChanged(EventArgs e)
+    {
+        base.OnEnabledChanged(e);
+        Cursor = Enabled ? Cursors.Hand : Cursors.Default;
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (Enabled && e.KeyCode is Keys.Space or Keys.Enter)
+            OnClick(EventArgs.Empty);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        var box = new RectangleF(S(0.5f), S(0.5f), Width - S(1), Height - S(1));
+        Fill(g, box, S(5), Enabled && Hover is not null ? Palette.Hover : Palette.Background);
+        Outline(g, box, S(5), Enabled ? Palette.Border : Palette.Separator, S(1));
+        using var font = MakeFont(13);
+        TextRenderer.DrawText(g, Text, font, ClientRectangle, Enabled ? Palette.Text : Palette.SubtleText,
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
+        DrawFocus(g, box, S(5));
+    }
+}
+
+/// <summary>
+/// "Removed X · Undo" after removing a controller, shown for a few seconds. Removing only hides, so undo
+/// just unhides; the bar is the quick way back, and Settings has the lasting one.
+/// </summary>
+internal sealed class UndoBar : ThemedControl
+{
+    private static readonly TimeSpan ShownFor = TimeSpan.FromSeconds(10);
+    private readonly ActionButton _undo = new("Undo");
+    private readonly System.Windows.Forms.Timer _timer = new() { Interval = (int)ShownFor.TotalMilliseconds };
+    private Action? _onUndo;
+
+    public UndoBar()
+    {
+        Controls.Add(_undo);
+        _undo.Click += (_, _) =>
+        {
+            _onUndo?.Invoke();
+            Dismiss();
+        };
+        _timer.Tick += (_, _) => Dismiss();
+        Visible = false;
+        ResizeForDpi();
+    }
+
+    protected override Size? LogicalSize => new Size(600, 48);
+
+    /// <summary>Raised when the bar appears or goes, so the page can make or close the room for it.</summary>
+    public event EventHandler? ShownChanged;
+
+    public bool Showing { get; private set; }
+
+    public void Show(string message, Action onUndo)
+    {
+        Text = message;
+        _onUndo = onUndo;
+        Showing = true;
+        _timer.Stop();
+        _timer.Start();
+        Invalidate();
+        ShownChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void Dismiss()
+    {
+        _timer.Stop();
+        _onUndo = null;
+        Showing = false;
+        ShownChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    protected override void OnPaletteChanged() => _undo.BackColor = Palette.Surface;
+
+    protected override void OnLayout(LayoutEventArgs e)
+    {
+        base.OnLayout(e);
+        _undo.BackColor = Palette.Surface;
+        _undo.Location = new Point(Width - _undo.Width - S(10), (Height - _undo.Height) / 2);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        Fill(g, new RectangleF(0, 0, Width, Height), S(6), Palette.Surface);
+        Fill(g, new RectangleF(0, S(10), S(3), Height - S(20)), S(1.5f), Palette.Accent);
+        using var font = MakeFont(13);
+        TextRenderer.DrawText(g, Text, font, new Rectangle(S(16), 0, _undo.Left - S(24), Height), Palette.Text, TextFlags);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+            _timer.Dispose();
+        base.Dispose(disposing);
+    }
+}

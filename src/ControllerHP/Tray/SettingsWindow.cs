@@ -22,6 +22,8 @@ internal sealed class SettingsWindow : Form, IMessageFilter
     private readonly bool _fixedPalette;
     /// <summary>Where the history chart's data comes from; the preview swaps in sample data.</summary>
     private readonly Func<DateTime, List<HistorySeries>> _loadHistory;
+    /// <summary>Showing sample data: never let it change the real settings.</summary>
+    private readonly bool _sampleData;
     /// <summary>Set while controls are filled from Settings, so they don't write the same values back.</summary>
     private bool _loading;
 
@@ -41,6 +43,10 @@ internal sealed class SettingsWindow : Form, IMessageFilter
     private readonly Note _statsNote = new("Averages and totals cover the range above. Predictions and health use recent history.");
     private readonly Note _historyNote = new($"Recorded whenever a controller's battery changes, and kept for {BatteryHistory.Kept.Days} days.");
     private readonly List<StatsCard> _statsCards = [];
+    private readonly UndoBar _undoBar = new();
+    /// <summary>The Settings page's Hidden controllers section, rebuilt whenever the list changes.</summary>
+    private readonly List<Control> _hiddenItems = [];
+    private readonly Note _versionNote = new($"ControllerHP {Application.ProductVersion.Split('+')[0]}");
     /// <summary>
     /// Which controller's figures to show: whichever has the lowest battery until the user picks a
     /// controller or all of them, then their pick.
@@ -63,6 +69,7 @@ internal sealed class SettingsWindow : Form, IMessageFilter
         _palette = palette ?? Theme.For(Theme.AppsUseLight());
         _fixedPalette = palette is not null;
         _loadHistory = loadHistory ?? BatteryHistory.Load;
+        _sampleData = loadHistory is not null;
         Text = "ControllerHP";
         Icon = Icon.ExtractAssociatedIcon(Environment.ProcessPath!);
         StartPosition = FormStartPosition.CenterScreen;
@@ -78,6 +85,7 @@ internal sealed class SettingsWindow : Form, IMessageFilter
         AddPage("Battery history", BuildHistoryPage());
         _historyPage = _pages.Count - 1;
         ShowPage(0);
+        RebuildHiddenList();
 
         LoadValues();
         WireEvents();
@@ -115,7 +123,7 @@ internal sealed class SettingsWindow : Form, IMessageFilter
         {
             _nav[i].Selected = i == index;
             foreach (var item in _pages[i])
-                item.Visible = i == index;
+                item.Visible = i == index && (item is not UndoBar bar || bar.Showing);
         }
         _page.AutoScrollPosition = Point.Empty;
         if (CurrentPage.Contains(_chart))
@@ -151,8 +159,7 @@ internal sealed class SettingsWindow : Form, IMessageFilter
         items.Add(new Heading("Startup", 15));
         items.Add(new SettingCard("Start with Windows", "Run ControllerHP when you sign in.", _startWithWindows));
 
-        string version = Application.ProductVersion.Split('+')[0];
-        items.Add(new Note($"ControllerHP {version}"));
+        items.Add(_versionNote);
         return items;
     }
 
@@ -165,14 +172,25 @@ internal sealed class SettingsWindow : Form, IMessageFilter
             _pickerChoice = _pickerKeys[_controllerPicker.SelectedIndex];
             ReloadHistory();
         };
-        return [new Heading("Battery history", 26), _range, _chart, _controllerPicker, _statsNote, _historyNote];
+        _undoBar.ShownChanged += (_, _) =>
+        {
+            _undoBar.Visible = _undoBar.Showing && _current == _historyPage;
+            PerformLayout();
+        };
+        return [new Heading("Battery history", 26), _undoBar, _range, _chart, _controllerPicker, _statsNote, _historyNote];
     }
 
     private void ReloadHistory()
     {
         var now = DateTime.Now;
         var since = now - Ranges[_range.SelectedIndex];
-        var shown = _loadHistory(since);
+        var full = _loadHistory(now - BatteryHistory.Kept).ToDictionary(s => s.Id);
+        // Removed controllers stay out until they record something after being removed. Judged on their whole
+        // history: in a short range, an old last reading is moved up to the range's start.
+        var hidden = Settings.HiddenControllers;
+        var shown = _loadHistory(since)
+            .Where(s => !(hidden.TryGetValue(s.Id, out var at) && full.TryGetValue(s.Id, out var all) && all.Points[^1].Time <= at))
+            .ToList();
         _chart.SetData(shown, since, now);
 
         // A card per controller in the chart, its figures worked out from its whole retained history.
@@ -196,13 +214,13 @@ internal sealed class SettingsWindow : Form, IMessageFilter
 
         var cards = showing == AllControllers ? shown : shown.Where(s => s.Id == showing).ToList();
 
-        var full = _loadHistory(now - BatteryHistory.Kept).ToDictionary(s => s.Id);
         int? lowWarning = Settings.LowWarningEnabled ? Settings.LowWarning : null;
         int insertAt = page.IndexOf(_statsNote) + 1;
         foreach (var series in cards)
         {
             var stats = BatteryStats.Compute(full.GetValueOrDefault(series.Id, series), since, now, lowWarning);
             var card = new StatsCard(series, stats) { Palette = _palette, Visible = _current == _historyPage };
+            card.RemoveRequested += (_, _) => Remove(series);
             _statsCards.Add(card);
             page.Insert(insertAt++, card);
             _page.Controls.Add(card);
@@ -279,10 +297,75 @@ internal sealed class SettingsWindow : Form, IMessageFilter
     }
 
     /// <summary>A change from the tray menu; setting a control to its current value raises nothing.</summary>
+    /// <summary>Hides a controller, with a few seconds to undo; Settings lists it for restoring later.</summary>
+    private void Remove(HistorySeries series)
+    {
+        if (_pickerChoice == series.Id)
+            _pickerChoice = null;
+        Settings.Hide(series.Id);
+        _undoBar.Show($"Removed {series.Name}", () => Settings.Unhide(series.Id));
+    }
+
+    /// <summary>
+    /// The Settings page's Hidden controllers section: one card per removed controller with a Restore button,
+    /// or nothing when none are hidden. Entries whose history has expired are forgotten.
+    /// </summary>
+    private void RebuildHiddenList()
+    {
+        var page = _pages[0];
+        foreach (var item in _hiddenItems)
+        {
+            page.Remove(item);
+            _page.Controls.Remove(item);
+            item.Dispose();
+        }
+        _hiddenItems.Clear();
+
+        var hidden = Settings.HiddenControllers;
+        if (hidden.Count == 0)
+            return;
+        var names = _loadHistory(DateTime.Now - BatteryHistory.Kept).ToDictionary(s => s.Id, s => s.Name);
+        // Sample data doesn't hold the real controllers, so they'd all look expired: never forget then.
+        var expired = hidden.Keys.Where(id => !names.ContainsKey(id)).ToList();
+        if (expired.Count > 0 && !_sampleData)
+        {
+            Settings.ForgetHidden(expired); // raises Changed, which rebuilds this again without them
+            return;
+        }
+        hidden = hidden.Where(kv => names.ContainsKey(kv.Key)).ToDictionary();
+        if (hidden.Count == 0)
+            return;
+
+        _hiddenItems.Add(new Heading("Hidden controllers", 15));
+        foreach (var (id, when) in hidden.OrderBy(kv => kv.Value))
+        {
+            var restore = new ActionButton("Restore");
+            restore.Click += (_, _) => Settings.Unhide(id);
+            _hiddenItems.Add(new SettingCard(names[id], $"Removed {when:d MMM}. Comes back by itself if it connects again.", restore));
+        }
+        int insertAt = page.IndexOf(_versionNote);
+        foreach (var item in _hiddenItems)
+        {
+            item.Visible = _current == 0;
+            if (item is ThemedControl themed)
+                themed.Palette = _palette;
+            page.Insert(insertAt++, item);
+            _page.Controls.Add(item);
+        }
+    }
+
     private void OnSettingsChanged()
     {
         if (IsHandleCreated)
-            BeginInvoke(LoadValues);
+            BeginInvoke(() =>
+            {
+                LoadValues();
+                RebuildHiddenList();
+                if (_current == _historyPage)
+                    ReloadHistory();
+                else
+                    PerformLayout();
+            });
     }
 
     private void OnUserPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e)
@@ -376,6 +459,8 @@ internal sealed class SettingsWindow : Form, IMessageFilter
         Control? previous = null;
         foreach (var item in CurrentPage)
         {
+            if (item is UndoBar { Showing: false })
+                continue; // takes no room until it has something to say
             if (item is Heading && previous is not null)
                 y += S(SectionGap) - S(CardGap);
             int height = item is SettingCard card ? card.PreferredHeight : item.Height;

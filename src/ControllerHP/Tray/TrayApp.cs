@@ -117,6 +117,10 @@ internal sealed class TrayApp : ApplicationContext
         {
             LogHistory(_readings);
             _history.Record(_readings);
+            // A removed controller that's connected again is in use: show it again.
+            var hidden = Settings.HiddenControllers;
+            foreach (var reading in _readings.Where(r => hidden.ContainsKey(r.Id)))
+                Settings.Unhide(reading.Id);
         }
         BatteryHistory.Heartbeat();
 
