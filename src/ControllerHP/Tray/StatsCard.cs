@@ -101,18 +101,7 @@ internal sealed class StatsCard : ThemedControl
         return tiles;
     }
 
-    /// <summary>e.g. "45 min", "3 h 20 min", "1 d 4 h"; rounded to 5 minutes, since none of this is precise.</summary>
-    private static string Duration(TimeSpan span, string zero = "0 min")
-    {
-        if (span < TimeSpan.FromMinutes(2.5))
-            return zero;
-        var rounded = TimeSpan.FromMinutes(Math.Round(span.TotalMinutes / 5) * 5);
-        if (rounded.TotalDays >= 1)
-            return rounded.Hours > 0 ? $"{(int)rounded.TotalDays} d {rounded.Hours} h" : $"{(int)rounded.TotalDays} d";
-        if (rounded.TotalHours >= 1)
-            return rounded.Minutes > 0 ? $"{(int)rounded.TotalHours} h {rounded.Minutes} min" : $"{(int)rounded.TotalHours} h";
-        return $"{rounded.Minutes} min";
-    }
+    private static string Duration(TimeSpan span, string zero = "0 min") => BatteryStats.FormatDuration(span, zero);
 
     /// <summary>A runtime in hours, e.g. "9 h" or "8.5 h".</summary>
     private static string Hours(TimeSpan span) => $"{Math.Round(span.TotalHours * 2) / 2:0.#} h";

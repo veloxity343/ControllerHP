@@ -27,6 +27,9 @@ internal static partial class Preview
             Connection: Connection.Usb),
     ];
 
+    /// <summary>The charging DualSense's estimate; the Xbox pad is already at its low level, so it has none.</summary>
+    private static readonly Dictionary<string, string> SampleTimeLeft = new() { ["preview2"] = "1 h 30 min to full" };
+
     private static readonly ToastContent[] SampleToasts =
     [
         new("Xbox Wireless Controller", "Connected · 87%", Sample(87), Color.FromArgb(52, 199, 89)),
@@ -89,9 +92,9 @@ internal static partial class Preview
         // The flyout in both modes, side by side.
         y += 10;
         Flyout.PaintContent(g, new Rectangle(rowHeader, y, flyoutSize.Width, flyoutSize.Height), SampleFlyout,
-            Palette.Dark, 1f);
+            Palette.Dark, 1f, timeLeft: SampleTimeLeft);
         Flyout.PaintContent(g, new Rectangle(rowHeader + flyoutSize.Width + 20, y, flyoutSize.Width, flyoutSize.Height),
-            SampleFlyout, Palette.LightMode, 1f);
+            SampleFlyout, Palette.LightMode, 1f, timeLeft: SampleTimeLeft);
 
         sheet.Save(path, System.Drawing.Imaging.ImageFormat.Png);
     }

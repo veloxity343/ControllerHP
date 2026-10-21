@@ -23,6 +23,7 @@ internal sealed partial class Flyout : Form
     private readonly System.Windows.Forms.Timer _animation = new() { Interval = 10 };
     private readonly System.Diagnostics.Stopwatch _clock = new();
     private IReadOnlyList<ControllerBattery> _readings = [];
+    private IReadOnlyDictionary<string, string> _timeLeft = new Dictionary<string, string>();
     private Point _anchor;
     /// <summary>Where it rests once open, and the direction it slides from (towards the taskbar).</summary>
     private Point _restingLocation;
@@ -33,7 +34,7 @@ internal sealed partial class Flyout : Form
     /// <summary>The gear in the header was clicked; the flyout is already closing.</summary>
     public event Action? SettingsRequested;
 
-    public Flyout(IReadOnlyList<ControllerBattery> readings, Palette palette)
+    public Flyout(IReadOnlyList<ControllerBattery> readings, IReadOnlyDictionary<string, string> timeLeft, Palette palette)
     {
         _palette = palette;
         FormBorderStyle = FormBorderStyle.None;
@@ -47,7 +48,7 @@ internal sealed partial class Flyout : Form
         // Creating the handle first gives the real monitor DPI for sizing.
         _ = Handle;
         Theme.StyleWindow(Handle, Theme.Corners.Round, palette.Border);
-        SetReadings(readings);
+        SetReadings(readings, timeLeft);
         _animation.Tick += (_, _) => Animate();
     }
 
@@ -67,9 +68,10 @@ internal sealed partial class Flyout : Form
     public static Size LogicalSize(int controllers) =>
         new(LogicalWidth, HeaderHeight + Math.Max(1, controllers) * RowHeight + BottomPadding);
 
-    public void SetReadings(IReadOnlyList<ControllerBattery> readings)
+    public void SetReadings(IReadOnlyList<ControllerBattery> readings, IReadOnlyDictionary<string, string> timeLeft)
     {
         _readings = readings;
+        _timeLeft = timeLeft;
         var size = LogicalSize(readings.Count);
         Size = new Size(Scale(size.Width), Scale(size.Height));
         if (Visible)
@@ -259,7 +261,7 @@ internal sealed partial class Flyout : Form
     }
 
     protected override void OnPaint(PaintEventArgs e) =>
-        PaintContent(e.Graphics, ClientRectangle, _readings, _palette, DeviceDpi / 96f, _gearHover);
+        PaintContent(e.Graphics, ClientRectangle, _readings, _palette, DeviceDpi / 96f, _gearHover, _timeLeft);
 
     /// <summary>The settings gear at the right of the header.</summary>
     private static Rectangle GearBounds(Rectangle bounds, float scale)
@@ -300,7 +302,7 @@ internal sealed partial class Flyout : Form
 
     /// <summary>Draws the flyout's contents; shared with the --preview sheet.</summary>
     public static void PaintContent(Graphics g, Rectangle bounds, IReadOnlyList<ControllerBattery> readings,
-        Palette palette, float scale, bool gearHover = false)
+        Palette palette, float scale, bool gearHover = false, IReadOnlyDictionary<string, string>? timeLeft = null)
     {
         int S(float v) => (int)Math.Round(v * scale);
         g.SmoothingMode = SmoothingMode.AntiAlias;
@@ -354,14 +356,14 @@ internal sealed partial class Flyout : Form
             int half = S(RowHeight) / 2;
             TextRenderer.DrawText(g, reading.Name, nameFont,
                 new Rectangle(textX, y + S(6), right - textX, half - S(6)), palette.Text, flags);
-            TextRenderer.DrawText(g, Details(reading), detailFont,
+            TextRenderer.DrawText(g, Details(reading, timeLeft?.GetValueOrDefault(reading.Id)), detailFont,
                 new Rectangle(textX, y + half, right - textX, half - S(8)), palette.SubtleText, flags);
             y += S(RowHeight);
         }
     }
 
-    /// <summary>e.g. "85% · Charging · Bluetooth".</summary>
-    private static string Details(ControllerBattery reading)
+    /// <summary>e.g. "62% · 3 h to 20% · Bluetooth", or "85% · Charging · USB" while time left isn't known.</summary>
+    private static string Details(ControllerBattery reading, string? timeLeft)
     {
         var parts = new List<string>();
         if (reading.Power == ChargeState.Wired)
@@ -373,7 +375,10 @@ internal sealed partial class Flyout : Form
         else
             parts.Add("Battery unknown");
 
-        if (reading.Power == ChargeState.Charging)
+        // "… to full" already says it's charging, and the line is short on room.
+        if (timeLeft is not null)
+            parts.Add(timeLeft);
+        else if (reading.Power == ChargeState.Charging)
             parts.Add("Charging");
 
         string? connection = reading.Connection switch

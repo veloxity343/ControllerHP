@@ -33,6 +33,8 @@ internal sealed class TrayApp : ApplicationContext
     private readonly ControllerNotifier _notifier = new();
     private readonly BatteryHistory _history = new();
     private IReadOnlyList<ControllerBattery> _readings = [];
+    /// <summary>Each connected controller's time left (to the low level, or to full while charging), when known.</summary>
+    private Dictionary<string, string> _timeLeft = [];
     private bool _lightTaskbar = Theme.SystemUsesLight();
     private Flyout? _flyout;
     private SettingsWindow? _settingsWindow;
@@ -130,11 +132,33 @@ internal sealed class TrayApp : ApplicationContext
         }
         BatteryHistory.Heartbeat();
 
+        _timeLeft = WorkOutTimeLeft();
         UpdateSlots();
-        _flyout?.SetReadings(Prioritise(_readings).ToList());
+        _flyout?.SetReadings(Prioritise(_readings).ToList(), _timeLeft);
 
         if (_notifier.Update(_readings))
             _settleTimer.Start();
+    }
+
+    /// <summary>
+    /// The Controllers page's Until figure for each connected controller, from its history: cheap, since the
+    /// history is cached and only new rows are read.
+    /// </summary>
+    private Dictionary<string, string> WorkOutTimeLeft()
+    {
+        if (_readings.Count == 0)
+            return [];
+        var now = DateTime.Now;
+        var history = BatteryHistory.Load(now - BatteryHistory.Kept).ToDictionary(s => s.Id);
+        int? low = Settings.LowWarningEnabled ? Settings.LowWarning : null;
+        var timeLeft = new Dictionary<string, string>();
+        foreach (var reading in _readings)
+        {
+            if (history.TryGetValue(reading.Id, out var series) &&
+                BatteryStats.TimeLeft(BatteryStats.Compute(series, now - TimeSpan.FromDays(7), now, low)) is { } text)
+                timeLeft[reading.Id] = text;
+        }
+        return timeLeft;
     }
 
     private void ToggleFlyout()
@@ -149,7 +173,7 @@ internal sealed class TrayApp : ApplicationContext
         if (DateTime.UtcNow - _flyoutClosedAt < TimeSpan.FromMilliseconds(300))
             return;
 
-        _flyout = new Flyout(Prioritise(_readings).ToList(), Theme.For(_lightTaskbar));
+        _flyout = new Flyout(Prioritise(_readings).ToList(), _timeLeft, Theme.For(_lightTaskbar));
         // Closing a modeless form disposes it.
         _flyout.FormClosed += (_, _) =>
         {
@@ -249,7 +273,8 @@ internal sealed class TrayApp : ApplicationContext
         for (int i = 0; i < count; i++)
         {
             _slotIds[i] = assigned[i]?.Id;
-            _slots[i].Update(assigned[i], _lightTaskbar, i == count - 1 ? more : null);
+            string? timeLeft = assigned[i] is { } reading ? _timeLeft.GetValueOrDefault(reading.Id) : null;
+            _slots[i].Update(assigned[i], _lightTaskbar, i == count - 1 ? more : null, timeLeft);
         }
     }
 
@@ -424,6 +449,7 @@ internal sealed class TrayEntry : IDisposable
     private ControllerBattery? _shown;
     private bool? _shownLightTaskbar;
     private string? _shownMore;
+    private string? _shownTimeLeft;
 
     public TrayEntry(ContextMenuStrip menu, Action onLeftClick)
     {
@@ -437,9 +463,11 @@ internal sealed class TrayEntry : IDisposable
 
     /// <param name="battery">null shows the "no controllers" placeholder.</param>
     /// <param name="more">Controllers without an icon of their own, appended to the tooltip.</param>
-    public void Update(ControllerBattery? battery, bool lightTaskbar, string? more = null)
+    /// <param name="timeLeft">e.g. "3 h to 20%", added to the tooltip when known.</param>
+    public void Update(ControllerBattery? battery, bool lightTaskbar, string? more = null, string? timeLeft = null)
     {
-        if (_image is not null && battery == _shown && lightTaskbar == _shownLightTaskbar && more == _shownMore)
+        if (_image is not null && battery == _shown && lightTaskbar == _shownLightTaskbar && more == _shownMore &&
+            timeLeft == _shownTimeLeft)
             return;
 
         var image = BatteryIconRenderer.Render(battery, lightTaskbar);
@@ -448,6 +476,8 @@ internal sealed class TrayEntry : IDisposable
         _image = image;
 
         string text = battery?.Describe() ?? "ControllerHP: no controllers connected";
+        if (battery is not null && timeLeft is not null)
+            text += $", about {timeLeft}";
         if (more is not null)
             text += "\n" + more;
         _notifyIcon.Text = text.Length > MaxTooltipLength ? text[..MaxTooltipLength] : text;
@@ -455,6 +485,7 @@ internal sealed class TrayEntry : IDisposable
         _shown = battery;
         _shownLightTaskbar = lightTaskbar;
         _shownMore = more;
+        _shownTimeLeft = timeLeft;
     }
 
     public void Dispose()

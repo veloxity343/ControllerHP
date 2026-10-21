@@ -40,6 +40,29 @@ internal sealed record ControllerStats
 /// <summary>Works out <see cref="ControllerStats"/> from a controller's readings.</summary>
 internal static class BatteryStats
 {
+    /// <summary>e.g. "45 min", "3 h 20 min", "1 d 4 h"; rounded to 5 minutes, since none of this is precise.</summary>
+    public static string FormatDuration(TimeSpan span, string zero = "0 min")
+    {
+        if (span < TimeSpan.FromMinutes(2.5))
+            return zero;
+        var rounded = TimeSpan.FromMinutes(Math.Round(span.TotalMinutes / 5) * 5);
+        if (rounded.TotalDays >= 1)
+            return rounded.Hours > 0 ? $"{(int)rounded.TotalDays} d {rounded.Hours} h" : $"{(int)rounded.TotalDays} d";
+        if (rounded.TotalHours >= 1)
+            return rounded.Minutes > 0 ? $"{(int)rounded.TotalHours} h {rounded.Minutes} min" : $"{(int)rounded.TotalHours} h";
+        return $"{rounded.Minutes} min";
+    }
+
+    /// <summary>
+    /// Time left as the tray shows it, e.g. "3 h to 20%" or "1 h 30 min to full": the same figure as the
+    /// Controllers page's Until card. Null when there isn't enough history to say.
+    /// </summary>
+    public static string? TimeLeft(ControllerStats s)
+    {
+        if (s.Charging)
+            return s.UntilFull is TimeSpan full ? $"{FormatDuration(full)} to full" : null;
+        return s.UntilLow is TimeSpan low ? $"{FormatDuration(low)} to {(s.CountdownLevel > 0 ? $"{s.CountdownLevel}%" : "empty")}" : null;
+    }
     /// <summary>History kept for the baseline: long enough to compare a controller with its early self.</summary>
     public static readonly TimeSpan BaselineAfter = TimeSpan.FromDays(21);
     private static readonly TimeSpan Week = TimeSpan.FromDays(7);

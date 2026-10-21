@@ -19,7 +19,9 @@
 | **?** | Connected, but the battery level isn't known yet. |
 | The ControllerHP gamepad | No controllers connected. |
 
-Hover over the icon for the controller's name and its exact reading, for example *DualSense Wireless Controller: 85%, charging*.
+Hover over the icon for the controller's name, its exact reading and, once there's enough history, how long it has left. For example: *Xbox Wireless Controller: 62%, about 3 h to 20%*, or *DualSense Wireless Controller: 85%, charging, about 1 h 30 min to full*.
+
+Time left counts down to your low warning level (or to empty if that warning is off), or up to full while charging. It's the same figure as the [Controllers page](controllers.md#the-stats) shows, and it appears after about an hour on battery.
 
 The icon follows your taskbar's light or dark mode.
 
@@ -39,10 +41,10 @@ To see more icons, change **Tray icons** to **2** or **One per controller** in t
 
 ## The controller panel
 
-Left-click the tray icon to open a panel listing **every** connected controller, including any that don't have a tray icon of their own. Each shows its battery, whether it's charging, and how it's connected:
+Left-click the tray icon to open a panel listing **every** connected controller, including any that don't have a tray icon of their own. Each shows its battery, how long it has left (once known), and how it's connected:
 
 > **Xbox Wireless Controller**
-> 62% · Bluetooth
+> 62% · 3 h to 20% · Bluetooth
 
 The panel lists controllers lowest battery first. The gear at the top right opens [Settings](#settings). Click anywhere else, press Esc or click the tray icon again to close it.
 
