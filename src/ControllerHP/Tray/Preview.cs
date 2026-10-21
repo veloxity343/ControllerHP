@@ -107,7 +107,12 @@ internal static partial class Preview
             window.Show();
             // Tall enough to show the whole page without scrolling.
             window.Height = window.LogicalToDeviceUnits(1000);
+            // Paint it and its children now, then let the compositor pick that up: PrintWindow copies the
+            // composed window, and capturing a brand-new window too early comes out black.
+            window.Refresh();
             Application.DoEvents();
+            DwmFlush();
+            DwmFlush();
             var shot = new Bitmap(window.Width, window.Height);
             using (var g = Graphics.FromImage(shot))
             {
@@ -133,6 +138,10 @@ internal static partial class Preview
     }
 
     private const uint PwRenderFullContent = 2;
+
+    /// <summary>Waits for the compositor's next frame.</summary>
+    [System.Runtime.InteropServices.LibraryImport("dwmapi.dll")]
+    private static partial int DwmFlush();
 
     [System.Runtime.InteropServices.LibraryImport("user32.dll")]
     [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
