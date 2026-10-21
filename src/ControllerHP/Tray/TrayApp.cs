@@ -262,6 +262,17 @@ internal sealed class TrayApp : ApplicationContext
         {
             Checked = _notifier.ConnectionToasts,
         });
+        // Both battery warnings at once; Settings has them separately. Ticked while either is on, so a click
+        // turns everything off, and a second click turns both back on. The levels are left as they were.
+        bool anyWarning = Settings.LowWarningEnabled || Settings.CriticalWarningEnabled;
+        _menu.Items.Add(new ToolStripMenuItem("Battery warnings", null, (_, _) =>
+        {
+            Settings.LowWarningEnabled = !anyWarning;
+            Settings.CriticalWarningEnabled = !anyWarning;
+        })
+        {
+            Checked = anyWarning,
+        });
         _menu.Items.Add(new ToolStripMenuItem("Start with Windows", null, (_, _) => Settings.StartWithWindows = !Settings.StartWithWindows)
         {
             Checked = Settings.StartWithWindows,
