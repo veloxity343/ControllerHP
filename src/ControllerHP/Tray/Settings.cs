@@ -15,10 +15,11 @@ internal static class Settings
         set => Write(nameof(ToastCorner), value.ToString());
     }
 
-    /// <summary>How many controllers get their own tray icon; 0 means one per controller.</summary>
+    /// <summary>How many controllers get their own tray icon: 1, 2, or 0 for one per controller.</summary>
     public static int TrayIconLimit
     {
-        get => Read(nameof(TrayIconLimit)) is int value && value >= 0 ? value : 1;
+        // 3 and 4 were options before; anything above 2 now means one per controller.
+        get => Read(nameof(TrayIconLimit)) is int value && value >= 0 ? (value > 2 ? 0 : value) : 1;
         set => Write(nameof(TrayIconLimit), value);
     }
 

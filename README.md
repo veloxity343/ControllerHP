@@ -4,7 +4,7 @@ Your controller's hit points, in the Windows taskbar.
 
 ControllerHP puts a battery meter in the notification area for your game controllers: the percentage on top, a meter underneath whose fill and colour track the charge (green → yellow → red), and a bolt through it while charging. Slim pop-ups in the top-right corner tell you when a controller connects or disconnects, and when its battery drops to 20% and 10%. Right-click the tray icon to move them to another corner or turn off the connect/disconnect ones.
 
-With several controllers connected, one icon shows the controller with the lowest battery (charging ones go last), and hovering lists the rest. Right-click → **Tray icons** to show up to four, or one per controller.
+With several controllers connected, one icon shows the controller with the lowest battery (charging ones go last), and hovering lists the rest. Right-click → **Tray icons** to show two, or one per controller.
 
 ![Icon states and pop-ups](docs/icon-preview.png)
 

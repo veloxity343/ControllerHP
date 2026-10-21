@@ -225,7 +225,7 @@ internal sealed class TrayApp : ApplicationContext
     }
 
     private static readonly (int Limit, string Label)[] IconLimitLabels =
-        [(1, "1"), (2, "2"), (3, "3"), (4, "4"), (0, "One per controller")];
+        [(1, "1"), (2, "2"), (0, "One per controller")];
 
     private void SetIconLimit(int limit)
     {
