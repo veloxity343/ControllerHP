@@ -27,6 +27,7 @@ There are no automated tests; changes are checked against real controllers. In y
 - Match the surrounding code: its naming, its layout, and comments that explain *why* rather than *what*.
 - The CI build must pass before merging.
 - Update the [wiki](docs/wiki/README.md) if you change what users see or which controllers are supported.
+- Add a line under **Unreleased** in [CHANGELOG.md](CHANGELOG.md) for anything users would notice. It becomes the next release's notes.
 - Label it `enhancement`, `bug` or `documentation`, so the release notes group it correctly.
 
 ## Code of Conduct

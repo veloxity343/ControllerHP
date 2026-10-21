@@ -74,10 +74,35 @@ jobs:
           path: dist
           merge-multiple: true
 
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: CHANGELOG.md
+          sparse-checkout-cone-mode: false
+
+      # The release notes are this version's section of CHANGELOG.md. A full release without one stops here
+      # rather than publishing empty notes; pre-releases use the Unreleased section.
+      - name: Release notes from CHANGELOG.md
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          section() { awk -v h="## [$1]" 'index($0, h) == 1 { found = 1; next } found && (/^## \[/ || /^\[[^]]+\]: /) { exit } found' CHANGELOG.md; }
+          notes="$(section "$version")"
+          if [ -z "$(printf '%s' "$notes" | tr -d '[:space:]')" ]; then
+            if [[ "$version" == *-* ]]; then
+              notes="$(section Unreleased)"
+            else
+              echo "::error file=CHANGELOG.md::CHANGELOG.md has no section for $version. Add '## [$version] - <date>' with its changes, then push the tag again."
+              exit 1
+            fi
+          fi
+          printf '%s\n' "$notes" > release-notes.md
+          cat release-notes.md
+
       # Third-party action, so pinned to a commit; Dependabot keeps it current.
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           files: dist/*.zip
+          # The changelog section, followed by GitHub's list of merged pull requests and a comparison link.
+          body_path: release-notes.md
           generate_release_notes: true
           # Tags like v1.2.0-beta.1 become pre-releases.
           prerelease: ${{ contains(github.ref_name, '-') }}

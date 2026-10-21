@@ -1,4 +1,5 @@
-# Groups the release notes GitHub generates from merged pull requests, by label.
+# Groups the list of merged pull requests GitHub adds to release notes, by label. The notes themselves
+# come from the version's section of CHANGELOG.md (see the release job in workflows/ci.yml).
 changelog:
   exclude:
     labels: [skip-release-notes]
