@@ -50,7 +50,7 @@ internal static class BatteryIconRenderer
 
     private static readonly Color Halo = Color.FromArgb(200, 0, 0, 0);
 
-    /// <param name="battery">null draws the dimmed "no controllers" placeholder.</param>
+    /// <param name="battery">null draws the app icon, the "no controllers" placeholder.</param>
     /// <param name="lightTaskbar">Whether the taskbar uses the light theme, which needs a dark outline.</param>
     public static OwnedIcon Render(ControllerBattery? battery, bool lightTaskbar)
     {
@@ -58,8 +58,12 @@ internal static class BatteryIconRenderer
         return new OwnedIcon(bitmap.GetHicon());
     }
 
+    /// <param name="battery">null draws the app icon, the "no controllers" placeholder.</param>
     public static Bitmap RenderBitmap(ControllerBattery? battery, bool lightBackground, int size)
     {
+        if (battery is null)
+            return AppIcon(size);
+
         var bitmap = new Bitmap(size, size);
         using var g = Graphics.FromImage(bitmap);
         g.SmoothingMode = SmoothingMode.AntiAlias;
@@ -68,6 +72,26 @@ internal static class BatteryIconRenderer
         // Everything below is laid out on a 16x16 grid and scaled to the real size.
         g.ScaleTransform(size / 16f, size / 16f);
         Draw(g, battery, lightBackground ? Color.FromArgb(32, 32, 32) : Color.White);
+        return bitmap;
+    }
+
+    /// <summary>
+    /// The app icon at <paramref name="size"/>, from its nearest hand-tuned frame. It's outlined, so it
+    /// reads on light and dark taskbars alike.
+    /// </summary>
+    private static Bitmap AppIcon(int size)
+    {
+        using var stream = typeof(BatteryIconRenderer).Assembly.GetManifestResourceStream("ControllerHP.app.ico")!;
+        using var icon = new Icon(stream, new Size(size, size));
+        using var frame = icon.ToBitmap();
+        if (frame.Width == size)
+            return new Bitmap(frame);
+
+        var bitmap = new Bitmap(size, size);
+        using var g = Graphics.FromImage(bitmap);
+        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+        g.DrawImage(frame, new Rectangle(0, 0, size, size));
         return bitmap;
     }
 
@@ -98,17 +122,12 @@ internal static class BatteryIconRenderer
     private static readonly RectangleF Inner = new(1.9f, 11f, 11f, 3.1f);
     private static readonly RectangleF Nub = new(14.6f, 11.3f, 1.2f, 2.5f);
 
-    private static void Draw(Graphics g, ControllerBattery? battery, Color foreground)
+    private static void Draw(Graphics g, ControllerBattery battery, Color foreground)
     {
-        if (battery is null)
-        {
-            DrawGamepad(g, foreground);
-            return;
-        }
 
-        int? percent = battery?.EffectivePercent;
-        bool wired = battery?.Power == ChargeState.Wired;
-        bool charging = battery?.Power == ChargeState.Charging;
+        int? percent = battery.EffectivePercent;
+        bool wired = battery.Power == ChargeState.Wired;
+        bool charging = battery.Power == ChargeState.Charging;
 
         if (percent is int p && !wired)
         {
@@ -150,32 +169,6 @@ internal static class BatteryIconRenderer
 
         using var brush = new SolidBrush(color);
         g.FillPath(brush, path);
-    }
-
-    /// <summary>
-    /// The "no controllers" placeholder: a gamepad silhouette like the app icon's, with the d-pad and face
-    /// buttons cut out, so it reads as the app rather than as an empty battery.
-    /// </summary>
-    private static void DrawGamepad(Graphics g, Color color)
-    {
-        using var pad = new GraphicsPath { FillMode = FillMode.Winding };
-        pad.AddPath(RoundedRect(new RectangleF(1.2f, 3.6f, 13.6f, 6.4f), 3f), false);
-        pad.AddEllipse(0.9f, 5.6f, 5f, 7.6f);
-        pad.AddEllipse(10.1f, 5.6f, 5f, 7.6f);
-        using (var brush = new SolidBrush(color))
-            g.FillPath(brush, pad);
-
-        // Cut the controls out to transparency, so the taskbar shows through.
-        var previous = g.CompositingMode;
-        g.CompositingMode = CompositingMode.SourceCopy;
-        using (var clear = new SolidBrush(Color.Transparent))
-        {
-            g.FillRectangle(clear, 3.1f, 6.3f, 3.4f, 1.2f);  // d-pad, across
-            g.FillRectangle(clear, 4.2f, 5.2f, 1.2f, 3.4f);  // d-pad, down
-            g.FillEllipse(clear, 10.9f, 5f, 1.5f, 1.5f);     // face buttons
-            g.FillEllipse(clear, 9.6f, 6.6f, 1.5f, 1.5f);
-        }
-        g.CompositingMode = previous;
     }
 
     /// <summary>A bolt through the battery, haloed so it stands out over the fill.</summary>

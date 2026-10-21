@@ -20,6 +20,11 @@
     <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Also drawn in the tray when no controllers are connected. -->
+    <EmbeddedResource Include="app.ico" LogicalName="ControllerHP.app.ico" />
+  </ItemGroup>
+
   <PropertyGroup>
     <!-- Overridden by CI from the release tag (v1.2.3 -> 1.2.3). -->
     <Version>0.2.0</Version>

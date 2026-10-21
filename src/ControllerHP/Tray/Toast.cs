@@ -5,7 +5,7 @@ using ControllerHP.Battery;
 namespace ControllerHP.Tray;
 
 /// <summary>What a toast shows: the controller's battery glyph, its name, and one line of status.</summary>
-/// <param name="Battery">Drawn as the glyph; null draws the dimmed outline used for "disconnected".</param>
+/// <param name="Battery">Drawn as the glyph; null draws the app icon, used for "disconnected".</param>
 /// <param name="Accent">Colour of the thin bar on the left edge.</param>
 internal sealed record ToastContent(string Title, string Message, ControllerBattery? Battery, Color Accent);
 
