@@ -92,6 +92,8 @@ internal static class BatteryIconRenderer
     // Layout on the 16x16 grid: the percentage across the top, a slim battery meter along the bottom,
     // so the number never hides the fill.
     private static readonly RectangleF TextArea = new(0f, 0f, 16f, 8.6f);
+    /// <summary>Digits stop growing at this height, so short numbers like "85" don't fill the whole area.</summary>
+    private const float MaxTextHeight = 7f;
     private static readonly RectangleF Body = new(0.6f, 9.7f, 13.6f, 5.7f);
     private static readonly RectangleF Inner = new(1.9f, 11f, 11f, 3.1f);
     private static readonly RectangleF Nub = new(14.6f, 11.3f, 1.2f, 2.5f);
@@ -99,7 +101,10 @@ internal static class BatteryIconRenderer
     private static void Draw(Graphics g, ControllerBattery? battery, Color foreground)
     {
         if (battery is null)
-            foreground = Color.FromArgb(110, foreground);
+        {
+            DrawGamepad(g, foreground);
+            return;
+        }
 
         int? percent = battery?.EffectivePercent;
         bool wired = battery?.Power == ChargeState.Wired;
@@ -121,9 +126,6 @@ internal static class BatteryIconRenderer
         using (var nubPath = RoundedRect(Nub, 0.5f))
             g.FillPath(nub, nubPath);
 
-        if (battery is null)
-            return;
-
         string label = wired ? "USB" : percent is int value ? value.ToString() : "?";
         DrawText(g, label, foreground);
 
@@ -139,7 +141,7 @@ internal static class BatteryIconRenderer
         path.AddString(text, family, (int)FontStyle.Bold, 10f, PointF.Empty, StringFormat.GenericTypographic);
 
         var bounds = path.GetBounds();
-        float scale = Math.Min(TextArea.Width / bounds.Width, TextArea.Height / bounds.Height);
+        float scale = Math.Min(TextArea.Width / bounds.Width, Math.Min(TextArea.Height, MaxTextHeight) / bounds.Height);
         using var matrix = new Matrix();
         matrix.Translate(TextArea.X + TextArea.Width / 2, TextArea.Y + TextArea.Height / 2);
         matrix.Scale(scale, scale);
@@ -148,6 +150,32 @@ internal static class BatteryIconRenderer
 
         using var brush = new SolidBrush(color);
         g.FillPath(brush, path);
+    }
+
+    /// <summary>
+    /// The "no controllers" placeholder: a gamepad silhouette like the app icon's, with the d-pad and face
+    /// buttons cut out, so it reads as the app rather than as an empty battery.
+    /// </summary>
+    private static void DrawGamepad(Graphics g, Color color)
+    {
+        using var pad = new GraphicsPath { FillMode = FillMode.Winding };
+        pad.AddPath(RoundedRect(new RectangleF(1.2f, 3.6f, 13.6f, 6.4f), 3f), false);
+        pad.AddEllipse(0.9f, 5.6f, 5f, 7.6f);
+        pad.AddEllipse(10.1f, 5.6f, 5f, 7.6f);
+        using (var brush = new SolidBrush(color))
+            g.FillPath(brush, pad);
+
+        // Cut the controls out to transparency, so the taskbar shows through.
+        var previous = g.CompositingMode;
+        g.CompositingMode = CompositingMode.SourceCopy;
+        using (var clear = new SolidBrush(Color.Transparent))
+        {
+            g.FillRectangle(clear, 3.1f, 6.3f, 3.4f, 1.2f);  // d-pad, across
+            g.FillRectangle(clear, 4.2f, 5.2f, 1.2f, 3.4f);  // d-pad, down
+            g.FillEllipse(clear, 10.9f, 5f, 1.5f, 1.5f);     // face buttons
+            g.FillEllipse(clear, 9.6f, 6.6f, 1.5f, 1.5f);
+        }
+        g.CompositingMode = previous;
     }
 
     /// <summary>A bolt through the battery, haloed so it stands out over the fill.</summary>
