@@ -19,6 +19,14 @@ internal static class Preview
         ("none", null),
     ];
 
+    /// <summary>A two-player evening: one pad running low on Bluetooth, one charging on USB.</summary>
+    private static readonly ControllerBattery[] SampleFlyout =
+    [
+        Sample(20) with { Name = "Xbox Wireless Controller", Connection = Connection.Bluetooth },
+        new("preview2", "DualSense Wireless Controller", "preview", 85, BatteryLevel.Full, ChargeState.Charging,
+            Connection: Connection.Usb),
+    ];
+
     private static readonly ToastContent[] SampleToasts =
     [
         new("Xbox Wireless Controller", "Connected · 87%", Sample(87), Color.FromArgb(52, 199, 89)),
@@ -36,9 +44,11 @@ internal static class Preview
         int iconsHeight = labelHeight + sizes.Sum(size => 2 * RowHeight(size));
         int toastWidth = ToastWindow.LogicalWidth, toastHeight = ToastWindow.LogicalHeight;
         int width = rowHeader + States.Length * cell;
-        int height = iconsHeight + SampleToasts.Length * (toastHeight + 10) + 30;
+        var flyoutSize = Flyout.LogicalSize(SampleFlyout.Length);
+        int height = iconsHeight + SampleToasts.Length * (toastHeight + 10) + 30 + flyoutSize.Height + 20;
 
-        using var sheet = new Bitmap(width, height);
+        // No alpha channel: GDI text doesn't write alpha, so on a 32-bit sheet the text would be see-through.
+        using var sheet = new Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
         using var g = Graphics.FromImage(sheet);
         g.Clear(Color.FromArgb(245, 245, 245));
         g.InterpolationMode = InterpolationMode.NearestNeighbor;
@@ -75,6 +85,13 @@ internal static class Preview
             ToastWindow.PaintContent(g, new Rectangle(rowHeader, y, toastWidth, toastHeight), toast, 1f);
             y += toastHeight + 10;
         }
+
+        // The flyout in both modes, side by side.
+        y += 10;
+        Flyout.PaintContent(g, new Rectangle(rowHeader, y, flyoutSize.Width, flyoutSize.Height), SampleFlyout,
+            Palette.Dark, 1f);
+        Flyout.PaintContent(g, new Rectangle(rowHeader + flyoutSize.Width + 20, y, flyoutSize.Width, flyoutSize.Height),
+            SampleFlyout, Palette.LightMode, 1f);
 
         sheet.Save(path, System.Drawing.Imaging.ImageFormat.Png);
     }

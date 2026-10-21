@@ -27,6 +27,8 @@ internal sealed class TrayApp : ApplicationContext
     private readonly ControllerNotifier _notifier = new();
     private IReadOnlyList<ControllerBattery> _readings = [];
     private bool _lightTaskbar = Theme.SystemUsesLight();
+    private Flyout? _flyout;
+    private DateTime _flyoutClosedAt;
 
     public TrayApp(IReadOnlyList<IBatterySource> sources)
     {
@@ -37,7 +39,7 @@ internal sealed class TrayApp : ApplicationContext
         _notifier.Corner = Settings.ToastCorner;
         _notifier.ConnectionToasts = Settings.ConnectionToasts;
 
-        _slots.Add(new TrayEntry(_menu));
+        _slots.Add(new TrayEntry(_menu, ToggleFlyout));
         _slotIds.Add(null);
         _slots[0].Update(null, _lightTaskbar);
 
@@ -69,6 +71,7 @@ internal sealed class TrayApp : ApplicationContext
         _ui.Post(_ =>
         {
             _lightTaskbar = Theme.SystemUsesLight();
+            _flyout?.Dismiss(); // reopens in the new colours
             Refresh();
         }, null);
     }
@@ -81,9 +84,32 @@ internal sealed class TrayApp : ApplicationContext
             LogHistory(_readings);
 
         UpdateSlots();
+        _flyout?.SetReadings(Prioritise(_readings).ToList());
 
         if (_notifier.Update(_readings))
             _settleTimer.Start();
+    }
+
+    private void ToggleFlyout()
+    {
+        if (_flyout is not null)
+        {
+            _flyout.Dismiss();
+            return;
+        }
+        // Clicking the tray icon while the flyout is open closes it (it loses focus) just before the
+        // click arrives; don't reopen it straight away.
+        if (DateTime.UtcNow - _flyoutClosedAt < TimeSpan.FromMilliseconds(300))
+            return;
+
+        _flyout = new Flyout(Prioritise(_readings).ToList(), Theme.For(_lightTaskbar));
+        // Closing a modeless form disposes it.
+        _flyout.FormClosed += (_, _) =>
+        {
+            _flyoutClosedAt = DateTime.UtcNow;
+            _flyout = null;
+        };
+        _flyout.ShowAt(Cursor.Position);
     }
 
     /// <summary>
@@ -103,7 +129,7 @@ internal sealed class TrayApp : ApplicationContext
         int count = Math.Max(1, shown.Count);
         while (_slots.Count < count)
         {
-            _slots.Add(new TrayEntry(_menu));
+            _slots.Add(new TrayEntry(_menu, ToggleFlyout));
             _slotIds.Add(null);
         }
         while (_slots.Count > count)
@@ -271,6 +297,7 @@ internal sealed class TrayApp : ApplicationContext
             source.ControllersChanged -= OnControllersChanged;
             (source as IDisposable)?.Dispose();
         }
+        _flyout?.Close();
         foreach (var slot in _slots)
             slot.Dispose();
         _menu.Dispose();
@@ -289,9 +316,14 @@ internal sealed class TrayEntry : IDisposable
     private bool? _shownLightTaskbar;
     private string? _shownMore;
 
-    public TrayEntry(ContextMenuStrip menu)
+    public TrayEntry(ContextMenuStrip menu, Action onLeftClick)
     {
         _notifyIcon = new NotifyIcon { ContextMenuStrip = menu, Visible = true };
+        _notifyIcon.MouseClick += (_, e) =>
+        {
+            if (e.Button == MouseButtons.Left)
+                onLeftClick();
+        };
     }
 
     /// <param name="battery">null shows the "no controllers" placeholder.</param>
