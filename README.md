@@ -1,84 +1,69 @@
-# ControllerHP
+<p align="center">
+  <img src="docs/images/app-icon.png" width="96" alt="">
+</p>
 
-Your controller's hit points, in the Windows taskbar.
+<h1 align="center">ControllerHP</h1>
 
-ControllerHP puts a battery meter in the notification area for your game controllers: the percentage on top, a meter underneath whose fill and colour track the charge (green → yellow → red), and a bolt through it while charging. Slim pop-ups in the top-right corner tell you when a controller connects or disconnects, and when its battery runs low (20% and 10% by default).
+<p align="center">Battery levels for Xbox and PlayStation controllers, in the Windows taskbar.</p>
 
-With several controllers connected, one icon shows the controller with the lowest battery (charging ones go last), and hovering lists the rest. Left-click the icon for a panel listing every controller with its charge and connection.
+<p align="center">
+  <a href="https://github.com/veloxity343/ControllerHP/releases/latest"><img src="https://img.shields.io/github/v/release/veloxity343/ControllerHP" alt="Latest release"></a>
+  <a href="https://github.com/veloxity343/ControllerHP/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/veloxity343/ControllerHP/ci.yml?branch=main" alt="Build status"></a>
+  <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4" alt="Windows 10 and 11">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/veloxity343/ControllerHP" alt="MIT licence"></a>
+</p>
 
-![Tray icons, pop-ups and the controller panel](docs/icon-preview.png)
+<p align="center">
+  <a href="#features">Features</a> · <a href="#install">Install</a> · <a href="docs/wiki/README.md">Wiki</a> · <a href="#help">Help</a> · <a href="#contributing">Contributing</a> · <a href="#license">License</a>
+</p>
 
-The gear in that panel, or **Settings…** in the right-click menu, opens the settings: how many tray icons to show, where pop-ups appear, whether connecting and disconnecting get one, the warning levels, and Start with Windows. It follows Windows' light or dark mode.
+![Tray icons at each battery level, pop-ups, and the controller panel in dark and light mode](docs/images/icon-preview.png)
+
+## Features
+
+- **A battery icon in the taskbar** showing the percentage and a meter that turns from green to red, with a bolt while charging.
+- **Pop-ups** when a controller connects or disconnects, and when its battery runs low (20% and 10% by default).
+- **One icon for several controllers**, showing whichever is lowest, or one icon each if you prefer.
+- **A panel on left-click** listing every controller with its charge and connection.
+- **Battery history**: a chart of each controller's charge, with average drain, time left, play time and a battery health estimate.
+- **Follows Windows' light or dark mode**, and runs quietly: a check every 30 seconds, nothing sent anywhere.
 
 ## Install
 
-Download the latest zip from [Releases](../../releases), extract `ControllerHP.exe` anywhere (e.g. `%LOCALAPPDATA%\Programs\ControllerHP`), and run it. Right-click the tray icon and tick **Start with Windows** to keep it running.
+1. Download a zip from [Releases](https://github.com/veloxity343/ControllerHP/releases/latest):
 
-| Download | Size | Needs |
-|---|---|---|
-| `ControllerHP-x.y.z-win-x64.zip` | ~6 MB | [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) (Windows offers the download link if it's missing) |
-| `ControllerHP-x.y.z-win-x64-standalone.zip` | ~72 MB | Nothing |
+   | Download | Size | Needs |
+   |---|---|---|
+   | `ControllerHP-x.y.z-win-x64.zip` | ~6 MB | [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) (Windows offers it if it's missing) |
+   | `ControllerHP-x.y.z-win-x64-standalone.zip` | ~72 MB | Nothing |
 
-Requires Windows 10 1809 or later.
+2. Extract `ControllerHP.exe` somewhere permanent, such as `%LOCALAPPDATA%\Programs\ControllerHP`, and run it.
+3. If Windows shows **"Windows protected your PC"**, choose **More info → Run anyway**. ControllerHP isn't code-signed, so Windows warns about it until it's widely downloaded.
+
+Requires Windows 10 version 1809 or later. [Getting started](docs/wiki/getting-started.md) covers keeping the icon visible, starting with Windows, updating and uninstalling.
 
 ## Supported controllers
 
-| Controller | Connection | Battery | Charging |
+| Controller | USB | Bluetooth | Xbox Wireless Adapter |
 |---|---|---|---|
-| Xbox One / Series | Bluetooth | Exact % | Inferred from the % rising (a minute or two after plugging in) |
-| Xbox One / Series | USB, Xbox Wireless Adapter | Exact % or 4 levels | Yes |
-| DualSense / DualSense Edge | USB, Bluetooth | 10% steps | Yes |
-| DualShock 4 | USB, Bluetooth | 10% steps | Yes |
+| Xbox One / Series | ✓ | ✓ | ✓ |
+| DualSense / DualSense Edge | ✓ | ✓ | — |
+| DualShock 4 | ✓ | ✓ | — |
 
-### Known limitations
+PlayStation controllers report battery in 10% steps. See [Supported controllers](docs/wiki/supported-controllers.md) for what each connection can report and the known limitations.
 
-- Pop-ups can't appear over games running in exclusive fullscreen (borderless and windowed are fine).
-- Over Bluetooth, Windows exposes no charging flag for Xbox controllers, so charging is inferred: the bolt appears at the first percentage rise and clears at 100% or after 5 minutes without one.
-- Two identical Xbox controllers, one on Bluetooth and one not, may have their readings swapped.
-- Over Bluetooth, PlayStation controllers only report their battery after being switched to their full input report, which ControllerHP does when one connects (as Steam does). Until the controller reconnects, games that read it through DirectInput (some emulators and older games) don't see its input. Steam Input and games with native DualSense / DualShock 4 support are unaffected.
-- PlayStation controllers held exclusively by another tool (e.g. DS4Windows with HidHide) show as "battery unknown".
+## Help
 
-## How batteries are read
+- **Something not working?** Start with [Troubleshooting](docs/wiki/troubleshooting.md).
+- **Questions** go in [Discussions](https://github.com/veloxity343/ControllerHP/discussions).
+- **Bugs and ideas** go in [Issues](https://github.com/veloxity343/ControllerHP/issues/new/choose), where a short form asks for what's needed to help.
+- **Security problems:** please report them privately, as described in [SECURITY.md](SECURITY.md).
 
-For Xbox controllers, sources are tried in order, and the first one that finds any controller is used:
+## Contributing
 
-| Source | Covers | Detail |
-|---|---|---|
-| `Windows.Gaming.Input` | Xbox controllers over USB, Xbox Wireless Adapter, Bluetooth | Percentage + charging state; finds controllers and raises connect/disconnect events |
-| ↳ Bluetooth LE battery | Xbox controllers over Bluetooth | Overrides the percentage above, which is wrong over Bluetooth (always 100/1000 mWh). Read from the same devnode property the Settings app shows, watched for instant updates. |
-| `XInput` | Xbox controllers via USB / Wireless Adapter (not Bluetooth) | 4 coarse levels, no charging state |
+Bug reports, results from controllers nobody has tested yet, and pull requests are all welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) and the [developer docs](docs/dev/README.md). Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-PlayStation controllers are read separately, so they show alongside Xbox ones:
-
-| Source | Covers | Detail |
-|---|---|---|
-| Raw HID input reports | DualSense, DualSense Edge, DualShock 4 over USB and Bluetooth | Battery level and charging state from the controller's status byte, sampled every 5 seconds |
-
-Connects and disconnects are event-driven; a 30-second poll only catches battery drift on Xbox sources without change events.
-
-## Development
-
-Requires the .NET 8 SDK (`global.json` pins the feature band). Open `ControllerHP.sln` in Visual Studio or Rider, or build from the command line:
-
-```bash
-dotnet build ControllerHP.sln
-```
-
-### Diagnostics
-
-| Flag | What it does |
-|---|---|
-| `--list` | Prints what every battery source reports for each controller, raw values included |
-| `--preview <file.png>` | Renders every icon state and pop-up to an image |
-| `--preview-settings <file.png>` | Renders each page of the settings window, in dark and light mode, to an image |
-| `--demo` | Plays the sample pop-ups on screen |
-| `--hid-probe` | Dumps the raw HID reports of connected Xbox and PlayStation controllers, and Xbox GATT services |
-
-Unhandled errors are logged to `%LOCALAPPDATA%\ControllerHP\error.log`, and every reading change is logged with a timestamp to `history.log` in the same folder. `battery.csv` there holds the last 90 days of readings per controller, for the Battery history page.
-
-### Contributing
-
-Bug reports, controller test results and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Looking for something to work on? [Help wanted](docs/dev/help-wanted.md) lists open ideas: more controllers (Switch Pro, Joy-Con, 8BitDo), Linux and macOS versions, new features and automated tests.
 
 ## License
 
