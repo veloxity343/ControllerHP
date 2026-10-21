@@ -9,12 +9,24 @@
 
 ## What each controller reports
 
-| Controller | Connection | Battery | Charging shown |
-|---|---|---|---|
-| Xbox One / Series | Bluetooth | Exact % | Worked out from the % rising (a minute or two after plugging in) |
-| Xbox One / Series | USB or Xbox Wireless Adapter | Exact %, or 4 levels on some setups | Yes |
-| DualSense / DualSense Edge | USB or Bluetooth | 10% steps | Yes |
-| DualShock 4 | USB or Bluetooth | 10% steps | Yes |
+The last column says whether each one has been tried on real hardware:
+
+- **Tested:** seen working on a real controller.
+- **Likely:** not tried yet, but it uses exactly the same code as a tested combination, so it should work.
+- **Untested:** written from the controller's documented format, but nobody has tried it on real hardware yet.
+
+| Controller | Connection | Battery | Charging shown | Tested on hardware |
+|---|---|---|---|---|
+| Xbox Wireless Controller (One / Series) | Bluetooth | Exact % | Worked out from the % rising (a minute or two after plugging in) | **Tested** (Series controller) |
+| Xbox Elite Series 2, Xbox Adaptive Controller | Bluetooth | Exact % | As above | Likely |
+| Xbox Wireless Controller (One / Series) | USB | Exact %, or 4 levels on some setups | Yes | Untested |
+| Xbox Wireless Controller (One / Series) | Xbox Wireless Adapter | Exact %, or 4 levels on some setups | Yes | Untested |
+| DualSense | Bluetooth | 10% steps | Yes | **Tested** |
+| DualSense Edge | Bluetooth | 10% steps | Yes | Likely |
+| DualSense, DualSense Edge | USB | 10% steps | Yes | Untested |
+| DualShock 4 | USB or Bluetooth | 10% steps | Yes | Untested |
+
+**Have one marked Likely or Untested?** Please help: connect it, run `ControllerHP.exe --list` (see [Reporting a bug](troubleshooting.md#reporting-a-bug)), and post what you see in [Discussions](https://github.com/veloxity343/ControllerHP/discussions), whether it works or not.
 
 The panel and Settings show each controller's connection: USB, Bluetooth or Xbox Wireless Adapter.
 

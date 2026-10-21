@@ -13,7 +13,7 @@ Each controller family is an `IBatterySource` in `src/ControllerHP/Battery`. A n
 `--hid-probe` dumps raw reports, which helps work out where the battery lives. Watch how the bytes change as the controller charges and drains.
 
 Then update the user docs:
-- [Supported controllers](../wiki/supported-controllers.md): the table, and any limitations.
+- [Supported controllers](../wiki/supported-controllers.md): the table, with its **Tested on hardware** status, and any limitations. Mark it Tested only once it's been seen working on a real controller.
 - The table in the main [README](../../README.md).
 - If the model has a commonly reported runtime, `BatteryStats.Typical`.
 

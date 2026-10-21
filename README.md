@@ -54,11 +54,14 @@ Requires Windows 10 version 1809 or later. [Getting started](docs/wiki/getting-s
 
 ## Supported controllers
 
-| Controller | USB | Bluetooth | Xbox Wireless Adapter |
+| Controller | Bluetooth | USB | Xbox Wireless Adapter |
 |---|---|---|---|
-| Xbox One / Series | ✓ | ✓ | ✓ |
-| DualSense / DualSense Edge | ✓ | ✓ | — |
-| DualShock 4 | ✓ | ✓ | — |
+| Xbox One / Series | **Tested** | Untested | Untested |
+| DualSense | **Tested** | Untested | — |
+| DualSense Edge | Likely | Untested | — |
+| DualShock 4 | Untested | Untested | — |
+
+**Tested** means seen working on real hardware. **Likely** means not tried yet, but it uses the same code as a tested one. **Untested** means written from the controller's documented format but not yet tried. Have one that's Likely or Untested? [Tell us how it goes](https://github.com/veloxity343/ControllerHP/discussions).
 
 PlayStation controllers report battery in 10% steps. See [Supported controllers](docs/wiki/supported-controllers.md) for what each connection can report and the known limitations.
 
