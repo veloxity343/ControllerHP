@@ -29,6 +29,8 @@ internal sealed class TrayApp : ApplicationContext
         // Creating the ContextMenuStrip installs the WinForms SynchronizationContext on this thread.
         _ui = SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
         _menu.Opening += (_, _) => BuildMenu();
+        _notifier.Corner = Settings.ToastCorner;
+        _notifier.ConnectionToasts = Settings.ConnectionToasts;
 
         _placeholder = new TrayEntry(_menu);
         _placeholder.Update(null, _lightTaskbar);
@@ -128,11 +130,40 @@ internal sealed class TrayApp : ApplicationContext
 
         _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add(new ToolStripMenuItem("Refresh now", null, (_, _) => Refresh()));
+
+        var position = new ToolStripMenuItem("Pop-up position");
+        foreach (var (corner, label) in CornerLabels)
+        {
+            position.DropDownItems.Add(new ToolStripMenuItem(label, null, (_, _) => SetToastCorner(corner))
+            {
+                Checked = _notifier.Corner == corner,
+            });
+        }
+        _menu.Items.Add(position);
+        _menu.Items.Add(new ToolStripMenuItem("Connection pop-ups", null, (_, _) =>
+        {
+            Settings.ConnectionToasts = _notifier.ConnectionToasts = !_notifier.ConnectionToasts;
+        })
+        {
+            Checked = _notifier.ConnectionToasts,
+        });
         _menu.Items.Add(new ToolStripMenuItem("Start with Windows", null, (_, _) => SetStartWithWindows(!StartsWithWindows()))
         {
             Checked = StartsWithWindows(),
         });
         _menu.Items.Add(new ToolStripMenuItem("Exit", null, (_, _) => ExitThread()));
+    }
+
+    private static readonly (ToastCorner Corner, string Label)[] CornerLabels =
+    [
+        (ToastCorner.TopRight, "Top right"), (ToastCorner.TopLeft, "Top left"),
+        (ToastCorner.BottomRight, "Bottom right"), (ToastCorner.BottomLeft, "Bottom left"),
+    ];
+
+    private void SetToastCorner(ToastCorner corner)
+    {
+        Settings.ToastCorner = _notifier.Corner = corner;
+        _notifier.ShowSample();
     }
 
     private static bool StartsWithWindows()

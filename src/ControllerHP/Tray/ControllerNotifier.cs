@@ -37,6 +37,19 @@ internal sealed class ControllerNotifier : IDisposable
     private readonly Dictionary<string, Tracked> _tracked = [];
     private readonly DateTime _startedAt = DateTime.UtcNow;
 
+    /// <summary>Whether connecting and disconnecting show a toast; battery warnings always do.</summary>
+    public bool ConnectionToasts { get; set; } = true;
+
+    public ToastCorner Corner
+    {
+        get => _toasts.Corner;
+        set => _toasts.Corner = value;
+    }
+
+    /// <summary>Shows where toasts will appear, after the position changes.</summary>
+    public void ShowSample() =>
+        _toasts.Show(new ToastContent("ControllerHP", "Pop-ups appear here", null, ConnectedAccent));
+
     /// <returns>True if a controller is still settling and <see cref="Update"/> should be called again shortly.</returns>
     public bool Update(IReadOnlyList<ControllerBattery> readings)
     {
@@ -48,7 +61,7 @@ internal sealed class ControllerNotifier : IDisposable
             var tracked = _tracked[gone];
             _tracked.Remove(gone);
             // A controller that vanished before it was announced was a blip; stay quiet.
-            if (tracked.Announced)
+            if (tracked.Announced && ConnectionToasts)
                 _toasts.Show(new ToastContent(tracked.Reading.Name, "Disconnected", null, DisconnectedAccent));
         }
 
@@ -68,9 +81,11 @@ internal sealed class ControllerNotifier : IDisposable
             }
 
             int? crossed = CheckThresholds(tracked);
-            if (!tracked.Announced)
+            bool announcing = !tracked.Announced;
+            tracked.Announced = true;
+            // With connection toasts off, a controller that connects low still gets its battery warning.
+            if (announcing && ConnectionToasts)
             {
-                tracked.Announced = true;
                 var accent = crossed is not null && reading.EffectivePercent is int p
                     ? BatteryIconRenderer.FillColor(p)
                     : ConnectedAccent;

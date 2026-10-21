@@ -34,7 +34,7 @@ internal static class Preview
         int cell = sizes.Max() * zoom + 12;
         int RowHeight(int size) => size + size * zoom + 18;
         int iconsHeight = labelHeight + sizes.Sum(size => 2 * RowHeight(size));
-        int toastWidth = 280, toastHeight = 60;
+        int toastWidth = ToastWindow.LogicalWidth, toastHeight = ToastWindow.LogicalHeight;
         int width = rowHeader + States.Length * cell;
         int height = iconsHeight + SampleToasts.Length * (toastHeight + 10) + 30;
 

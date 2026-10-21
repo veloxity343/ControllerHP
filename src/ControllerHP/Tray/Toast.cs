@@ -9,11 +9,24 @@ namespace ControllerHP.Tray;
 /// <param name="Accent">Colour of the thin bar on the left edge.</param>
 internal sealed record ToastContent(string Title, string Message, ControllerBattery? Battery, Color Accent);
 
-/// <summary>Stacks toasts in the bottom-right corner of the primary screen, newest at the bottom.</summary>
+internal enum ToastCorner { TopRight, TopLeft, BottomRight, BottomLeft }
+
+/// <summary>Stacks toasts in a corner of the primary screen, newest nearest the corner.</summary>
 internal sealed class ToastManager : IDisposable
 {
     private const int MaxVisible = 4;
     private readonly List<ToastWindow> _open = [];
+    private ToastCorner _corner = ToastCorner.TopRight;
+
+    public ToastCorner Corner
+    {
+        get => _corner;
+        set
+        {
+            _corner = value;
+            Layout();
+        }
+    }
 
     public void Show(ToastContent content)
     {
@@ -35,13 +48,17 @@ internal sealed class ToastManager : IDisposable
     private void Layout()
     {
         var area = (Screen.PrimaryScreen ?? Screen.AllScreens[0]).WorkingArea;
-        int bottom = area.Bottom;
+        bool top = _corner is ToastCorner.TopRight or ToastCorner.TopLeft;
+        bool right = _corner is ToastCorner.TopRight or ToastCorner.BottomRight;
+        int edge = top ? area.Top : area.Bottom;
         for (int i = _open.Count - 1; i >= 0; i--)
         {
             var toast = _open[i];
-            int margin = toast.Scale(12);
-            toast.Location = new Point(area.Right - toast.Width - margin, bottom - toast.Height - margin);
-            bottom = toast.Top + margin - toast.Scale(8);
+            int margin = toast.Scale(12), gap = toast.Scale(8);
+            int x = right ? area.Right - toast.Width - margin : area.Left + margin;
+            int y = top ? edge + margin : edge - toast.Height - margin;
+            toast.Location = new Point(x, y);
+            edge = top ? toast.Bottom - margin + gap : toast.Top + margin - gap;
         }
     }
 
@@ -59,6 +76,9 @@ internal sealed class ToastManager : IDisposable
 /// </summary>
 internal sealed partial class ToastWindow : Form
 {
+    /// <summary>Size at 96 DPI: a single line, half the height of a Steam notification.</summary>
+    public const int LogicalWidth = 380, LogicalHeight = 30;
+
     private static readonly TimeSpan HoldTime = TimeSpan.FromSeconds(4);
     private const double MaxOpacity = 0.96;
     private const double FadeStep = 0.12;
@@ -89,7 +109,7 @@ internal sealed partial class ToastWindow : Form
 
         // Creating the handle first gives the real monitor DPI for sizing.
         _ = Handle;
-        Size = new Size(Scale(280), Scale(60));
+        Size = new Size(Scale(LogicalWidth), Scale(LogicalHeight));
 
         _animation.Tick += (_, _) => Animate();
         Click += (_, _) => Dismiss();
@@ -167,20 +187,29 @@ internal sealed partial class ToastWindow : Form
         using (var accent = new SolidBrush(content.Accent))
             g.FillRectangle(accent, bounds.X, bounds.Y, S(3), bounds.Height);
 
-        int glyphSize = S(32);
+        int glyphSize = S(22);
         using (var glyph = BatteryIconRenderer.RenderBitmap(content.Battery, lightBackground: false, glyphSize))
-            g.DrawImage(glyph, bounds.X + S(14), bounds.Y + (bounds.Height - glyphSize) / 2);
+            g.DrawImage(glyph, bounds.X + S(10), bounds.Y + (bounds.Height - glyphSize) / 2);
 
-        int textX = bounds.X + S(14) + glyphSize + S(12);
-        int textWidth = bounds.Right - textX - S(12);
+        // One line: the title, then the message in grey. The title gives way first if space runs out.
+        int textX = bounds.X + S(10) + glyphSize + S(9);
+        int textRight = bounds.Right - S(12);
+        int gap = S(8);
         // Pixel units so the size is the same whether drawing to the window or to a 96-DPI preview bitmap.
-        using var titleFont = new Font("Segoe UI Semibold", 13.5f * scale, GraphicsUnit.Pixel);
+        using var titleFont = new Font("Segoe UI Semibold", 12.5f * scale, GraphicsUnit.Pixel);
         using var messageFont = new Font("Segoe UI", 12f * scale, GraphicsUnit.Pixel);
-        var flags = TextFormatFlags.Left | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine;
+        var flags = TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis |
+            TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding;
+        // Measured without EndEllipsis, which would measure the text already cut down to fit.
+        var measureFlags = TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding;
+        int messageWidth = Math.Min(TextRenderer.MeasureText(g, content.Message, messageFont, Size.Empty, measureFlags).Width,
+            textRight - textX);
+        int titleWidth = Math.Min(TextRenderer.MeasureText(g, content.Title, titleFont, Size.Empty, measureFlags).Width,
+            Math.Max(0, textRight - textX - messageWidth - gap));
         TextRenderer.DrawText(g, content.Title, titleFont,
-            new Rectangle(textX, bounds.Y + S(11), textWidth, S(20)), TitleColor, flags);
+            new Rectangle(textX, bounds.Y, titleWidth, bounds.Height), TitleColor, flags);
         TextRenderer.DrawText(g, content.Message, messageFont,
-            new Rectangle(textX, bounds.Y + S(31), textWidth, S(18)), MessageColor, flags);
+            new Rectangle(textX + titleWidth + gap, bounds.Y, messageWidth, bounds.Height), MessageColor, flags);
     }
 
     protected override void Dispose(bool disposing)
