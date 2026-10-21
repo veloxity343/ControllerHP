@@ -117,7 +117,7 @@ internal static class BatteryIconRenderer
     // so the number never hides the fill.
     private static readonly RectangleF TextArea = new(0f, 0f, 16f, 8.6f);
     /// <summary>Digits stop growing at this height, so short numbers like "85" don't fill the whole area.</summary>
-    private const float MaxTextHeight = 7f;
+    private const float MaxTextHeight = 6.3f;
     private static readonly RectangleF Body = new(0.6f, 9.7f, 13.6f, 5.7f);
     private static readonly RectangleF Inner = new(1.9f, 11f, 11f, 3.1f);
     private static readonly RectangleF Nub = new(14.6f, 11.3f, 1.2f, 2.5f);
