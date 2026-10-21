@@ -72,8 +72,9 @@ internal static class Settings
         Read(name) is int value ? Math.Clamp(value, min, max) : Math.Clamp(fallback, min, max);
 
     /// <summary>
-    /// Controllers the user removed from the history page, with when. Removing hides rather than deletes:
-    /// the history stays in battery.csv until it expires, and a controller that connects again is unhidden.
+    /// Controllers the user removed from the Controllers page, with when. Removing hides rather than deletes:
+    /// the history stays in battery.csv until it expires, and the tray app unhides a controller when it next
+    /// connects.
     /// </summary>
     public static IReadOnlyDictionary<string, DateTime> HiddenControllers
     {
@@ -97,11 +98,13 @@ internal static class Settings
 
     public static void Hide(string id) => WriteHidden(HiddenControllers.Append(new(id, DateTime.Now)));
 
-    public static void Unhide(string id)
+    public static void Unhide(string id) => Unhide([id]);
+
+    public static void Unhide(IReadOnlyCollection<string> ids)
     {
         var hidden = HiddenControllers;
-        if (hidden.ContainsKey(id))
-            WriteHidden(hidden.Where(kv => kv.Key != id));
+        if (hidden.Keys.Any(ids.Contains))
+            WriteHidden(hidden.Where(kv => !ids.Contains(kv.Key)));
     }
 
     /// <summary>Drops entries for controllers whose history has expired, so the list doesn't keep strangers.</summary>

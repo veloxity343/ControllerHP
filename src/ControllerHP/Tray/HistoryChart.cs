@@ -21,6 +21,12 @@ internal sealed class HistoryChart : ThemedControl
     private static readonly Color[] DarkSlots =
         [.. new[] { "#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767" }.Select(ColorTranslator.FromHtml)];
 
+    public const string NoHistoryMessage =
+        "No battery history yet. Readings are recorded from now on, whenever a controller's battery changes.";
+
+    /// <summary>Shown in place of the chart when there's nothing to draw.</summary>
+    public string EmptyMessage { get; set; } = NoHistoryMessage;
+
     private IReadOnlyList<HistorySeries> _series = [];
     /// <summary>Every reading time in range plus now, sorted, so the crosshair can snap without re-sorting per move.</summary>
     private DateTime[] _snapTimes = [];
@@ -66,8 +72,7 @@ internal sealed class HistoryChart : ThemedControl
         if (_series.Count == 0)
         {
             using var font = MakeFont(13);
-            TextRenderer.DrawText(g, "No battery history yet. Readings are recorded from now on, whenever a controller's battery changes.",
-                font, Rectangle.Inflate(ClientRectangle, -S(24), -S(24)), Palette.SubtleText,
+            TextRenderer.DrawText(g, EmptyMessage, font, Rectangle.Inflate(ClientRectangle, -S(24), -S(24)), Palette.SubtleText,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
             return;
         }

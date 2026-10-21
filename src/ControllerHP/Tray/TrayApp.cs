@@ -117,10 +117,16 @@ internal sealed class TrayApp : ApplicationContext
         {
             LogHistory(_readings);
             _history.Record(_readings);
-            // A removed controller that's connected again is in use: show it again.
+
+            // A removed controller that connects (newly appears) is in use again: show it again. Only on
+            // connecting, so one removed while connected stays hidden until it next connects.
             var hidden = Settings.HiddenControllers;
-            foreach (var reading in _readings.Where(r => hidden.ContainsKey(r.Id)))
+            var before = previous.Select(r => r.Id).ToHashSet();
+            foreach (var reading in _readings.Where(r => !before.Contains(r.Id) && hidden.ContainsKey(r.Id)))
                 Settings.Unhide(reading.Id);
+
+            // An open Controllers page shows connection state in its cards, so update it straight away.
+            _settingsWindow?.ReadingsChanged();
         }
         BatteryHistory.Heartbeat();
 

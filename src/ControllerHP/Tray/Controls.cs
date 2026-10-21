@@ -207,6 +207,14 @@ internal sealed class NavItem : ThemedControl
         if (e.KeyCode is Keys.Space or Keys.Enter)
             OnClick(EventArgs.Empty);
     }
+
+    // Take focus when clicked, like the window's other controls, so focus never lingers on a control that's
+    // scrolled out of view or on the other page.
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        base.OnMouseDown(e);
+        Focus();
+    }
 }
 
 /// <summary>
@@ -540,7 +548,7 @@ internal sealed class DropDown : ThemedControl
 {
     private IReadOnlyList<string> _items = [];
     private int _selected;
-    private ContextMenuStrip? _open;
+    private ListPopup? _open;
 
     public event EventHandler? SelectedChanged;
 
@@ -568,60 +576,28 @@ internal sealed class DropDown : ThemedControl
 
     private void Open()
     {
-        var menu = new ContextMenuStrip { ShowCheckMargin = true, ShowImageMargin = false };
-        for (int i = 0; i < _items.Count; i++)
+        if (_open is { IsDisposed: false })
         {
-            int index = i;
-            menu.Items.Add(new ToolStripMenuItem(_items[i], null, (_, _) =>
-            {
-                if (index == _selected)
-                    return;
-                _selected = index;
-                Invalidate();
-                SelectedChanged?.Invoke(this, EventArgs.Empty);
-            })
-            { Checked = i == _selected });
+            _open.Close(); // a second click on the box closes the list
+            return;
         }
-        MenuRenderer.Apply(menu, Palette);
-        menu.Closed += (_, _) =>
+        _open = ListPopup.Open(this, _items, _selected, Palette, index =>
         {
-            _open = null;
-            BeginInvoke(menu.Dispose);
-        };
-        // Exactly as wide as the box, with every row spanning that width: widening only the menu's window
-        // leaves the rows at their text width, and clicks to the right of the text miss.
-        // The menu sizes its window from the rows' text, not their set width, so fix the window's size too.
-        // Rows start at the menu's left edge (the tick column is inside them), so only the right edge is spare.
-        int rowWidth = Width - menu.Padding.Right - 1;
-        int height = menu.Padding.Vertical;
-        foreach (ToolStripItem item in menu.Items)
-        {
-            item.AutoSize = false;
-            item.Size = new Size(rowWidth, item.GetPreferredSize(Size.Empty).Height);
-            height += item.Height + item.Margin.Vertical;
-        }
-        menu.AutoSize = false;
-        menu.Size = new Size(Width, height);
-        _open = menu;
-        menu.Show(this, ListLocation);
+            if (index == _selected)
+                return;
+            _selected = index;
+            Invalidate();
+            SelectedChanged?.Invoke(this, EventArgs.Empty);
+        });
+        if (_open is not null)
+            _open.FormClosed += (_, _) => _open = null;
     }
 
-    private Point ListLocation => new(0, Height + S(2));
-
-
-    /// <summary>
-    /// The page scrolled under an open list: keep the list attached to the box, or close it once the box
-    /// has scrolled out of view rather than leave it floating over the page.
-    /// </summary>
+    /// <summary>The page scrolled under an open list (with the scroll bar): close it rather than leave it floating.</summary>
     protected override void OnLocationChanged(EventArgs e)
     {
         base.OnLocationChanged(e);
-        if (_open is null || Parent is null)
-            return;
-        if (!Parent.ClientRectangle.IntersectsWith(Bounds))
-            _open.Close();
-        else
-            _open.Location = PointToScreen(ListLocation);
+        _open?.Close();
     }
 
     protected override void OnClick(EventArgs e)
@@ -670,10 +646,26 @@ internal sealed class ActionButton : ThemedControl
 
     protected override Size? LogicalSize => new Size(Math.Max(72, Text.Length * 8 + 24), 30);
 
+    protected override void OnTextChanged(EventArgs e)
+    {
+        base.OnTextChanged(e);
+        ResizeForDpi();
+        Invalidate();
+    }
+
     protected override void OnEnabledChanged(EventArgs e)
     {
         base.OnEnabledChanged(e);
         Cursor = Enabled ? Cursors.Hand : Cursors.Default;
+    }
+
+    // Take focus when clicked, like any button. Otherwise focus stays on whatever control had it, and when a
+    // list or dialog this opened closes, focus returns there and the page scrolls to it (e.g. to the top).
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        base.OnMouseDown(e);
+        if (Enabled)
+            Focus();
     }
 
     protected override void OnKeyDown(KeyEventArgs e)
@@ -769,5 +761,282 @@ internal sealed class UndoBar : ThemedControl
         if (disposing)
             _timer.Dispose();
         base.Dispose(disposing);
+    }
+}
+
+/// <summary>
+/// A themed list that drops down under a control: at most <see cref="VisibleRows"/> rows, scrolling for the
+/// rest with the wheel, the arrow keys, Page Up/Down and Home/End, with a slim scroll bar to show where you
+/// are. Picks with a click or Enter; Esc or clicking elsewhere closes it. WinForms' menus can't be both a
+/// fixed width and a fixed height and still scroll, so this draws its own.
+/// </summary>
+internal sealed class ListPopup : Form
+{
+    public const int VisibleRows = 4;
+    private const int RowHeight = 32, Inset = 4;
+
+    // The list closes when it loses focus, which a click on its own button causes too. Remember which
+    // button's list closed and when, so that click closes the list rather than reopening it.
+    private static Control? s_lastAnchor;
+    private static DateTime s_lastClosed;
+    private static readonly TimeSpan ReopenGuard = TimeSpan.FromMilliseconds(300);
+    private Control? _anchor;
+    private const int WsExToolWindow = 0x00000080;
+
+    private readonly IReadOnlyList<string> _items;
+    private readonly int _checked;
+    private readonly Action<int> _onPick;
+    private readonly Palette _palette;
+    private int _top, _focus, _hover = -1, _wheel;
+
+    private ListPopup(IReadOnlyList<string> items, int checkedIndex, Action<int> onPick, Palette palette)
+    {
+        _items = items;
+        _checked = checkedIndex;
+        _onPick = onPick;
+        _palette = palette;
+        _focus = Math.Clamp(checkedIndex, 0, items.Count - 1);
+        FormBorderStyle = FormBorderStyle.None;
+        StartPosition = FormStartPosition.Manual;
+        ShowInTaskbar = false;
+        KeyPreview = true;
+        DoubleBuffered = true;
+        BackColor = palette.Background;
+        _ = Handle;
+        Theme.StyleWindow(Handle, Theme.Corners.RoundSmall, palette.Border);
+    }
+
+    /// <summary>
+    /// Opens the list under <paramref name="anchor"/>, at least as wide as it; null when this click is the one
+    /// that just closed the anchor's list.
+    /// </summary>
+    public static ListPopup? Open(Control anchor, IReadOnlyList<string> items, int checkedIndex, Palette palette, Action<int> onPick)
+    {
+        if (s_lastAnchor == anchor && DateTime.UtcNow - s_lastClosed < ReopenGuard)
+            return null;
+        var popup = new ListPopup(items, checkedIndex, onPick, palette) { _anchor = anchor };
+        using var font = popup.RowFont();
+        int textWidth = items.Count == 0 ? 0 : items.Max(i => TextRenderer.MeasureText(i, font).Width);
+        int width = Math.Max(anchor.Width, textWidth + popup.S(56));
+        int rows = Math.Min(VisibleRows, Math.Max(1, items.Count));
+        popup.ClientSize = new Size(width, rows * popup.S(RowHeight) + popup.S(Inset) * 2);
+        popup.Location = anchor.PointToScreen(new Point(0, anchor.Height + popup.S(2)));
+        popup.ScrollIntoView(popup._focus);
+        popup.Show(anchor.FindForm());
+        popup.Activate();
+        return popup;
+    }
+
+    protected override CreateParams CreateParams
+    {
+        get
+        {
+            var cp = base.CreateParams;
+            cp.ExStyle |= WsExToolWindow;
+            return cp;
+        }
+    }
+
+    private int S(float logicalPixels) => (int)Math.Round(logicalPixels * DeviceDpi / 96f);
+    private Font RowFont() => new("Segoe UI", 13f * DeviceDpi / 96f, GraphicsUnit.Pixel);
+    private int Rows => Math.Min(VisibleRows, _items.Count);
+    private int MaxTop => Math.Max(0, _items.Count - VisibleRows);
+
+    /// <summary>The first visible row, for checking the scroll position.</summary>
+    public int FirstVisible => _top;
+
+    private void ScrollTo(int top)
+    {
+        _top = Math.Clamp(top, 0, MaxTop);
+        Invalidate();
+    }
+
+    private void ScrollIntoView(int index)
+    {
+        if (index < _top)
+            ScrollTo(index);
+        else if (index >= _top + Rows)
+            ScrollTo(index - Rows + 1);
+    }
+
+    private int RowAt(Point p)
+    {
+        int row = (p.Y - S(Inset)) / S(RowHeight);
+        return p.Y < S(Inset) || row >= Rows ? -1 : _top + row;
+    }
+
+    private void Pick(int index)
+    {
+        if (index < 0 || index >= _items.Count)
+            return;
+        Close();
+        _onPick(index);
+    }
+
+    protected override void OnDeactivate(EventArgs e)
+    {
+        base.OnDeactivate(e);
+        // Not straight away: destroying a window while Windows is still switching focus away from it can make
+        // Windows bring forward another app instead of the settings window. Picking a row closes the list too,
+        // which also lands here, so skip a list that's already closing.
+        if (_closing || !IsHandleCreated)
+            return;
+        BeginInvoke(() =>
+        {
+            if (!IsDisposed)
+                Close();
+        });
+    }
+
+    private bool _closing;
+
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        _closing = true;
+        base.OnFormClosing(e);
+    }
+
+    protected override void OnFormClosed(FormClosedEventArgs e)
+    {
+        s_lastAnchor = _anchor;
+        s_lastClosed = DateTime.UtcNow;
+        base.OnFormClosed(e);
+        // Hand focus back to the window the list belongs to, rather than leaving Windows to choose one (which
+        // can be another app, sending ControllerHP to the background).
+        if (Owner is { IsDisposed: false } owner)
+            owner.Activate();
+    }
+
+    protected override void OnMouseWheel(MouseEventArgs e)
+    {
+        base.OnMouseWheel(e);
+        // 120 per notch; touchpads send smaller amounts, so accumulate them into whole rows.
+        _wheel += e.Delta;
+        int rows = _wheel / 120;
+        _wheel %= 120;
+        if (rows != 0)
+            ScrollTo(_top - rows);
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+        int row = RowAt(e.Location);
+        if (row != _hover)
+        {
+            _hover = row;
+            Invalidate();
+        }
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        base.OnMouseLeave(e);
+        _hover = -1;
+        Invalidate();
+    }
+
+    // A click is a press and release on the same row; dragging off the row cancels it.
+    private int _pressed = -1;
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        base.OnMouseDown(e);
+        _pressed = e.Button == MouseButtons.Left ? RowAt(e.Location) : -1;
+    }
+
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        base.OnMouseUp(e);
+        int row = RowAt(e.Location);
+        if (e.Button == MouseButtons.Left && row >= 0 && row == _pressed)
+            Pick(row);
+        _pressed = -1;
+    }
+
+    protected override bool ProcessDialogKey(Keys keyData)
+    {
+        int last = _items.Count - 1;
+        int focus = keyData switch
+        {
+            Keys.Down => Math.Min(last, _focus + 1),
+            Keys.Up => Math.Max(0, _focus - 1),
+            Keys.PageDown => Math.Min(last, _focus + VisibleRows),
+            Keys.PageUp => Math.Max(0, _focus - VisibleRows),
+            Keys.End => last,
+            Keys.Home => 0,
+            _ => -1,
+        };
+        if (focus >= 0)
+        {
+            _focus = focus;
+            _hover = -1;
+            ScrollIntoView(focus);
+            Invalidate();
+            return true;
+        }
+        if (keyData is Keys.Enter or Keys.Space)
+        {
+            Pick(_focus);
+            return true;
+        }
+        if (keyData == Keys.Escape)
+        {
+            Close();
+            return true;
+        }
+        return base.ProcessDialogKey(keyData);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        bool scrolls = _items.Count > VisibleRows;
+        int barSpace = scrolls ? S(10) : 0;
+        using var font = RowFont();
+        for (int row = 0; row < Rows; row++)
+        {
+            int index = _top + row;
+            var r = new Rectangle(S(Inset), S(Inset) + row * S(RowHeight), ClientSize.Width - S(Inset) * 2 - barSpace, S(RowHeight));
+            if (index == _hover || (_hover < 0 && index == _focus))
+            {
+                using var brush = new SolidBrush(_palette.Hover);
+                using var path = Rounded(Rectangle.Inflate(r, 0, -S(2)), S(4));
+                g.FillPath(brush, path);
+            }
+            if (index == _checked)
+            {
+                // A tick for the current choice, as in the tray menu.
+                float cx = r.X + S(14), cy = r.Y + r.Height / 2f, s = S(5);
+                using var pen = new Pen(_palette.Text, S(1.6f)) { StartCap = System.Drawing.Drawing2D.LineCap.Round, EndCap = System.Drawing.Drawing2D.LineCap.Round };
+                g.DrawLines(pen, [new PointF(cx - s, cy), new PointF(cx - s / 3, cy + s * 0.65f), new PointF(cx + s, cy - s * 0.7f)]);
+            }
+            TextRenderer.DrawText(g, _items[index], font, new Rectangle(r.X + S(30), r.Y, r.Width - S(38), r.Height), _palette.Text,
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine);
+        }
+
+        if (scrolls)
+        {
+            // A slim bar showing which part of the list is in view.
+            int trackTop = S(Inset) + S(2), trackHeight = ClientSize.Height - trackTop * 2;
+            int thumbHeight = Math.Max(S(16), trackHeight * VisibleRows / _items.Count);
+            int thumbTop = trackTop + (trackHeight - thumbHeight) * _top / MaxTop;
+            using var brush = new SolidBrush(_palette.SubtleText);
+            using var path = Rounded(new Rectangle(ClientSize.Width - S(Inset) - S(5), thumbTop, S(4), thumbHeight), S(2));
+            g.FillPath(brush, path);
+        }
+    }
+
+    private static System.Drawing.Drawing2D.GraphicsPath Rounded(Rectangle r, int radius)
+    {
+        int d = Math.Max(1, radius * 2);
+        var path = new System.Drawing.Drawing2D.GraphicsPath();
+        path.AddArc(r.X, r.Y, d, d, 180, 90);
+        path.AddArc(r.Right - d, r.Y, d, d, 270, 90);
+        path.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
+        path.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
     }
 }

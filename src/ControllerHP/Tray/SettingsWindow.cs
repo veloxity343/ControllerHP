@@ -6,7 +6,7 @@ namespace ControllerHP.Tray;
 /// The full window behind the flyout's gear: navigation on the left, a page on the right. Follows
 /// Windows' app mode, light or dark, and stays in step with the tray menu through <see cref="Settings"/>.
 /// </summary>
-internal sealed class SettingsWindow : Form, IMessageFilter
+internal sealed partial class SettingsWindow : Form, IMessageFilter
 {
     private const int NavWidth = 220, PagePadding = 32, CardGap = 4, SectionGap = 24;
 
@@ -15,7 +15,7 @@ internal sealed class SettingsWindow : Form, IMessageFilter
     /// <summary>Each nav item's page: the controls stacked on it, shown only while it's selected.</summary>
     private readonly List<List<Control>> _pages = [];
     private int _current;
-    private readonly int _historyPage;
+    private readonly int _controllersPage;
     private List<Control> CurrentPage => _pages[_current];
     private Palette _palette;
     /// <summary>Set for the --preview-settings render, which fixes the palette instead of following Windows.</summary>
@@ -35,7 +35,7 @@ internal sealed class SettingsWindow : Form, IMessageFilter
     private readonly SwitchedStepper _critical = new(Settings.MinWarning, Settings.MaxWarning - Settings.WarningStep, Settings.WarningStep);
     private readonly ToggleSwitch _startWithWindows = new();
 
-    // The Battery history page.
+    // The Controllers page: each controller's battery history, its stats, and removing it.
     private readonly SegmentedControl _range = new(["2 hours", "6 hours", "24 hours", "7 days"], 95) { SelectedIndex = 1 };
     private static readonly TimeSpan[] Ranges =
         [TimeSpan.FromHours(2), TimeSpan.FromHours(6), TimeSpan.FromHours(24), TimeSpan.FromDays(7)];
@@ -44,8 +44,9 @@ internal sealed class SettingsWindow : Form, IMessageFilter
     private readonly Note _historyNote = new($"Recorded whenever a controller's battery changes, and kept for {BatteryHistory.Kept.Days} days.");
     private readonly List<StatsCard> _statsCards = [];
     private readonly UndoBar _undoBar = new();
-    /// <summary>The Settings page's Hidden controllers section, rebuilt whenever the list changes.</summary>
-    private readonly List<Control> _hiddenItems = [];
+    /// <summary>Beside the dropdown, while any controllers are removed: lists them to restore.</summary>
+    private readonly ActionButton _restoreButton = new("Restore removed");
+    private List<(string Id, string Name, DateTime When)> _removed = [];
     private readonly Note _versionNote = new($"ControllerHP {Application.ProductVersion.Split('+')[0]}");
     /// <summary>
     /// Which controller's figures to show: whichever has the lowest battery until the user picks a
@@ -57,7 +58,7 @@ internal sealed class SettingsWindow : Form, IMessageFilter
     private string? _pickerChoice;
     /// <summary>What each of the picker's items stands for: a controller id, then <see cref="AllControllers"/>.</summary>
     private List<string> _pickerKeys = [];
-    /// <summary>Keeps the chart's "now" edge moving while the history page is open.</summary>
+    /// <summary>Keeps the chart's "now" edge moving while the Controllers page is open.</summary>
     private readonly System.Windows.Forms.Timer _historyTimer = new() { Interval = 30_000 };
 
     private static readonly int[] IconLimits = [1, 2, 0];
@@ -82,10 +83,9 @@ internal sealed class SettingsWindow : Form, IMessageFilter
 
         Controls.Add(_page);
         AddPage("Settings", BuildSettingsPage());
-        AddPage("Battery history", BuildHistoryPage());
-        _historyPage = _pages.Count - 1;
+        AddPage("Controllers", BuildControllersPage());
+        _controllersPage = _pages.Count - 1;
         ShowPage(0);
-        RebuildHiddenList();
 
         LoadValues();
         WireEvents();
@@ -123,7 +123,7 @@ internal sealed class SettingsWindow : Form, IMessageFilter
         {
             _nav[i].Selected = i == index;
             foreach (var item in _pages[i])
-                item.Visible = i == index && (item is not UndoBar bar || bar.Showing);
+                item.Visible = i == index && (item is not UndoBar bar || bar.Showing) && (item != _restoreButton || _removed.Count > 0);
         }
         _page.AutoScrollPosition = Point.Empty;
         if (CurrentPage.Contains(_chart))
@@ -163,7 +163,7 @@ internal sealed class SettingsWindow : Form, IMessageFilter
         return items;
     }
 
-    private List<Control> BuildHistoryPage()
+    private List<Control> BuildControllersPage()
     {
         _range.SelectedChanged += (_, _) => ReloadHistory();
         _historyTimer.Tick += (_, _) => ReloadHistory();
@@ -174,10 +174,11 @@ internal sealed class SettingsWindow : Form, IMessageFilter
         };
         _undoBar.ShownChanged += (_, _) =>
         {
-            _undoBar.Visible = _undoBar.Showing && _current == _historyPage;
+            _undoBar.Visible = _undoBar.Showing && _current == _controllersPage;
             PerformLayout();
         };
-        return [new Heading("Battery history", 26), _undoBar, _range, _chart, _controllerPicker, _statsNote, _historyNote];
+        _restoreButton.Click += (_, _) => OpenRestoreList();
+        return [new Heading("Controllers", 26), _undoBar, _range, _chart, _controllerPicker, _restoreButton, _statsNote, _historyNote];
     }
 
     private void ReloadHistory()
@@ -185,16 +186,19 @@ internal sealed class SettingsWindow : Form, IMessageFilter
         var now = DateTime.Now;
         var since = now - Ranges[_range.SelectedIndex];
         var full = _loadHistory(now - BatteryHistory.Kept).ToDictionary(s => s.Id);
-        // Removed controllers stay out until they record something after being removed. Judged on their whole
-        // history: in a short range, an old last reading is moved up to the range's start.
+        // Removed controllers stay out until they next connect, when the tray app unhides them.
         var hidden = Settings.HiddenControllers;
-        var shown = _loadHistory(since)
-            .Where(s => !(hidden.TryGetValue(s.Id, out var at) && full.TryGetValue(s.Id, out var all) && all.Points[^1].Time <= at))
-            .ToList();
+        var shown = _loadHistory(since).Where(s => !hidden.ContainsKey(s.Id)).ToList();
+        _removed = RemovedControllers(full);
+        _restoreButton.Text = $"Restore removed ({_removed.Count})";
+        _restoreButton.Visible = _current == _controllersPage && _removed.Count > 0;
+        _chart.EmptyMessage = shown.Count == 0 && hidden.Count > 0
+            ? "Every controller with history here has been removed. Use Restore removed below to bring one back."
+            : HistoryChart.NoHistoryMessage;
         _chart.SetData(shown, since, now);
 
         // A card per controller in the chart, its figures worked out from its whole retained history.
-        var page = _pages[_historyPage];
+        var page = _pages[_controllersPage];
         foreach (var card in _statsCards)
         {
             page.Remove(card);
@@ -210,7 +214,7 @@ internal sealed class SettingsWindow : Form, IMessageFilter
         string? showing = _pickerChoice ?? lowest;
         _pickerKeys = [.. shown.Select(s => s.Id), AllControllers];
         _controllerPicker.SetItems([.. shown.Select(s => s.Name), "All controllers"], Math.Max(0, _pickerKeys.IndexOf(showing ?? "")));
-        _controllerPicker.Visible = _current == _historyPage && shown.Count > 0;
+        _controllerPicker.Visible = _current == _controllersPage && shown.Count > 0;
 
         var cards = showing == AllControllers ? shown : shown.Where(s => s.Id == showing).ToList();
 
@@ -219,13 +223,13 @@ internal sealed class SettingsWindow : Form, IMessageFilter
         foreach (var series in cards)
         {
             var stats = BatteryStats.Compute(full.GetValueOrDefault(series.Id, series), since, now, lowWarning);
-            var card = new StatsCard(series, stats) { Palette = _palette, Visible = _current == _historyPage };
+            var card = new StatsCard(series, stats) { Palette = _palette, Visible = _current == _controllersPage };
             card.RemoveRequested += (_, _) => Remove(series);
             _statsCards.Add(card);
             page.Insert(insertAt++, card);
             _page.Controls.Add(card);
         }
-        _statsNote.Visible = _current == _historyPage && shown.Count > 0;
+        _statsNote.Visible = _current == _controllersPage && shown.Count > 0;
         PerformLayout();
     }
 
@@ -297,61 +301,58 @@ internal sealed class SettingsWindow : Form, IMessageFilter
     }
 
     /// <summary>A change from the tray menu; setting a control to its current value raises nothing.</summary>
+    /// <summary>A controller connected, disconnected or changed level: refresh the Controllers page if it's showing.</summary>
+    public void ReadingsChanged()
+    {
+        if (_current == _controllersPage)
+            ReloadHistory();
+    }
+
     /// <summary>Hides a controller, with a few seconds to undo; Settings lists it for restoring later.</summary>
     private void Remove(HistorySeries series)
     {
+        if (!ConfirmDialog.Ask(this, $"Remove {series.Name}?",
+                "It'll be hidden from the Controllers page. Its history is kept, and it comes back by itself the next " +
+                "time it connects. You can also restore it with Restore removed, on this page.",
+                "Remove", _palette))
+            return;
         if (_pickerChoice == series.Id)
             _pickerChoice = null;
+        // The Remove button's card is about to be rebuilt, taking focus with it; left alone, Windows would move
+        // focus to an arbitrary control and the page would scroll to it. Keep it on the dropdown, on screen.
+        _controllerPicker.Focus();
         Settings.Hide(series.Id);
         _undoBar.Show($"Removed {series.Name}", () => Settings.Unhide(series.Id));
     }
 
     /// <summary>
-    /// The Settings page's Hidden controllers section: one card per removed controller with a Restore button,
-    /// or nothing when none are hidden. Entries whose history has expired are forgotten.
+    /// The removed controllers that still have history, oldest removal first, for the Restore removed button.
+    /// Entries whose history has expired are forgotten.
     /// </summary>
-    private void RebuildHiddenList()
+    private List<(string Id, string Name, DateTime When)> RemovedControllers(Dictionary<string, HistorySeries> full)
     {
-        var page = _pages[0];
-        foreach (var item in _hiddenItems)
-        {
-            page.Remove(item);
-            _page.Controls.Remove(item);
-            item.Dispose();
-        }
-        _hiddenItems.Clear();
-
         var hidden = Settings.HiddenControllers;
-        if (hidden.Count == 0)
-            return;
-        var names = _loadHistory(DateTime.Now - BatteryHistory.Kept).ToDictionary(s => s.Id, s => s.Name);
         // Sample data doesn't hold the real controllers, so they'd all look expired: never forget then.
-        var expired = hidden.Keys.Where(id => !names.ContainsKey(id)).ToList();
+        var expired = hidden.Keys.Where(id => !full.ContainsKey(id)).ToList();
         if (expired.Count > 0 && !_sampleData)
-        {
-            Settings.ForgetHidden(expired); // raises Changed, which rebuilds this again without them
-            return;
-        }
-        hidden = hidden.Where(kv => names.ContainsKey(kv.Key)).ToDictionary();
-        if (hidden.Count == 0)
-            return;
+            Settings.ForgetHidden(expired);
+        return [.. hidden.Where(kv => full.ContainsKey(kv.Key)).OrderBy(kv => kv.Value).Select(kv => (kv.Key, full[kv.Key].Name, kv.Value))];
+    }
 
-        _hiddenItems.Add(new Heading("Hidden controllers", 15));
-        foreach (var (id, when) in hidden.OrderBy(kv => kv.Value))
+    /// <summary>Lists removed controllers under the button; picking one restores it, or all of them at once.</summary>
+    private void OpenRestoreList()
+    {
+        var removed = _removed.ToList();
+        var labels = removed.Select(r => $"{r.Name}  ·  removed {r.When:d MMM}").ToList();
+        if (removed.Count > 1)
+            labels.Add("Restore all");
+        ListPopup.Open(_restoreButton, labels, checkedIndex: -1, _palette, index =>
         {
-            var restore = new ActionButton("Restore");
-            restore.Click += (_, _) => Settings.Unhide(id);
-            _hiddenItems.Add(new SettingCard(names[id], $"Removed {when:d MMM}. Comes back by itself if it connects again.", restore));
-        }
-        int insertAt = page.IndexOf(_versionNote);
-        foreach (var item in _hiddenItems)
-        {
-            item.Visible = _current == 0;
-            if (item is ThemedControl themed)
-                themed.Palette = _palette;
-            page.Insert(insertAt++, item);
-            _page.Controls.Add(item);
-        }
+            // Restoring the last one hides this button, taking focus with it: keep focus on the dropdown instead.
+            if (removed.Count == 1 || index >= removed.Count)
+                _controllerPicker.Focus();
+            Settings.Unhide(index < removed.Count ? [removed[index].Id] : removed.Select(r => r.Id).ToList());
+        });
     }
 
     private void OnSettingsChanged()
@@ -360,8 +361,7 @@ internal sealed class SettingsWindow : Form, IMessageFilter
             BeginInvoke(() =>
             {
                 LoadValues();
-                RebuildHiddenList();
-                if (_current == _historyPage)
+                if (_current == _controllersPage)
                     ReloadHistory();
                 else
                     PerformLayout();
@@ -395,9 +395,22 @@ internal sealed class SettingsWindow : Form, IMessageFilter
     // so the page never scrolled. Catch the wheel for the whole window and scroll the page under the pointer.
     private const int WmMouseWheel = 0x020A;
 
+    private struct NativePoint
+    {
+        public int X, Y;
+    }
+
+    [System.Runtime.InteropServices.LibraryImport("user32.dll")]
+    private static partial IntPtr WindowFromPoint(NativePoint point);
+
     public bool PreFilterMessage(ref Message m)
     {
         if (m.Msg != WmMouseWheel || !Visible || Form.ActiveForm != this)
+            return false;
+        // An open dropdown list is its own window over the page: leave the wheel to it, so it scrolls the list.
+        var cursor = Cursor.Position;
+        if (Control.FromChildHandle(WindowFromPoint(new NativePoint { X = cursor.X, Y = cursor.Y })) is not { } under ||
+            under.FindForm() != this)
             return false;
         var pointer = _page.PointToClient(Cursor.Position);
         if (!_page.ClientRectangle.Contains(pointer) || !_page.VerticalScroll.Visible)
@@ -461,8 +474,22 @@ internal sealed class SettingsWindow : Form, IMessageFilter
         {
             if (item is UndoBar { Showing: false })
                 continue; // takes no room until it has something to say
+            if (item == _restoreButton)
+            {
+                // Beside the dropdown rather than below it; hidden while nothing is removed.
+                if (_restoreButton.Visible && previous is not null)
+                {
+                    // With every controller removed the dropdown hides, so the button takes its place.
+                    _restoreButton.Location = previous.Visible
+                        ? new Point(previous.Right + S(8), previous.Top + (previous.Height - _restoreButton.Height) / 2)
+                        : previous.Location;
+                }
+                continue;
+            }
             if (item is Heading && previous is not null)
                 y += S(SectionGap) - S(CardGap);
+            else if (item is DropDown && previous is HistoryChart)
+                y += S(12); // the chart's card and the box below it read as one block without room between
             int height = item is SettingCard card ? card.PreferredHeight : item.Height;
             // Choice rows keep their own width; everything else spans the page.
             item.Bounds = new Rectangle(x, y, item is SegmentedControl or DropDown ? item.Width : width, height);
