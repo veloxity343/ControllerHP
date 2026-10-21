@@ -26,7 +26,7 @@ internal sealed class TrayApp : ApplicationContext
     private readonly System.Windows.Forms.Timer _settleTimer = new();
     private readonly ControllerNotifier _notifier = new();
     private IReadOnlyList<ControllerBattery> _readings = [];
-    private bool _lightTaskbar = IsLightTaskbar();
+    private bool _lightTaskbar = Theme.SystemUsesLight();
 
     public TrayApp(IReadOnlyList<IBatterySource> sources)
     {
@@ -68,7 +68,7 @@ internal sealed class TrayApp : ApplicationContext
             return;
         _ui.Post(_ =>
         {
-            _lightTaskbar = IsLightTaskbar();
+            _lightTaskbar = Theme.SystemUsesLight();
             Refresh();
         }, null);
     }
@@ -220,6 +220,8 @@ internal sealed class TrayApp : ApplicationContext
             Checked = StartsWithWindows(),
         });
         _menu.Items.Add(new ToolStripMenuItem("Exit", null, (_, _) => ExitThread()));
+
+        MenuRenderer.Apply(_menu, Theme.For(_lightTaskbar));
     }
 
     private static readonly (int Limit, string Label)[] IconLimitLabels =
@@ -256,12 +258,6 @@ internal sealed class TrayApp : ApplicationContext
             key.SetValue(RunValueName, $"\"{Environment.ProcessPath}\"");
         else
             key.DeleteValue(RunValueName, throwOnMissingValue: false);
-    }
-
-    private static bool IsLightTaskbar()
-    {
-        using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
-        return key?.GetValue("SystemUsesLightTheme") is int value && value != 0;
     }
 
     protected override void ExitThreadCore()
