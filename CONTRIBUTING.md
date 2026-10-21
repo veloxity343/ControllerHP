@@ -21,7 +21,7 @@ You need the .NET 8 SDK (`global.json` pins the feature band). Open `ControllerH
 dotnet build ControllerHP.sln
 ```
 
-The project builds on Linux too (`EnableWindowsTargeting`), which is how CI runs, but it only runs on Windows. From WSL, `./deploy.sh` publishes, installs to `%LOCALAPPDATA%\Programs\ControllerHP` and restarts the app.
+The project builds on Linux too (`EnableWindowsTargeting`), which is how CI runs, but it only runs on Windows.
 
 ## Testing your change
 

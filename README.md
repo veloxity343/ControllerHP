@@ -62,14 +62,6 @@ Requires the .NET 8 SDK (`global.json` pins the feature band). Open `ControllerH
 dotnet build ControllerHP.sln
 ```
 
-### From WSL
-
-```bash
-./deploy.sh
-```
-
-This publishes the app, installs it to `%LOCALAPPDATA%\Programs\ControllerHP` and restarts it. Don't run it straight out of `publish/` over `\\wsl.localhost`. Windows caches stale DLLs from that path, and "Start with Windows" would point at a location that doesn't exist until WSL starts.
-
 ### Diagnostics
 
 | Flag | What it does |
