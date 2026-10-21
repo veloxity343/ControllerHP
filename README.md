@@ -28,6 +28,16 @@
 - **A Controllers page** with each controller's battery history, average drain, time left, play time and a battery health estimate, and a way to remove controllers you no longer use.
 - **Follows Windows' light or dark mode**, and runs quietly: a check every 30 seconds, nothing sent anywhere.
 
+## Documentation
+
+This page covers the basics. The **[wiki](docs/wiki/README.md)** has the rest:
+- [setting up](docs/wiki/getting-started.md) and what [each setting](docs/wiki/using-controllerhp.md) does;
+- how the [battery stats and health](docs/wiki/controllers.md) are worked out, and what's stored on your PC;
+- what each [controller and connection](docs/wiki/supported-controllers.md) can report;
+- [fixes for common problems](docs/wiki/troubleshooting.md).
+
+If something isn't working, Troubleshooting is the place to start.
+
 ## Install
 
 1. Download a zip from [Releases](https://github.com/veloxity343/ControllerHP/releases/latest):
