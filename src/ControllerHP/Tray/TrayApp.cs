@@ -22,6 +22,14 @@ internal sealed class TrayApp : ApplicationContext
     private int _iconLimit = Settings.TrayIconLimit;
     private readonly System.Windows.Forms.Timer _timer = new();
     private readonly System.Windows.Forms.Timer _settleTimer = new();
+
+    // Controller events come in bursts (a reconnect fires a run of Bluetooth updates), and each used to
+    // trigger a full refresh. Now an event waits for a short quiet spell, so a burst costs one refresh;
+    // a steady stream still refreshes at least once a second.
+    private static readonly TimeSpan EventQuiet = TimeSpan.FromMilliseconds(250);
+    private static readonly TimeSpan EventMaxWait = TimeSpan.FromSeconds(1);
+    private readonly System.Windows.Forms.Timer _eventTimer = new() { Interval = (int)EventQuiet.TotalMilliseconds };
+    private DateTime? _eventPendingSince;
     private readonly ControllerNotifier _notifier = new();
     private readonly BatteryHistory _history = new();
     private IReadOnlyList<ControllerBattery> _readings = [];
@@ -49,6 +57,8 @@ internal sealed class TrayApp : ApplicationContext
             source.ControllersChanged += OnControllersChanged;
         SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
 
+        _eventTimer.Tick += (_, _) => RefreshForEvents();
+
         _timer.Interval = (int)PollInterval.TotalMilliseconds;
         _timer.Tick += (_, _) => Refresh();
         _timer.Start();
@@ -64,7 +74,28 @@ internal sealed class TrayApp : ApplicationContext
         Refresh();
     }
 
-    private void OnControllersChanged(object? sender, EventArgs e) => _ui.Post(_ => Refresh(), null);
+    private void OnControllersChanged(object? sender, EventArgs e) => _ui.Post(_ => OnControllersChangedUi(), null);
+
+    private void OnControllersChangedUi()
+    {
+        var now = DateTime.UtcNow;
+        _eventPendingSince ??= now;
+        if (now - _eventPendingSince >= EventMaxWait)
+        {
+            RefreshForEvents();
+            return;
+        }
+        // Restart the quiet spell.
+        _eventTimer.Stop();
+        _eventTimer.Start();
+    }
+
+    private void RefreshForEvents()
+    {
+        _eventTimer.Stop();
+        _eventPendingSince = null;
+        Refresh();
+    }
 
     private void OnUserPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e)
     {
@@ -324,6 +355,7 @@ internal sealed class TrayApp : ApplicationContext
     {
         _timer.Dispose();
         _settleTimer.Dispose();
+        _eventTimer.Dispose();
         _notifier.Dispose();
         SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
         Settings.Changed -= OnSettingsChanged;
