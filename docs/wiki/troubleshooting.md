@@ -13,7 +13,7 @@ Each problem below has its likely cause and what to do. If yours isn't here, see
 - [The charging bolt is late or missing on an Xbox controller](#the-charging-bolt-is-late-or-missing-on-an-xbox-controller)
 - [The percentage only moves in 10% steps](#the-percentage-only-moves-in-10-steps)
 - [Pop-ups don't appear while I'm playing](#pop-ups-dont-appear-while-im-playing)
-- [Battery history says "Needs more data"](#battery-history-says-needs-more-data)
+- [The Controllers page says "Needs more data"](#the-controllers-page-says-needs-more-data)
 - [There are gaps in the battery history](#there-are-gaps-in-the-battery-history)
 - [Resetting everything](#resetting-everything)
 - [Reporting a bug](#reporting-a-bug)
@@ -65,7 +65,7 @@ If it's still missing, run `ControllerHP.exe --list` (see [Reporting a bug](#rep
 ## The percentage only moves in 10% steps
 
 **Cause:** that's how DualSense and DualShock 4 controllers report their battery, so "85%" means somewhere between 80% and 89%.
-**Fix:** none needed. Battery history accounts for it.
+**Fix:** none needed. The Controllers page's stats account for it.
 
 ## Pop-ups don't appear while I'm playing
 
@@ -74,10 +74,10 @@ If it's still missing, run `ControllerHP.exe --list` (see [Reporting a bug](#rep
 - **The pop-up is turned off.** Check **Connection pop-ups** and **Battery warnings** in the right-click menu, or the levels in Settings.
 - **Each warning only shows once per discharge.** It shows again after the controller charges.
 
-## Battery history says "Needs more data"
+## The Controllers page says "Needs more data"
 
 **Cause:** an honest figure needs at least 45 minutes of the controller on battery, with its level falling at least 5%. Battery health needs three weeks of history for its percentage.
-**Fix:** keep using it. See [The stats](battery-history.md#the-stats).
+**Fix:** keep using it. See [The stats](controllers.md#the-stats).
 
 ## There are gaps in the battery history
 

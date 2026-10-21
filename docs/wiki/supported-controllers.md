@@ -50,4 +50,4 @@ If you'd like a controller added, [open a feature request](https://github.com/ve
 
 ---
 
-[← Battery history](battery-history.md) · Next: [Troubleshooting →](troubleshooting.md)
+[← Controllers](controllers.md) · Next: [Troubleshooting →](troubleshooting.md)

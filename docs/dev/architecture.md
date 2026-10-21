@@ -43,7 +43,7 @@ The two Xbox sources see the same controllers, so `FirstAvailableSource` uses wh
 | Pop-ups | `ControllerNotifier.cs`, `Toast.cs` | The notifier decides when, and the toast window draws and stacks them. |
 | Panel | `Flyout.cs` | Opened by left-click. It closes on losing focus, and also on any click outside it via a mouse hook, because rapid tray clicks can leave it without focus. |
 | Settings window | `SettingsWindow.cs`, `Controls.cs` | Custom-drawn controls, because WinForms' own don't follow dark mode. |
-| Battery history | `BatteryHistory.cs`, `BatteryStats.cs`, `HistoryChart.cs`, `StatsCard.cs` | Recording and loading, figures, chart, and stat cards. |
+| Controllers page | `BatteryHistory.cs`, `BatteryStats.cs`, `HistoryChart.cs`, `StatsCard.cs` | Recording and loading battery history, figures, chart, and stat cards, including Remove. |
 | Theming | `Theme.cs`, `MenuRenderer.cs` | Palettes and Windows 11 styling (rounded corners, dark title bar). The tray menu and panel follow the taskbar's mode; the settings window follows the app mode. |
 | Settings | `Settings.cs` | `HKCU\Software\ControllerHP`. Raises `Changed` on every write, so the menu and the window stay in step. |
 

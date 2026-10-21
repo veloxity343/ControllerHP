@@ -25,7 +25,7 @@
 - **Pop-ups** when a controller connects or disconnects, and when its battery runs low (20% and 10% by default).
 - **One icon for several controllers**, showing whichever is lowest, or one icon each if you prefer.
 - **A panel on left-click** listing every controller with its charge and connection.
-- **Battery history**: a chart of each controller's charge, with average drain, time left, play time and a battery health estimate.
+- **A Controllers page** with each controller's battery history, average drain, time left, play time and a battery health estimate, and a way to remove controllers you no longer use.
 - **Follows Windows' light or dark mode**, and runs quietly: a check every 30 seconds, nothing sent anywhere.
 
 ## Install

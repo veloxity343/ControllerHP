@@ -81,7 +81,7 @@ The menu follows your taskbar's light or dark mode.
 
 ## Settings
 
-Open it from the panel's gear or **Settings…** in the right-click menu. It follows Windows' app mode, light or dark, and changes take effect straight away. The window has two pages: **Settings**, and **[Battery history](battery-history.md)**.
+Open it from the panel's gear or **Settings…** in the right-click menu. It follows Windows' app mode, light or dark, and changes take effect straight away. The window has two pages: **Settings**, and **[Controllers](controllers.md)**.
 
 | Setting | Default | Options |
 |---|---|---|
@@ -94,8 +94,6 @@ Open it from the panel's gear or **Settings…** in the right-click menu. It fol
 
 Switching a warning off greys out its level until you switch it back on. Lowering the low level below the critical one pushes the critical level down with it.
 
-If you've removed any controllers from the battery history, a **Hidden controllers** section lists them, each with a **Restore** button. See [Removing a controller](battery-history.md#removing-a-controller).
-
 ---
 
-[← Getting started](getting-started.md) · Next: [Battery history →](battery-history.md)
+[← Getting started](getting-started.md) · Next: [Controllers →](controllers.md)

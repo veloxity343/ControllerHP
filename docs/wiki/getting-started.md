@@ -54,7 +54,7 @@ If you move `ControllerHP.exe` later, turn this off and on again so Windows star
 2. Download the new release and replace `ControllerHP.exe` with the new one.
 3. Run it.
 
-Your settings and battery history are kept: they're stored separately from the program (see [what's stored](battery-history.md#whats-stored-on-your-pc)).
+Your settings and battery history are kept: they're stored separately from the program (see [what's stored](controllers.md#whats-stored-on-your-pc)).
 
 ## Uninstalling
 

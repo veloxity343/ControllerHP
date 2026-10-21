@@ -1,4 +1,4 @@
-# Battery history
+# Controllers
 
 [← Wiki home](README.md)
 
@@ -8,7 +8,7 @@
 - [Removing a controller](#removing-a-controller)
 - [What's stored on your PC](#whats-stored-on-your-pc)
 
-Open **Settings…** from the right-click menu (or the gear in the panel) and choose **Battery history**.
+The Controllers page shows each controller's battery history and stats, and lets you remove controllers you no longer use. Open **Settings…** from the right-click menu (or the gear in the panel) and choose **Controllers**.
 
 ## The chart
 
@@ -69,17 +69,14 @@ Hover the **?** beside it in the app for a short version of this.
 
 ## Removing a controller
 
-If you no longer use a controller, such as one you've sold, you can remove it from the battery history:
+If you no longer use a controller, such as one you've sold or a friend's, you can remove it from the Controllers page: choose it in the dropdown, click **Remove** on its card, and confirm. **Cancel** is selected by default, so pressing Enter or Esc by accident won't remove anything.
 
-1. Turn the controller **off**. A connected controller can't be removed, because it would come straight back.
-2. Choose it in the dropdown and click **Remove** on its card.
-
-It disappears from the chart, the dropdown and the stats. For a few seconds an **Undo** bar appears at the top of the page.
+It disappears from the chart, the dropdown and the stats. For a few seconds an **Undo** bar appears at the top of the page. If it's connected, it stays in the tray while it's on, because it's still in use.
 
 Removing **hides** a controller; it doesn't delete anything:
 - Its history stays on your PC until it expires after 90 days.
-- Settings → **Hidden controllers** lists it, with a **Restore** button.
-- If you turn it on again, it comes back by itself.
+- **Restore removed**, beside the dropdown on the Controllers page, brings it back. The button shows how many are removed, and opens a list to pick from, with **Restore all** when there's more than one.
+- The next time it connects, it comes back by itself. That includes ControllerHP starting while it's connected.
 
 ## What's stored on your PC
 
