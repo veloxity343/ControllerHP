@@ -81,28 +81,9 @@ This publishes the app, installs it to `%LOCALAPPDATA%\Programs\ControllerHP` an
 
 Unhandled errors are logged to `%LOCALAPPDATA%\ControllerHP\error.log`, and every reading change is logged with a timestamp to `history.log` in the same folder.
 
-### Releasing
+### Contributing
 
-Push a version tag and GitHub Actions builds both zips and publishes a release with generated notes. The version number comes from the tag, so nothing needs editing first.
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-Tags with a suffix (e.g. `v0.2.0-beta.1`) are published as pre-releases. If a release build fails, fix it, then move the tag and push again:
-
-```bash
-git tag -f v0.1.0
-git push -f origin v0.1.0
-```
-
-### Adding other controllers
-
-PlayStation and Switch controllers aren't XInput devices, and Windows doesn't expose their battery through a standard API. Each needs its own `IBatterySource` that opens the HID device and parses the vendor's input report:
-
-- **DualShock 4 / DualSense** (VID `054C`): battery level and charging flag are packed into a byte of the input report, at a different offset for USB vs Bluetooth.
-- **Switch Pro Controller** (VID `057E`): battery nibble in the standard input report, after a handshake.
+Bug reports, controller test results and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
