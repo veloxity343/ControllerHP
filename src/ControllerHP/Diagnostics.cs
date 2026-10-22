@@ -78,6 +78,7 @@ internal static partial class Diagnostics
         w.WriteLine($"Tray icons: {(Settings.TrayIconLimit == 0 ? "one per controller" : Settings.TrayIconLimit)}");
         w.WriteLine($"Pop-up position: {Settings.ToastCorner}");
         w.WriteLine($"Connection pop-ups: {OnOff(Settings.ConnectionToasts)}");
+        w.WriteLine($"Fully charged pop-up: {OnOff(Settings.FullyChargedToasts)}");
         w.WriteLine($"Hold while a game is fullscreen: {OnOff(Settings.HoldInFullscreen)}");
         w.WriteLine($"Low battery: {OnOff(Settings.LowWarningEnabled)}, {Settings.LowWarning}%");
         w.WriteLine($"Critical battery: {OnOff(Settings.CriticalWarningEnabled)}, {Settings.CriticalWarning}%");

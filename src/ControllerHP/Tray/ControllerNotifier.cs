@@ -38,6 +38,8 @@ internal sealed class ControllerNotifier : IDisposable
         public bool Announced = announced;
         /// <summary>The most severe threshold already toasted, or <see cref="NoneNotified"/>.</summary>
         public int Notified = NoneNotified;
+        /// <summary>Charging since the last "fully charged" toast, so reaching 100% earns one.</summary>
+        public bool ChargingTowardFull;
     }
 
     private readonly ToastManager _toasts = new();
@@ -109,6 +111,9 @@ internal sealed class ControllerNotifier : IDisposable
     /// <summary>Whether connecting and disconnecting show a toast; battery warnings always do.</summary>
     public bool ConnectionToasts { get; set; } = true;
 
+    /// <summary>Whether a controller that charges to 100% gets a toast.</summary>
+    public bool FullyChargedToasts { get; set; } = true;
+
     public ToastCorner Corner
     {
         get => _toasts.Corner;
@@ -150,6 +155,7 @@ internal sealed class ControllerNotifier : IDisposable
             }
 
             int? crossed = CheckThresholds(tracked);
+            bool fullyCharged = CheckFullyCharged(tracked);
             bool announcing = !tracked.Announced;
             tracked.Announced = true;
             // With connection toasts off, a controller that connects low still gets its battery warning.
@@ -167,9 +173,32 @@ internal sealed class ControllerNotifier : IDisposable
                 Show(reading.Id, new ToastContent(reading.Name, $"{title} · {percent}%", reading,
                     BatteryIconRenderer.FillColor(percent)), ToastKind.Warning);
             }
+            else if (fullyCharged && FullyChargedToasts)
+            {
+                Show(reading.Id, new ToastContent(reading.Name, "Fully charged · 100%", reading, ConnectedAccent),
+                    ToastKind.Connection);
+            }
         }
 
         return settling;
+    }
+
+    /// <summary>
+    /// True once when a controller that has been charging reaches 100%. Controllers signal "full"
+    /// differently (PlayStation switches to a full state, Xbox stops showing as charging or goes idle), so
+    /// this asks only whether it charged since the last time and is now at 100%.
+    /// </summary>
+    private static bool CheckFullyCharged(Tracked tracked)
+    {
+        var reading = tracked.Reading;
+        // Only charging below 100% counts: some controllers keep reporting "charging" while topping off at
+        // 100%, which would otherwise re-arm this on every update.
+        if (reading.Power == ChargeState.Charging && reading.EffectivePercent is < 100)
+            tracked.ChargingTowardFull = true;
+        if (!tracked.ChargingTowardFull || reading.EffectivePercent is not >= 100)
+            return false;
+        tracked.ChargingTowardFull = false;
+        return true;
     }
 
     /// <returns>The threshold newly crossed downwards, if any.</returns>

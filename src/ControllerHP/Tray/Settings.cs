@@ -38,6 +38,13 @@ internal static class Settings
         set => Write(nameof(ConnectionToasts), value ? 1 : 0);
     }
 
+    /// <summary>Whether a controller that charges to 100% gets a pop-up.</summary>
+    public static bool FullyChargedToasts
+    {
+        get => Read(nameof(FullyChargedToasts)) is not int value || value != 0;
+        set => Write(nameof(FullyChargedToasts), value ? 1 : 0);
+    }
+
     /// <summary>Hold pop-ups while a fullscreen app runs; they're always held in exclusive fullscreen.</summary>
     public static bool HoldInFullscreen
     {

@@ -58,6 +58,7 @@ Slim pop-ups appear in the top-right corner of the screen:
 | **Disconnected** | A controller turns off or disconnects. |
 | **Battery low** | A controller on battery drops to the low level (20% by default). |
 | **Battery critical** | It drops to the critical level (10% by default). |
+| **Fully charged** | A controller that's been charging reaches 100%. Once per charge. |
 
 Each warning shows once per discharge. It can show again after the controller charges, or after its level recovers by 5 points or more.
 
@@ -95,6 +96,7 @@ Open it from the panel's gear or **Settings** in the right-click menu. It follow
 | **Tray icons** | 1 | 1, 2, or one per controller |
 | **Position** | Top right | Any corner of the screen |
 | **Connection pop-ups** | On | On or off |
+| **Fully charged** | On | On or off |
 | **Hold while a game is fullscreen** | Off | On or off. Pop-ups are always held in exclusive fullscreen, where they can't show |
 | **Low battery** | On, 20% | On or off; 10% to 50%, in 5% steps |
 | **Critical battery** | On, 10% | On or off; 5% to 45%, always below the low level |
