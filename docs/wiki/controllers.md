@@ -21,6 +21,7 @@ One line per controller, over the last **2 hours**, **6 hours** (the default), *
 - A connected controller's line ends in a dot with its current level.
 - A very short connection that's too brief to draw as a line shows as a small dot.
 - **Hover** over the chart to see every controller's level at that moment, and whether it was charging.
+- **Click a name** in the legend above the chart to leave that controller's line out, for example a keyboard you don't need to watch. Its name stays in the legend, dimmed, so you can click it back. This only changes the chart: its history is still recorded, and its card and stats still show.
 
 Each controller keeps its colour whichever range you pick. Every line is also named in the legend, so you never need to tell controllers apart by colour alone.
 

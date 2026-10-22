@@ -193,6 +193,20 @@ internal static class Settings
     private static string FormatLevel(int? level) =>
         level?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "off";
 
+    /// <summary>
+    /// Controllers left out of the Controllers page's chart, by id. Only the chart: their history is still
+    /// recorded, and their stats still show.
+    /// </summary>
+    public static IReadOnlySet<string> LeftOutOfChart =>
+        Read(nameof(LeftOutOfChart)) is string[] ids ? ids.ToHashSet() : [];
+
+    public static void SetInChart(string id, bool inChart)
+    {
+        var ids = LeftOutOfChart.ToHashSet();
+        if (inChart ? ids.Remove(id) : ids.Add(id))
+            Write(nameof(LeftOutOfChart), ids.ToArray());
+    }
+
     /// <summary>Names the user gave controllers, by controller id; a renamed controller shows this everywhere.</summary>
     public static IReadOnlyDictionary<string, string> ControllerNames
     {

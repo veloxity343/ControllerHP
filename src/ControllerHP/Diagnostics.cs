@@ -86,6 +86,7 @@ internal static partial class Diagnostics
         w.WriteLine($"Start with Windows: {OnOff(Settings.StartWithWindows)}");
         w.WriteLine($"Removed controllers: {Settings.HiddenControllers.Count}");
         w.WriteLine($"Renamed controllers: {Settings.ControllerNames.Count}");
+        w.WriteLine($"Left out of the chart: {Settings.LeftOutOfChart.Count}");
         foreach (var (id, levels) in Settings.ControllerWarnings)
             w.WriteLine($"Own warning levels for {id}: low {levels.Low?.ToString() ?? "off"}, critical {levels.Critical?.ToString() ?? "off"}");
 

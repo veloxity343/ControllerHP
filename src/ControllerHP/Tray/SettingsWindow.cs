@@ -43,6 +43,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
     private static readonly TimeSpan[] Ranges =
         [TimeSpan.FromHours(2), TimeSpan.FromHours(6), TimeSpan.FromHours(24), TimeSpan.FromDays(7)];
     private readonly HistoryChart _chart = new();
+    private readonly Note _chartNote = new("Click a controller's name above the chart to leave its line out, or bring it back.");
     private readonly Note _statsNote = new("Averages and totals cover the range above. Predictions and health use recent history.");
     private readonly Note _historyNote = new($"Recorded whenever a controller's battery changes, and kept for {BatteryHistory.Kept.Days} days.");
     private readonly List<StatsCard> _statsCards = [];
@@ -177,6 +178,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
     private List<Control> BuildControllersPage()
     {
         _range.SelectedChanged += (_, _) => ReloadHistory();
+        _chart.LegendClicked += (_, id) => Settings.SetInChart(id, Settings.LeftOutOfChart.Contains(id));
         _historyTimer.Tick += (_, _) => ReloadHistory();
         _controllerPicker.SelectedChanged += (_, _) =>
         {
@@ -189,7 +191,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
             PerformLayout();
         };
         _restoreButton.Click += (_, _) => OpenRestoreList();
-        return [new Heading("Controllers", 26), _undoBar, _range, _chart, _controllerPicker, _restoreButton, _statsNote, _historyNote];
+        return [new Heading("Controllers", 26), _undoBar, _range, _chart, _chartNote, _controllerPicker, _restoreButton, _statsNote, _historyNote];
     }
 
     private void ReloadHistory()
@@ -206,7 +208,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
         _chart.EmptyMessage = shown.Count == 0 && hidden.Count > 0
             ? "Every controller with history here has been removed. Use Restore removed below to bring one back."
             : HistoryChart.NoHistoryMessage;
-        _chart.SetData(shown, since, now);
+        _chart.SetData(shown, since, now, Settings.LeftOutOfChart);
 
         // A card per controller in the chart, its figures worked out from its whole retained history.
         var page = _pages[_controllersPage];
@@ -259,6 +261,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
             gone.Dispose();
         }
         _statsNote.Visible = _current == _controllersPage && shown.Count > 0;
+        _chartNote.Visible = _current == _controllersPage && shown.Count > 0;
         PerformLayout();
     }
 
@@ -548,8 +551,8 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
             }
             if (item is Heading && previous is not null)
                 y += S(SectionGap) - S(CardGap);
-            else if (item is DropDown && previous is HistoryChart)
-                y += S(12); // the chart's card and the box below it read as one block without room between
+            else if (item is DropDown && (previous is HistoryChart || previous == _chartNote))
+                y += S(18); // the chart, its note and the box below them read as one block without room between
             int height = item is SettingCard card ? card.PreferredHeight : item.Height;
             // Choice rows keep their own width; everything else spans the page.
             item.Bounds = new Rectangle(x, y, item is SegmentedControl or DropDown ? item.Width : width, height);

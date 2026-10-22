@@ -28,6 +28,16 @@ internal sealed class HistoryChart : ThemedControl
     public string EmptyMessage { get; set; } = NoHistoryMessage;
 
     private IReadOnlyList<HistorySeries> _series = [];
+    /// <summary>The series drawn: all but those left out, which only appear, dimmed, in the legend.</summary>
+    private IReadOnlyList<HistorySeries> _drawn = [];
+    private IReadOnlySet<string> _leftOut = new HashSet<string>();
+    /// <summary>Each legend entry's area, for clicking it to leave that controller out or bring it back.</summary>
+    private readonly List<(Rectangle Bounds, string Id)> _legendHits = [];
+
+    /// <summary>A legend entry was clicked: the controller's id, to leave out of the chart or bring back.</summary>
+    public event EventHandler<string>? LegendClicked;
+
+    public const string AllLeftOutMessage = "Every controller is left out of the chart. Click a name above to show it again.";
     /// <summary>Every reading time in range plus now, sorted, so the crosshair can snap without re-sorting per move.</summary>
     private DateTime[] _snapTimes = [];
     private DateTime _start, _end;
@@ -40,13 +50,15 @@ internal sealed class HistoryChart : ThemedControl
 
     protected override Size? LogicalSize => new Size(600, 380);
 
-    public void SetData(IReadOnlyList<HistorySeries> series, DateTime start, DateTime end)
+    public void SetData(IReadOnlyList<HistorySeries> series, DateTime start, DateTime end, IReadOnlySet<string>? leftOut = null)
     {
         // Eight slots and no more: a ninth controller would need a generated colour nobody could tell apart.
         _series = series.Where(s => s.Slot < LightSlots.Length).ToList();
+        _leftOut = leftOut ?? new HashSet<string>();
+        _drawn = _series.Where(s => !_leftOut.Contains(s.Id)).ToList();
         _start = start;
         _end = end;
-        _snapTimes = [.. _series.SelectMany(s => s.Points).Select(p => p.Time).Append(end)
+        _snapTimes = [.. _drawn.SelectMany(s => s.Points).Select(p => p.Time).Append(end)
             .Where(t => t >= start && t <= end).Distinct().Order()];
         _hoverTime = null;
         Invalidate();
@@ -79,8 +91,15 @@ internal sealed class HistoryChart : ThemedControl
 
         DrawLegend(g);
         DrawAxes(g);
+        if (_drawn.Count == 0)
+        {
+            using var font = MakeFont(13);
+            TextRenderer.DrawText(g, AllLeftOutMessage, font, Rectangle.Inflate(Plot, -S(24), -S(24)), Palette.SubtleText,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
+            return;
+        }
         g.SmoothingMode = SmoothingMode.AntiAlias;
-        foreach (var s in _series)
+        foreach (var s in _drawn)
             DrawSeries(g, s);
         DrawEndLabels(g);
         if (_hoverTime is DateTime t)
@@ -91,14 +110,31 @@ internal sealed class HistoryChart : ThemedControl
     {
         using var font = MakeFont(12);
         int x = S(16), y = S(16);
+        _legendHits.Clear();
         foreach (var s in _series)
         {
-            // A short line key mirrors the line mark; the name stays in text ink.
-            using (var pen = new Pen(SeriesColor(s), S(2)) { StartCap = LineCap.Round, EndCap = LineCap.Round })
-                g.DrawLine(pen, x, y + LegendHeight / 2f, x + S(14), y + LegendHeight / 2f);
+            // A short line key mirrors the line mark; the name stays in text ink. Left out of the chart, the
+            // key is a hollow outline and the name fades, but it stays here to click back in.
+            bool leftOut = _leftOut.Contains(s.Id);
+            float keyY = y + LegendHeight / 2f;
+            // Halfway from the legend's grey to the background: plainly dimmed, still readable.
+            var faded = Color.FromArgb((Palette.SubtleText.R + Palette.Surface.R) / 2, (Palette.SubtleText.G + Palette.Surface.G) / 2,
+                (Palette.SubtleText.B + Palette.Surface.B) / 2);
+            if (leftOut)
+            {
+                using var pen = new Pen(faded, S(1));
+                g.DrawRectangle(pen, x, keyY - S(2), S(14), S(4));
+            }
+            else
+            {
+                using var pen = new Pen(SeriesColor(s), S(2)) { StartCap = LineCap.Round, EndCap = LineCap.Round };
+                g.DrawLine(pen, x, keyY, x + S(14), keyY);
+            }
             // Measured without EndEllipsis, which would measure the name already cut down to fit.
             int textWidth = TextRenderer.MeasureText(g, s.Name, font, Size.Empty, TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Width;
-            TextRenderer.DrawText(g, s.Name, font, new Rectangle(x + S(20), y, textWidth + S(2), LegendHeight), Palette.SubtleText, TextFlags);
+            TextRenderer.DrawText(g, s.Name, font, new Rectangle(x + S(20), y, textWidth + S(2), LegendHeight),
+                leftOut ? faded : Palette.SubtleText, TextFlags);
+            _legendHits.Add((new Rectangle(x - S(4), y, S(20) + textWidth + S(8), LegendHeight), s.Id));
             x += S(20) + textWidth + S(20);
         }
     }
@@ -200,7 +236,7 @@ internal sealed class HistoryChart : ThemedControl
     {
         using var font = MakeFont(12, semibold: true);
         var placed = new List<float>();
-        foreach (var s in _series.Where(s => s.Connected))
+        foreach (var s in _drawn.Where(s => s.Connected))
         {
             int percent = s.Points[^1].Percent!.Value;
             float y = Y(percent);
@@ -232,7 +268,7 @@ internal sealed class HistoryChart : ThemedControl
             g.DrawLine(line, x, plot.Top, x, plot.Bottom);
 
         // One tooltip for every controller at this moment: value first and strong, name after.
-        var rows = _series
+        var rows = _drawn
             .Select(s => (s, point: ValueAt(s, t)))
             .Where(r => r.point is not null)
             .Select(r => (r.s, text: r.point!.Value.Percent is int p ? $"{p}%{(r.point.Value.Charging ? " charging" : "")}" : "—"))
@@ -292,6 +328,14 @@ internal sealed class HistoryChart : ThemedControl
             _hoverTime = snapped;
             Invalidate();
         }
+        Cursor = _legendHits.Any(h => h.Bounds.Contains(e.Location)) ? Cursors.Hand : Cursors.Default;
+    }
+
+    protected override void OnMouseClick(MouseEventArgs e)
+    {
+        base.OnMouseClick(e);
+        if (e.Button == MouseButtons.Left && _legendHits.FirstOrDefault(h => h.Bounds.Contains(e.Location)).Id is string id)
+            LegendClicked?.Invoke(this, id);
     }
 
     protected override void OnMouseLeave(EventArgs e)
