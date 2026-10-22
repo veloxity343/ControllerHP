@@ -122,6 +122,7 @@ Turn on **Share battery levels** in Settings, and ControllerHP keeps `%LOCALAPPD
     {
       "id": "ble:70f8ae8f7583",
       "name": "Xbox Wireless Controller",
+      "deviceName": "Xbox Wireless Controller",
       "type": "controller",
       "percent": 62,
       "exact": true,
@@ -140,6 +141,8 @@ Turn on **Share battery levels** in Settings, and ControllerHP keeps `%LOCALAPPD
 | `updated` | When the file was last written. It's only rewritten when something changes, so it can be hours old while nothing does. |
 | `controllers` | Every connected controller. Empty when none are. |
 | `id` | Stays the same for each controller, across connections and restarts. |
+| `name` | The name ControllerHP shows: yours, if you've [renamed it](controllers.md#renaming-a-controller). |
+| `deviceName` | The name the controller gives itself. |
 | `type` | `controller` for now. |
 | `percent` | The battery level, or `null` if it isn't known yet. |
 | `exact` | `false` when the controller only reports a rough level (empty, low, medium or full), so `percent` is an estimate. |

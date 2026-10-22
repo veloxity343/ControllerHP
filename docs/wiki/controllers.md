@@ -5,10 +5,11 @@
 - [The chart](#the-chart)
 - [The stats](#the-stats)
 - [Battery health](#battery-health)
+- [Renaming a controller](#renaming-a-controller)
 - [Removing a controller](#removing-a-controller)
 - [What's stored on your PC](#whats-stored-on-your-pc)
 
-The Controllers page shows each controller's battery history and stats, and lets you remove controllers you no longer use. Open **Settings** from the right-click menu (or the gear in the panel) and choose **Controllers**.
+The Controllers page shows each controller's battery history and stats, and lets you rename controllers or remove ones you no longer use. Open **Settings** from the right-click menu (or the gear in the panel) and choose **Controllers**.
 
 ## The chart
 
@@ -66,6 +67,14 @@ Battery health compares **how long a charge lasts on battery now** with a baseli
 - Charge cycles are left out too, so a controller that's simply used a lot isn't marked as worn.
 
 Hover the **?** beside it in the app for a short version of this.
+
+## Renaming a controller
+
+Two controllers of the same model, such as two Xbox controllers, share a name. The Controllers page numbers them, *Xbox Wireless Controller (1)* and *(2)*, but in the tray and pop-ups they look the same. To tell them apart everywhere, give each a name of your own, such as *Black pad* or *Player 2*.
+
+Choose the controller in the dropdown, click **Rename** on its card, type a name and press Enter. Names can be up to 40 characters.
+
+The new name shows everywhere ControllerHP shows that controller: the tray tooltip, the panel, pop-ups, the chart and the [status file](using-controllerhp.md#sharing-battery-levels-with-other-apps). It doesn't change the name Windows uses. To go back to the controller's own name, rename it again and leave the box empty.
 
 ## Removing a controller
 

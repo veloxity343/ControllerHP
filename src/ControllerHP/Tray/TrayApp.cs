@@ -41,6 +41,7 @@ internal sealed class TrayApp : ApplicationContext
     private DateTime _flyoutClosedAt;
     /// <summary>Whether status.json is being kept; null until the settings are first applied.</summary>
     private bool? _shareStatus;
+    private IReadOnlyDictionary<string, string> _names = Settings.ControllerNames;
 
     public TrayApp(IReadOnlyList<IBatterySource> sources)
     {
@@ -319,7 +320,8 @@ internal sealed class TrayApp : ApplicationContext
                 Program.LogOnce($"{source.Name} failed: {ex.GetType().Name}: {ex.Message}");
             }
         }
-        return readings;
+        var names = Settings.ControllerNames;
+        return names.Count == 0 ? readings : [.. readings.Select(r => Settings.Named(r, names))];
     }
 
     private void BuildMenu()
@@ -421,6 +423,15 @@ internal sealed class TrayApp : ApplicationContext
                 StatusFile.Write(_readings, _timeLeft);
             else
                 StatusFile.Delete();
+        }
+
+        // A rename shows straight away: in the tray, the panel and the status file.
+        var names = Settings.ControllerNames;
+        if (!names.OrderBy(kv => kv.Key).SequenceEqual(_names.OrderBy(kv => kv.Key)))
+        {
+            _names = names;
+            if (_slots.Count > 0)
+                Refresh();
         }
 
         int limit = Settings.TrayIconLimit;

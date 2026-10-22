@@ -21,8 +21,12 @@ internal sealed class StatsCard : ThemedControl
     private readonly HistorySeries _series;
     private readonly ControllerStats _stats;
     private readonly List<Tile> _tiles;
+    private readonly ActionButton _rename = new("Rename");
     private readonly ActionButton _remove = new("Remove");
     private bool _helpHover;
+
+    /// <summary>The Rename button was clicked.</summary>
+    public event EventHandler? RenameRequested;
 
     /// <summary>The Remove button was clicked.</summary>
     public event EventHandler? RemoveRequested;
@@ -34,18 +38,22 @@ internal sealed class StatsCard : ThemedControl
         _series = series;
         _stats = stats;
         _tiles = BuildTiles();
+        Controls.Add(_rename);
         Controls.Add(_remove);
+        _rename.Click += (_, _) => RenameRequested?.Invoke(this, EventArgs.Empty);
         _remove.Click += (_, _) => RemoveRequested?.Invoke(this, EventArgs.Empty);
         ResizeForDpi();
     }
 
-    protected override void OnPaletteChanged() => _remove.BackColor = Palette.Surface;
+    protected override void OnPaletteChanged() => _rename.BackColor = _remove.BackColor = Palette.Surface;
 
     protected override void OnLayout(LayoutEventArgs e)
     {
         base.OnLayout(e);
-        _remove.BackColor = Palette.Surface;
-        _remove.Location = new Point(Width - S(Padding_) - _remove.Width, (S(HeaderHeight) - _remove.Height) / 2 + S(4));
+        _rename.BackColor = _remove.BackColor = Palette.Surface;
+        int top = (S(HeaderHeight) - _remove.Height) / 2 + S(4);
+        _remove.Location = new Point(Width - S(Padding_) - _remove.Width, top);
+        _rename.Location = new Point(_remove.Left - S(8) - _rename.Width, top);
     }
 
     protected override Size? LogicalSize =>
@@ -143,7 +151,7 @@ internal sealed class StatsCard : ThemedControl
             g.DrawLine(key, S(Padding_), S(HeaderHeight) / 2f, S(Padding_) + S(14), S(HeaderHeight) / 2f);
         using (var nameFont = MakeFont(14, semibold: true))
             TextRenderer.DrawText(g, _series.Name, nameFont,
-                new Rectangle(S(Padding_) + S(22), 0, _remove.Left - S(Padding_) - S(30), S(HeaderHeight)), Palette.Text, TextFlags);
+                new Rectangle(S(Padding_) + S(22), 0, _rename.Left - S(Padding_) - S(30), S(HeaderHeight)), Palette.Text, TextFlags);
 
         using var labelFont = MakeFont(12);
         using var valueFont = MakeFont(17, semibold: true);

@@ -123,7 +123,7 @@ internal static class BatteryStats
             RuntimePerCharge = runtime,
             BaselineRuntime = baseline,
             HealthPercent = health,
-            TypicalHours = Typical(history.Name),
+            TypicalHours = Typical(history.DeviceName),
             PlayTime = play,
             PlayTimeToday = playToday,
             ChargeCycles = discharged / 100.0,

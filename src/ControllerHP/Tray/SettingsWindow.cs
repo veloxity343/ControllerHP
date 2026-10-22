@@ -234,6 +234,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
         {
             var stats = BatteryStats.Compute(full.GetValueOrDefault(series.Id, series), since, now, lowWarning);
             var card = new StatsCard(series, stats) { Palette = _palette, Visible = _current == _controllersPage };
+            card.RenameRequested += (_, _) => Rename(series);
             card.RemoveRequested += (_, _) => Remove(series);
             _statsCards.Add(card);
             page.Insert(insertAt++, card);
@@ -334,6 +335,19 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
     {
         if (_current == _controllersPage)
             ReloadHistory();
+    }
+
+    /// <summary>Gives a controller a name of the user's own, or with an empty name, its own back.</summary>
+    private void Rename(HistorySeries series)
+    {
+        string? name = ConfirmDialog.AskText(this, $"Rename {series.Name}",
+            $"The new name shows everywhere ControllerHP shows this controller. Leave it empty to go back to {series.DeviceName}.",
+            series.Name, Settings.MaxNameLength, "Rename", _palette);
+        if (name is null)
+            return;
+        // As with Remove, the card is about to be rebuilt; keep focus on screen.
+        _controllerPicker.Focus();
+        Settings.Rename(series.Id, name.Trim() == series.DeviceName ? null : name);
     }
 
     /// <summary>Hides a controller, with a few seconds to undo; Settings lists it for restoring later.</summary>

@@ -33,6 +33,18 @@ public sealed record ControllerBattery(
     Connection Connection = Connection.Unknown,
     DeviceKind Kind = DeviceKind.Gamepad)
 {
+    private readonly string? _deviceName;
+
+    /// <summary>
+    /// What the device calls itself. <see cref="Name"/> is what's shown, which is the user's name for it
+    /// when they've renamed it.
+    /// </summary>
+    public string DeviceName
+    {
+        get => _deviceName ?? Name;
+        init => _deviceName = value;
+    }
+
     /// <summary>
     /// The percentage to display: the exact value when known, otherwise a representative value for the
     /// coarse level, so icons and low-battery warnings work the same for every source.

@@ -1,3 +1,4 @@
+using ControllerHP.Battery;
 using Microsoft.Win32;
 
 namespace ControllerHP.Tray;
@@ -142,6 +143,46 @@ internal static class Settings
             .GroupBy(kv => kv.Key).Select(g => g.Last()) // a re-hidden controller keeps its latest time
             .Select(kv => $"{kv.Key}\t{kv.Value.ToString("O", System.Globalization.CultureInfo.InvariantCulture)}")
             .ToArray());
+
+    /// <summary>Names the user gave controllers, by controller id; a renamed controller shows this everywhere.</summary>
+    public static IReadOnlyDictionary<string, string> ControllerNames
+    {
+        get
+        {
+            var names = new Dictionary<string, string>();
+            if (Read(nameof(ControllerNames)) is string[] entries)
+            {
+                foreach (var entry in entries)
+                {
+                    // "id<TAB>name"; names are cleaned of tabs and line breaks when saved.
+                    int tab = entry.IndexOf('\t');
+                    if (tab > 0 && tab < entry.Length - 1)
+                        names[entry[..tab]] = entry[(tab + 1)..];
+                }
+            }
+            return names;
+        }
+    }
+
+    public const int MaxNameLength = 40;
+
+    /// <summary>Gives a controller a name of the user's own; an empty name restores the device's.</summary>
+    public static void Rename(string id, string? name)
+    {
+        // Tabs, line breaks and runs of spaces become single spaces: names are stored as "id<TAB>name".
+        name = string.Join(' ', (name ?? "").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        name = new string(name.Where(c => !char.IsControl(c)).ToArray()).Trim();
+        if (name.Length > MaxNameLength)
+            name = name[..MaxNameLength].TrimEnd();
+        var names = ControllerNames.Where(kv => kv.Key != id).ToDictionary();
+        if (name.Length > 0)
+            names[id] = name;
+        Write(nameof(ControllerNames), names.Select(kv => $"{kv.Key}\t{kv.Value}").ToArray());
+    }
+
+    /// <summary>The reading with the user's name for its controller, if they've given it one.</summary>
+    public static ControllerBattery Named(ControllerBattery reading, IReadOnlyDictionary<string, string> names) =>
+        names.TryGetValue(reading.Id, out var name) ? reading with { Name = name, DeviceName = reading.DeviceName } : reading;
 
     /// <summary>Whether Windows starts the app at sign-in, via the current user's Run key.</summary>
     public static bool StartWithWindows

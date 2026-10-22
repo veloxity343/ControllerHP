@@ -14,6 +14,15 @@ internal readonly record struct HistoryPoint(DateTime Time, int? Percent, bool C
 /// </param>
 internal sealed record HistorySeries(string Id, string Name, int Slot, IReadOnlyList<HistoryPoint> Points)
 {
+    private readonly string? _deviceName;
+
+    /// <summary>What the device calls itself; <see cref="Name"/> is the user's name for it, if they gave one.</summary>
+    public string DeviceName
+    {
+        get => _deviceName ?? Name;
+        init => _deviceName = value;
+    }
+
     /// <summary>Still connected at the latest reading.</summary>
     public bool Connected => Points.Count > 0 && Points[^1].Percent is not null;
 }
@@ -62,7 +71,8 @@ internal sealed class BatteryHistory
             if (_written.TryGetValue(reading.Id, out var last) && last == state)
                 continue;
             _written[reading.Id] = state;
-            rows.AppendLine(Row(now, reading.Id, reading.Name, reading.EffectivePercent, reading.Power.ToString()));
+            // The device's own name, so the history doesn't change with a rename (names are applied on loading).
+            rows.AppendLine(Row(now, reading.Id, reading.DeviceName, reading.EffectivePercent, reading.Power.ToString()));
         }
         foreach (var id in _written.Keys.Except(readings.Select(r => r.Id)).ToList())
         {
@@ -173,8 +183,13 @@ internal sealed class BatteryHistory
             }
         }
 
+        var custom = Settings.ControllerNames;
         var series = points
-            .Select((kv, slot) => new HistorySeries(kv.Key, names.GetValueOrDefault(kv.Key, "Controller"), slot, kv.Value))
+            .Select((kv, slot) =>
+            {
+                string deviceName = names.GetValueOrDefault(kv.Key, "Controller");
+                return new HistorySeries(kv.Key, custom.GetValueOrDefault(kv.Key, deviceName), slot, kv.Value) { DeviceName = deviceName };
+            })
             // A controller that was already disconnected for the whole range has nothing to show.
             .Where(s => s.Points.Any(pt => pt.Percent is not null))
             .ToList();

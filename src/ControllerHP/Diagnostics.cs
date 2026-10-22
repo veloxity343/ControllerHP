@@ -85,6 +85,7 @@ internal static partial class Diagnostics
         w.WriteLine($"Share battery levels: {OnOff(Settings.ShareStatus)}");
         w.WriteLine($"Start with Windows: {OnOff(Settings.StartWithWindows)}");
         w.WriteLine($"Removed controllers: {Settings.HiddenControllers.Count}");
+        w.WriteLine($"Renamed controllers: {Settings.ControllerNames.Count}");
 
         Section(w, "Battery sources");
         WriteSources(w, sources);

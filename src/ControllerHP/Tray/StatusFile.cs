@@ -29,6 +29,7 @@ internal static class StatusFile
         {
             id = r.Id,
             name = r.Name,
+            deviceName = r.DeviceName,
             type = r.Kind switch
             {
                 DeviceKind.Gamepad => "controller",
