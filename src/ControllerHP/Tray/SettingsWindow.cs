@@ -35,6 +35,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
     private readonly ToggleSwitch _fullyCharged = new();
     private readonly SwitchedStepper _low = new(Settings.MinWarning + Settings.WarningStep, Settings.MaxWarning, Settings.WarningStep);
     private readonly SwitchedStepper _critical = new(Settings.MinWarning, Settings.MaxWarning - Settings.WarningStep, Settings.WarningStep);
+    private readonly ToggleSwitch _shareStatus = new();
     private readonly ToggleSwitch _startWithWindows = new();
 
     // The Controllers page: each controller's battery history, its stats, and removing it.
@@ -160,6 +161,11 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
         items.Add(new SettingCard("Low battery", "Warn when a controller drops to this level.", _low));
         items.Add(new SettingCard("Critical battery", "Warn again at this lower level.", _critical));
 
+        items.Add(new Heading("Other apps", 15));
+        items.Add(new Note($"Battery levels in {StatusFile.DisplayPath}, for other apps to read."));
+        items.Add(new SettingCard("Share battery levels", "Such as Rainmeter skins, Stream Deck plugins or scripts.",
+            _shareStatus));
+
         items.Add(new Heading("Startup", 15));
         items.Add(new SettingCard("Start with Windows", "Run ControllerHP when you sign in.", _startWithWindows));
 
@@ -252,6 +258,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
         _low.Stepper.Value = Settings.LowWarning;
         _critical.Stepper.Maximum = _low.Stepper.Value - Settings.WarningStep;
         _critical.Stepper.Value = Settings.CriticalWarning;
+        _shareStatus.Checked = Settings.ShareStatus;
         _startWithWindows.Checked = Settings.StartWithWindows;
         _loading = false;
     }
@@ -308,6 +315,11 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
         {
             if (!_loading)
                 Settings.CriticalWarningEnabled = _critical.Switch.Checked;
+        };
+        _shareStatus.CheckedChanged += (_, _) =>
+        {
+            if (!_loading)
+                Settings.ShareStatus = _shareStatus.Checked;
         };
         _startWithWindows.CheckedChanged += (_, _) =>
         {

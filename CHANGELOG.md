@@ -16,6 +16,7 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 - **Pop-ups during fullscreen games:** in exclusive fullscreen, where pop-ups can't appear, they're now held and shown once the game closes, instead of being lost. A new **Hold while a game is fullscreen** setting does the same for borderless games. At most one shows per controller, and a held battery warning is dropped if the controller was charged meanwhile.
 - **Fully charged** pop-up when a charging controller reaches 100%, once per charge. It can be turned off in Settings.
 - **Time left** in the tray tooltip and the controller panel, such as "about 3 h to 20%" or "1 h 30 min to full", once there's enough history. It's the same figure as the Controllers page shows.
+- **Share battery levels** setting: keeps `%LOCALAPPDATA%\ControllerHP\status.json` up to date with every connected controller's battery, for other apps such as Rainmeter skins, Stream Deck plugins or scripts to read. Off by default.
 - **Diagnostics** in the right-click menu writes a report of what ControllerHP sees and opens it, for bug reports, instead of running `--list` from a terminal. Bluetooth addresses in it are partly masked, so it can be posted as it is.
 
 ### Changed

@@ -39,6 +39,8 @@ internal sealed class TrayApp : ApplicationContext
     private Flyout? _flyout;
     private SettingsWindow? _settingsWindow;
     private DateTime _flyoutClosedAt;
+    /// <summary>Whether status.json is being kept; null until the settings are first applied.</summary>
+    private bool? _shareStatus;
 
     public TrayApp(IReadOnlyList<IBatterySource> sources)
     {
@@ -133,6 +135,8 @@ internal sealed class TrayApp : ApplicationContext
         BatteryHistory.Heartbeat();
 
         _timeLeft = WorkOutTimeLeft();
+        if (_shareStatus == true)
+            StatusFile.Write(_readings, _timeLeft);
         UpdateSlots();
         _flyout?.SetReadings(Prioritise(_readings).ToList(), _timeLeft);
 
@@ -409,6 +413,16 @@ internal sealed class TrayApp : ApplicationContext
                 _notifier.ShowSample();
         }
 
+        bool share = Settings.ShareStatus;
+        if (share != _shareStatus)
+        {
+            _shareStatus = share;
+            if (share)
+                StatusFile.Write(_readings, _timeLeft);
+            else
+                StatusFile.Delete();
+        }
+
         int limit = Settings.TrayIconLimit;
         if (limit != _iconLimit)
         {
@@ -433,6 +447,8 @@ internal sealed class TrayApp : ApplicationContext
         _flyout?.Close();
         _settingsWindow?.Close();
         _history.Record([]); // close every controller's session on a clean exit
+        if (_shareStatus == true)
+            StatusFile.Write([], new Dictionary<string, string>(), running: false);
         foreach (var slot in _slots)
             slot.Dispose();
         _menu.Dispose();

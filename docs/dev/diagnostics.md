@@ -33,6 +33,7 @@ In `%LOCALAPPDATA%\ControllerHP`:
 | `error.log` | Unhandled errors, and each distinct source failure, logged once. Kept to the newest 1 MB. |
 | `battery.csv` | One row per change per controller: time, id, name, percent, charge state. Kept 90 days. |
 | `battery.alive` | The last time the app was known to be running. |
+| `status.json` | Battery levels for other apps, while **Share battery levels** is on. See [Sharing battery levels](../wiki/using-controllerhp.md#sharing-battery-levels-with-other-apps). |
 | `diagnostics.txt` | The last report from **Diagnostics**, overwritten each time. |
 
 ## Checking a change

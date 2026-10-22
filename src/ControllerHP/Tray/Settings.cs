@@ -45,6 +45,13 @@ internal static class Settings
         set => Write(nameof(FullyChargedToasts), value ? 1 : 0);
     }
 
+    /// <summary>Keep status.json up to date, for other apps to read the battery levels.</summary>
+    public static bool ShareStatus
+    {
+        get => Read(nameof(ShareStatus)) is int value && value != 0;
+        set => Write(nameof(ShareStatus), value ? 1 : 0);
+    }
+
     /// <summary>Hold pop-ups while a fullscreen app runs; they're always held in exclusive fullscreen.</summary>
     public static bool HoldInFullscreen
     {

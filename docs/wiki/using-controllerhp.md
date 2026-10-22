@@ -8,6 +8,7 @@
 - [Pop-ups](#pop-ups)
 - [The right-click menu](#the-right-click-menu)
 - [Settings](#settings)
+- [Sharing battery levels with other apps](#sharing-battery-levels-with-other-apps)
 
 ## The tray icon
 
@@ -100,9 +101,53 @@ Open it from the panel's gear or **Settings** in the right-click menu. It follow
 | **Hold while a game is fullscreen** | Off | On or off. Pop-ups are always held in exclusive fullscreen, where they can't show |
 | **Low battery** | On, 20% | On or off; 10% to 50%, in 5% steps |
 | **Critical battery** | On, 10% | On or off; 5% to 45%, always below the low level |
+| **Share battery levels** | Off | On or off. See [below](#sharing-battery-levels-with-other-apps) |
 | **Start with Windows** | Off | On or off |
 
 Switching a warning off greys out its level until you switch it back on. Lowering the low level below the critical one pushes the critical level down with it.
+
+## Sharing battery levels with other apps
+
+Turn on **Share battery levels** in Settings, and ControllerHP keeps `%LOCALAPPDATA%\ControllerHP\status.json` up to date with every connected controller's battery. Other apps can read it to show your battery levels, such as a Rainmeter skin, a Stream Deck plugin or a script. It's a file on your PC, so nothing is sent anywhere.
+
+```json
+{
+  "app": "ControllerHP",
+  "format": 1,
+  "version": "0.3.0",
+  "running": true,
+  "pid": 9696,
+  "updated": "2026-10-22T12:41:09.5679406+11:00",
+  "controllers": [
+    {
+      "id": "ble:70f8ae8f7583",
+      "name": "Xbox Wireless Controller",
+      "type": "controller",
+      "percent": 62,
+      "exact": true,
+      "power": "battery",
+      "connection": "bluetooth",
+      "timeLeft": "3 h to 20%"
+    }
+  ]
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `format` | Goes up only if a field changes meaning or is removed. New fields can appear without it changing. |
+| `running` | `false` once ControllerHP exits. If it crashed, this stays `true`: check that a process with the given `pid` is still running. |
+| `updated` | When the file was last written. It's only rewritten when something changes, so it can be hours old while nothing does. |
+| `controllers` | Every connected controller. Empty when none are. |
+| `id` | Stays the same for each controller, across connections and restarts. |
+| `type` | `controller` for now. |
+| `percent` | The battery level, or `null` if it isn't known yet. |
+| `exact` | `false` when the controller only reports a rough level (empty, low, medium or full), so `percent` is an estimate. |
+| `power` | `battery`, `charging`, `wired` (plugged in with no battery reported) or `unknown`. |
+| `connection` | `bluetooth`, `usb`, `wireless-adapter` or `unknown`. |
+| `timeLeft` | The same estimate as the tooltip, such as `3 h to 20%` or `1 h 30 min to full`, or `null` until there's enough history. |
+
+The file is replaced in one step, so an app never reads half of it. Turning the setting off deletes it.
 
 ---
 

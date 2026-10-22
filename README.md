@@ -26,6 +26,7 @@
 - **One icon for several controllers**, showing whichever is lowest, or one icon each if you prefer.
 - **A panel on left-click** listing every controller with its charge and connection.
 - **A Controllers page** with each controller's battery history, average drain, time left, play time and a battery health estimate, and a way to remove controllers you no longer use.
+- **Shares battery levels with other apps** if you turn it on, such as Rainmeter skins or scripts, through a file on your PC.
 - **Follows Windows' light or dark mode**, and runs quietly: a check every 30 seconds, nothing sent anywhere.
 
 ## Documentation
