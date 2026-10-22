@@ -63,6 +63,8 @@ Slim pop-ups appear in the top-right corner of the screen:
 
 Each warning shows once per discharge. It can show again after the controller charges, or after its level recovers by 5 points or more.
 
+The levels are set in [Settings](#settings), and a controller can have [its own](controllers.md#a-controllers-own-warning-levels).
+
 Pop-ups disappear after a few seconds; click one to dismiss it sooner. You can move them to another corner, turn off the connection ones, or change or turn off the warnings: see [Settings](#settings).
 
 **While you're playing fullscreen:**
@@ -80,7 +82,7 @@ Held pop-ups show once the game closes, at most one per controller, the latest f
 | **Tray icons** | 1, 2, or one per controller. |
 | **Pop-up position** | Which corner pop-ups appear in. Choosing one shows a sample there. |
 | **Connection pop-ups** | Turns the Connected and Disconnected pop-ups on or off. |
-| **Battery warnings** | Turns both the low and critical warnings on or off together. Your warning levels are kept. |
+| **Battery warnings** | Turns both the low and critical warnings in Settings on or off together. Your warning levels are kept. Controllers with [their own levels](controllers.md#a-controllers-own-warning-levels) keep them. |
 | **Start with Windows** | Runs ControllerHP when you sign in. |
 | **Settings** | Opens the settings window. |
 | **Diagnostics** | Writes a report of what ControllerHP sees, for bug reports, and opens it. See [Reporting a bug](troubleshooting.md#reporting-a-bug). |

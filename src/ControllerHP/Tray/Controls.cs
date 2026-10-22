@@ -259,7 +259,8 @@ internal sealed class SettingCard : ThemedControl
         int textRight = _stacked ? Width - S(16) : _control.Left - S(16);
         using var titleFont = MakeFont(14);
         using var descriptionFont = MakeFont(12);
-        TextRenderer.DrawText(g, Text, titleFont, new Rectangle(S(16), S(14), textRight - S(16), S(20)), Palette.Text, TextFlags);
+        TextRenderer.DrawText(g, Text, titleFont, new Rectangle(S(16), S(14), textRight - S(16), S(20)),
+            Enabled ? Palette.Text : Palette.SubtleText, TextFlags);
         TextRenderer.DrawText(g, _description, descriptionFont,
             new Rectangle(S(16), S(36), textRight - S(16), S(18)), Palette.SubtleText, TextFlags);
     }
@@ -279,7 +280,20 @@ internal sealed class ToggleSwitch : ThemedControl
         ResizeForDpi();
     }
 
-    protected override Size? LogicalSize => new Size(84, 22);
+    private readonly bool _compact;
+
+    /// <summary>Just a smaller track, without the On/Off text, for switches set among other figures.</summary>
+    public bool Compact
+    {
+        get => _compact;
+        init
+        {
+            _compact = value;
+            ResizeForDpi(); // the constructor sized it for the full-size switch
+        }
+    }
+
+    protected override Size? LogicalSize => Compact ? new Size(32, 18) : new Size(84, 22);
 
     public bool Checked
     {
@@ -312,22 +326,28 @@ internal sealed class ToggleSwitch : ThemedControl
     {
         var g = e.Graphics;
         // Label on the left, switch on the right, as in Windows' Settings.
-        using var font = MakeFont(13);
-        int trackWidth = S(40);
-        TextRenderer.DrawText(g, Checked ? "On" : "Off", font,
-            new Rectangle(0, 0, Width - trackWidth - S(10), Height), Palette.Text,
-            TextFlags & ~TextFormatFlags.Left | TextFormatFlags.Right);
+        int trackWidth = Compact ? Width - S(2) : S(40);
+        if (!Compact)
+        {
+            using var font = MakeFont(13);
+            TextRenderer.DrawText(g, Checked ? "On" : "Off", font,
+                new Rectangle(0, 0, Width - trackWidth - S(10), Height), Enabled ? Palette.Text : Palette.SubtleText,
+                TextFlags & ~TextFormatFlags.Left | TextFormatFlags.Right);
+        }
 
+        // Disabled, it keeps its position but loses its colour, so it doesn't look like it can be changed.
         var track = new RectangleF(Width - trackWidth - S(1), S(1), trackWidth, Height - S(2));
         float radius = track.Height / 2;
         if (Checked)
-            Fill(g, track, radius, Palette.Accent);
+            Fill(g, track, radius, Enabled ? Palette.Accent : Palette.Border);
         else
-            Outline(g, track, radius, Palette.SubtleText, S(1));
+            Outline(g, track, radius, Enabled ? Palette.SubtleText : Palette.Border, S(1));
 
-        float knob = Checked ? track.Height - S(8) : track.Height - S(10);
-        float x = Checked ? track.Right - S(4) - knob : track.X + S(5);
-        var knobColor = Checked ? (Palette.Light ? Color.White : Palette.Background) : Palette.SubtleText;
+        // The knob's inset scales with the track, so the compact switch keeps the same proportions.
+        float inset = Compact ? 3 : 4;
+        float knob = Checked ? track.Height - S(inset * 2) : track.Height - S(inset * 2 + 2);
+        float x = Checked ? track.Right - S(inset) - knob : track.X + S(inset + 1);
+        var knobColor = Checked ? (Palette.Light ? Color.White : Palette.Background) : Enabled ? Palette.SubtleText : Palette.Border;
         Fill(g, new RectangleF(x, track.Y + (track.Height - knob) / 2, knob, knob), knob / 2, knobColor);
         DrawFocus(g, track, radius);
     }
@@ -430,18 +450,44 @@ internal sealed class Stepper : ThemedControl
         ResizeForDpi();
     }
 
-    protected override Size? LogicalSize => new Size(Text.Length == 0 ? 110 : 190, 32);
+    private readonly bool _compact;
+
+    /// <summary>A smaller box, for steppers set among other figures rather than in a settings row.</summary>
+    public bool Compact
+    {
+        get => _compact;
+        init
+        {
+            _compact = value;
+            ResizeForDpi(); // the constructor sized it for the full-size box
+        }
+    }
+
+    private int BoxWidth => Compact ? 84 : 110;
+    private int ButtonWidth => Compact ? 24 : 32;
+
+    protected override Size? LogicalSize => new Size(BoxWidth + (Text.Length == 0 ? 0 : 80), Compact ? 26 : 32);
 
     public int Minimum { get; set; }
     public int Maximum { get; set; }
     public int Step { get; }
+
+    /// <summary>One step below <see cref="Minimum"/> means off, and shows as "Off".</summary>
+    public bool CanTurnOff { get; init; }
+
+    public bool IsOff => CanTurnOff && _value < Minimum;
+
+    /// <summary>The value meaning off, when <see cref="CanTurnOff"/>.</summary>
+    public int OffValue => Minimum - Step;
+
+    private int Lowest => CanTurnOff ? OffValue : Minimum;
 
     public int Value
     {
         get => _value;
         set
         {
-            value = Math.Clamp(value, Minimum, Maximum);
+            value = Math.Clamp(value, Lowest, Math.Max(Lowest, Maximum));
             if (_value == value)
                 return;
             _value = value;
@@ -451,9 +497,9 @@ internal sealed class Stepper : ThemedControl
     }
 
     // Layout: label, then [ − | value | + ] on the right.
-    private RectangleF Box => new(Width - S(110), S(0.5f), S(110) - S(1), Height - S(1));
-    private RectangleF Minus => new(Box.X, Box.Y, S(32), Box.Height);
-    private RectangleF Plus => new(Box.Right - S(32), Box.Y, S(32), Box.Height);
+    private RectangleF Box => new(Width - S(BoxWidth), S(0.5f), S(BoxWidth) - S(1), Height - S(1));
+    private RectangleF Minus => new(Box.X, Box.Y, S(ButtonWidth), Box.Height);
+    private RectangleF Plus => new(Box.Right - S(ButtonWidth), Box.Y, S(ButtonWidth), Box.Height);
 
     protected override void OnMouseClick(MouseEventArgs e)
     {
@@ -495,7 +541,7 @@ internal sealed class Stepper : ThemedControl
         // Disabled: greyed out and inert, but still showing the level it'll use when switched back on.
         Fill(g, Box, S(5), Enabled ? Palette.Background : Palette.Surface);
         Outline(g, Box, S(5), Enabled ? Palette.Border : Palette.Separator, S(1));
-        foreach (var (r, canStep) in new[] { (Minus, Value > Minimum), (Plus, Value < Maximum) })
+        foreach (var (r, canStep) in new[] { (Minus, Value > Lowest), (Plus, Value < Maximum) })
         {
             if (Enabled && canStep && Hover is Point p && r.Contains(p))
                 Fill(g, RectangleF.Inflate(r, -S(3), -S(3)), S(3), Palette.Hover);
@@ -504,11 +550,11 @@ internal sealed class Stepper : ThemedControl
         var flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix |
             TextFormatFlags.SingleLine;
         Color Sign(bool canStep) => Enabled && canStep ? Palette.Text : Palette.Separator;
-        using var signFont = MakeFont(16);
-        TextRenderer.DrawText(g, "−", signFont, Rectangle.Round(Minus), Sign(Value > Minimum), flags);
+        using var signFont = MakeFont(Compact ? 14 : 16);
+        TextRenderer.DrawText(g, "−", signFont, Rectangle.Round(Minus), Sign(Value > Lowest), flags);
         TextRenderer.DrawText(g, "+", signFont, Rectangle.Round(Plus), Sign(Value < Maximum), flags);
-        using var valueFont = MakeFont(13, semibold: true);
-        TextRenderer.DrawText(g, $"{Value}%", valueFont,
+        using var valueFont = MakeFont(Compact ? 12 : 13, semibold: true);
+        TextRenderer.DrawText(g, IsOff ? "Off" : $"{Value}%", valueFont,
             Rectangle.Round(new RectangleF(Minus.Right, Box.Y, Plus.X - Minus.Right, Box.Height)),
             Enabled ? Palette.Text : Palette.SubtleText, flags);
         DrawFocus(g, Box, S(5));

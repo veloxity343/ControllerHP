@@ -18,13 +18,8 @@ internal sealed class ControllerNotifier : IDisposable
     /// <summary>Controllers already on when the app starts don't get a "connected" toast.</summary>
     private static readonly TimeSpan StartupQuietTime = TimeSpan.FromSeconds(5);
 
-    /// <summary>The "Battery low" level in percent, or null when that warning is off.</summary>
-    public int? LowWarning { get; set; } = 20;
-
-    /// <summary>The "Battery critical" level in percent, or null when that warning is off.</summary>
-    public int? CriticalWarning { get; set; } = 10;
-
-    private IEnumerable<int> Thresholds => new[] { LowWarning, CriticalWarning }.OfType<int>();
+    /// <summary>Each controller's warning levels, by controller id.</summary>
+    public Func<string, WarningLevels> WarningsFor { get; set; } = _ => new(20, 10);
     private const int RearmMargin = 5;
     private const int NoneNotified = int.MaxValue;
 
@@ -169,7 +164,7 @@ internal sealed class ControllerNotifier : IDisposable
             }
             else if (crossed is int threshold && reading.EffectivePercent is int percent)
             {
-                string title = threshold == CriticalWarning ? "Battery critical" : "Battery low";
+                string title = threshold == WarningsFor(reading.Id).Critical ? "Battery critical" : "Battery low";
                 Show(reading.Id, new ToastContent(reading.Name, $"{title} · {percent}%", reading,
                     BatteryIconRenderer.FillColor(percent)), ToastKind.Warning);
             }
@@ -212,7 +207,9 @@ internal sealed class ControllerNotifier : IDisposable
             return null;
         }
 
-        int severest = Thresholds.Where(t => percent <= t).DefaultIfEmpty(NoneNotified).Min();
+        var levels = WarningsFor(reading.Id);
+        int severest = new[] { levels.Low, levels.Critical }.OfType<int>()
+            .Where(t => percent <= t).DefaultIfEmpty(NoneNotified).Min();
 
         // Recovered well above the last warning (e.g. batteries swapped): allow it to warn again.
         if (tracked.Notified != NoneNotified && percent >= tracked.Notified + RearmMargin)

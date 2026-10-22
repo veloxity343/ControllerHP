@@ -18,12 +18,29 @@ internal sealed class StatsCard : ThemedControl
         "light bar, audio and how you play all change runtime, so expect it to move around. Typical ranges " +
         "are commonly reported figures, not official ones.";
 
-    private readonly HistorySeries _series;
-    private readonly ControllerStats _stats;
-    private readonly List<Tile> _tiles;
+    private HistorySeries _series;
+    private ControllerStats _stats;
+    private List<Tile> _tiles;
     private readonly ActionButton _rename = new("Rename");
     private readonly ActionButton _remove = new("Remove");
     private bool _helpHover;
+
+    // Its battery warnings, in the space beside the last tile: low and critical, each able to go off.
+    private readonly Stepper _low = new("", Settings.MinWarning + Settings.WarningStep, Settings.MaxWarning, Settings.WarningStep) { CanTurnOff = true, Compact = true };
+    private readonly Stepper _critical = new("", Settings.MinWarning, Settings.MaxWarning - Settings.WarningStep, Settings.WarningStep) { CanTurnOff = true, Compact = true };
+    /// <summary>Both warnings at once: off overrides Settings with no warnings for it.</summary>
+    private readonly ToggleSwitch _enabled = new() { Compact = true };
+    /// <summary>Whether it has warning levels of its own, rather than following Settings.</summary>
+    private bool _ownLevels;
+    /// <summary>Set while the steppers are filled in, so they don't report it as a change.</summary>
+    private bool _loading;
+    private bool _resetHover;
+
+    /// <summary>
+    /// Its warning levels were changed: its own levels, or null to follow Settings again. Changing either
+    /// stepper gives it levels of its own.
+    /// </summary>
+    public event EventHandler<WarningLevels?>? WarningsChanged;
 
     /// <summary>The Rename button was clicked.</summary>
     public event EventHandler? RenameRequested;
@@ -33,31 +50,161 @@ internal sealed class StatsCard : ThemedControl
 
     private sealed record Tile(string Label, string Value, string Detail, bool Help = false, bool Muted = false);
 
-    public StatsCard(HistorySeries series, ControllerStats stats)
+    public StatsCard(HistorySeries series, ControllerStats stats, WarningLevels levels, bool ownLevels)
     {
         _series = series;
         _stats = stats;
         _tiles = BuildTiles();
         Controls.Add(_rename);
         Controls.Add(_remove);
+        Controls.Add(_enabled);
+        Controls.Add(_low);
+        Controls.Add(_critical);
+        SetLevels(levels, ownLevels);
+        _enabled.CheckedChanged += (_, _) =>
+        {
+            if (_loading)
+                return;
+            // Back on with both levels off would be off again straight away: start from Settings' levels.
+            if (_enabled.Checked && _low.IsOff && _critical.IsOff)
+                ShowLevels(UsableLevels(Settings.DefaultWarnings));
+            _low.Enabled = _critical.Enabled = _enabled.Checked;
+            ReportLevels();
+        };
+        _low.ValueChanged += (_, _) =>
+        {
+            // As on the Settings page, critical stays below low, and lowering low pushes it down too.
+            _critical.Maximum = CriticalMaximum;
+            if (!_critical.IsOff && _critical.Value > _critical.Maximum)
+                _critical.Value = _critical.Maximum;
+            _critical.Invalidate();
+            ReportLevels();
+        };
+        _critical.ValueChanged += (_, _) => ReportLevels();
         _rename.Click += (_, _) => RenameRequested?.Invoke(this, EventArgs.Empty);
         _remove.Click += (_, _) => RemoveRequested?.Invoke(this, EventArgs.Empty);
         ResizeForDpi();
     }
 
-    protected override void OnPaletteChanged() => _rename.BackColor = _remove.BackColor = Palette.Surface;
+    public string Id => _series.Id;
+
+    /// <summary>The controller's history as last shown.</summary>
+    public HistorySeries Series => _series;
+
+    /// <summary>
+    /// Shows newer figures and levels in place, rather than as a new card, so a stepper being used keeps
+    /// its focus and the page doesn't jump.
+    /// </summary>
+    public void Update(HistorySeries series, ControllerStats stats, WarningLevels levels, bool ownLevels)
+    {
+        _series = series;
+        _stats = stats;
+        _tiles = BuildTiles();
+        SetLevels(levels, ownLevels);
+        Invalidate();
+    }
+
+    private int CriticalMaximum => _low.IsOff ? Settings.MaxWarning - Settings.WarningStep : _low.Value - Settings.WarningStep;
+
+    private void SetLevels(WarningLevels levels, bool ownLevels)
+    {
+        _ownLevels = ownLevels;
+        bool on = levels.Low is not null || levels.Critical is not null;
+        // Switched off, the steppers keep showing levels, greyed, ready for switching back on: the ones they
+        // had, or else Settings'.
+        if (on)
+            ShowLevels(levels);
+        else if (_low.IsOff && _critical.IsOff)
+            ShowLevels(UsableLevels(Settings.DefaultWarnings));
+        _loading = true;
+        _enabled.Checked = on;
+        _loading = false;
+        _low.Enabled = _critical.Enabled = on;
+    }
+
+    private void ShowLevels(WarningLevels levels)
+    {
+        _loading = true;
+        _low.Value = levels.Low ?? _low.OffValue;
+        _critical.Maximum = CriticalMaximum;
+        _critical.Value = levels.Critical ?? _critical.OffValue;
+        _loading = false;
+    }
+
+    /// <summary>Levels with at least one warning on: these, or the usual 20% and 10% if both are off.</summary>
+    private static WarningLevels UsableLevels(WarningLevels levels) =>
+        levels.Low is null && levels.Critical is null ? new(20, 10) : levels;
+
+    private void ReportLevels()
+    {
+        if (_loading)
+            return;
+        _ownLevels = true;
+        Invalidate();
+        WarningsChanged?.Invoke(this, _enabled.Checked
+            ? new WarningLevels(_low.IsOff ? null : _low.Value, _critical.IsOff ? null : _critical.Value)
+            : new WarningLevels(null, null));
+    }
+
+    protected override void OnPaletteChanged() =>
+        _rename.BackColor = _remove.BackColor = _enabled.BackColor = _low.BackColor = _critical.BackColor = Palette.Surface;
 
     protected override void OnLayout(LayoutEventArgs e)
     {
         base.OnLayout(e);
-        _rename.BackColor = _remove.BackColor = Palette.Surface;
+        OnPaletteChanged();
         int top = (S(HeaderHeight) - _remove.Height) / 2 + S(4);
         _remove.Location = new Point(Width - S(Padding_) - _remove.Width, top);
         _rename.Location = new Point(_remove.Left - S(8) - _rename.Width, top);
+
+        var area = WarningsBounds;
+        using var font = MakeFont(12);
+        int y = area.Y + S(WarningsStepperTop);
+        int x = area.X + LabelWidth(font, "Low") + S(8);
+        _low.Location = new Point(x, y);
+        _critical.Location = new Point(_low.Right + S(20) + LabelWidth(font, "Critical") + S(8), y);
+        // Right after the "Warnings" label, centred on its line.
+        _enabled.Location = new Point(area.X + LabelWidth(font, "Warnings") + S(10), area.Y + S(6) + (S(22) - _enabled.Height) / 2);
     }
 
+    private static int LabelWidth(Font font, string text) =>
+        TextRenderer.MeasureText(text, font, Size.Empty, TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Width;
+
+    /// <summary>The warnings take two tiles' room: beside the last tile, or on a row of their own if there isn't room.</summary>
+    private int WarningsIndex => _tiles.Count % Columns == Columns - 1 ? _tiles.Count + 1 : _tiles.Count;
+
+    /// <summary>The warnings' row is taller than a tile's, for the switch beside its label.</summary>
+    private const int WarningsExtraHeight = 14;
+
+    // Within the warnings: the label and switch, the steppers, then where the levels come from.
+    private const int WarningsStepperTop = 36, WarningsStatusTop = 70;
+
+    private Rectangle WarningsBounds
+    {
+        get
+        {
+            var first = TileBounds(WarningsIndex);
+            return first with { Width = first.Width * 2, Height = first.Height + S(WarningsExtraHeight) };
+        }
+    }
+
+    /// <summary>"Reset", after "Overridden", while it has levels of its own.</summary>
+    private Rectangle ResetBounds
+    {
+        get
+        {
+            var area = WarningsBounds;
+            using var font = MakeFont(11);
+            int x = area.X + LabelWidth(font, OwnLevelsText);
+            return new Rectangle(x, area.Y + S(WarningsStatusTop), LabelWidth(font, ResetLink) + S(2), S(18));
+        }
+    }
+
+    private const string OwnLevelsText = "Overridden · ";
+    private const string ResetLink = "Reset";
+
     protected override Size? LogicalSize =>
-        new Size(600, HeaderHeight + (int)Math.Ceiling(_tiles.Count / (double)Columns) * TileHeight + Padding_);
+        new Size(600, HeaderHeight + (int)Math.Ceiling((WarningsIndex + 2) / (double)Columns) * TileHeight + WarningsExtraHeight + Padding_);
 
     private List<Tile> BuildTiles()
     {
@@ -169,6 +316,27 @@ internal sealed class StatsCard : ThemedControl
                 DrawHelpIcon(g, HelpBounds(i));
         }
 
+        // Warnings: a label like the tiles', "Low" and "Critical" beside their steppers, then where the levels come from.
+        var area = WarningsBounds;
+        TextRenderer.DrawText(g, "Warnings", labelFont, new Rectangle(area.X, area.Y + S(6), area.Width, S(22)), Palette.SubtleText, TextFlags);
+        foreach (var (label, stepper) in new[] { ("Low", _low), ("Critical", _critical) })
+        {
+            int width = LabelWidth(labelFont, label);
+            TextRenderer.DrawText(g, label, labelFont, new Rectangle(stepper.Left - S(8) - width, stepper.Top, width + S(2), stepper.Height),
+                stepper.Enabled ? Palette.Text : Palette.SubtleText, TextFlags);
+        }
+        if (_ownLevels)
+        {
+            TextRenderer.DrawText(g, OwnLevelsText, detailFont, new Rectangle(area.X, area.Y + S(WarningsStatusTop), area.Width, S(18)), Palette.SubtleText, TextFlags);
+            using var linkFont = MakeFont(11);
+            using var link = new Font(linkFont, _resetHover ? FontStyle.Underline : FontStyle.Regular);
+            TextRenderer.DrawText(g, ResetLink, link, ResetBounds, Palette.Accent, TextFlags);
+        }
+        else
+        {
+            TextRenderer.DrawText(g, "Inherited from Settings", detailFont, new Rectangle(area.X, area.Y + S(WarningsStatusTop), area.Width, S(18)), Palette.SubtleText, TextFlags);
+        }
+
         if (_helpHover)
             DrawDisclaimer(g, HelpBounds(_tiles.FindIndex(t => t.Help)));
     }
@@ -204,18 +372,36 @@ internal sealed class StatsCard : ThemedControl
         base.OnMouseMove(e);
         int help = _tiles.FindIndex(t => t.Help);
         bool hover = help >= 0 && Rectangle.Inflate(HelpBounds(help), S(4), S(4)).Contains(e.Location);
-        if (hover != _helpHover)
+        bool link = _ownLevels && ResetBounds.Contains(e.Location);
+        if (hover != _helpHover || link != _resetHover)
         {
             _helpHover = hover;
-            Cursor = hover ? Cursors.Help : Cursors.Default;
+            _resetHover = link;
+            Cursor = hover ? Cursors.Help : link ? Cursors.Hand : Cursors.Default;
+            // The disclaimer can reach down over the steppers, which would draw on top of it.
+            _low.Visible = _critical.Visible = _enabled.Visible = !hover;
             Invalidate();
+        }
+    }
+
+    protected override void OnMouseClick(MouseEventArgs e)
+    {
+        base.OnMouseClick(e);
+        if (e.Button == MouseButtons.Left && _ownLevels && ResetBounds.Contains(e.Location))
+        {
+            _ownLevels = false;
+            _resetHover = false;
+            Cursor = Cursors.Default;
+            Invalidate();
+            WarningsChanged?.Invoke(this, null);
         }
     }
 
     protected override void OnMouseLeave(EventArgs e)
     {
         base.OnMouseLeave(e);
-        _helpHover = false;
+        _helpHover = _resetHover = false;
+        _low.Visible = _critical.Visible = _enabled.Visible = true;
         Invalidate();
     }
 }

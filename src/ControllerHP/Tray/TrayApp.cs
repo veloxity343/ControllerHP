@@ -155,10 +155,10 @@ internal sealed class TrayApp : ApplicationContext
             return [];
         var now = DateTime.Now;
         var history = BatteryHistory.Load(now - BatteryHistory.Kept).ToDictionary(s => s.Id);
-        int? low = Settings.LowWarningEnabled ? Settings.LowWarning : null;
         var timeLeft = new Dictionary<string, string>();
         foreach (var reading in _readings)
         {
+            int? low = _notifier.WarningsFor(reading.Id).Low;
             if (history.TryGetValue(reading.Id, out var series) &&
                 BatteryStats.TimeLeft(BatteryStats.Compute(series, now - TimeSpan.FromDays(7), now, low)) is { } text)
                 timeLeft[reading.Id] = text;
@@ -403,8 +403,9 @@ internal sealed class TrayApp : ApplicationContext
         _notifier.ConnectionToasts = Settings.ConnectionToasts;
         _notifier.HoldInFullscreen = Settings.HoldInFullscreen;
         _notifier.FullyChargedToasts = Settings.FullyChargedToasts;
-        _notifier.LowWarning = Settings.LowWarningEnabled ? Settings.LowWarning : null;
-        _notifier.CriticalWarning = Settings.CriticalWarningEnabled ? Settings.CriticalWarning : null;
+        var defaults = Settings.DefaultWarnings;
+        var ownLevels = Settings.ControllerWarnings;
+        _notifier.WarningsFor = id => ownLevels.GetValueOrDefault(id, defaults);
 
         var corner = Settings.ToastCorner;
         if (corner != _notifier.Corner)

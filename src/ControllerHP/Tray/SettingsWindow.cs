@@ -158,6 +158,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
 
         items.Add(new Heading("Battery warnings", 15));
         items.Add(new Note("Pop-ups when a controller's battery runs down, whatever the connection pop-ups setting."));
+        items.Add(new Note("A controller can have its own levels, set on its card on the Controllers page."));
         items.Add(new SettingCard("Low battery", "Warn when a controller drops to this level.", _low));
         items.Add(new SettingCard("Critical battery", "Warn again at this lower level.", _critical));
 
@@ -210,12 +211,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
         // A card per controller in the chart, its figures worked out from its whole retained history.
         var page = _pages[_controllersPage];
         foreach (var card in _statsCards)
-        {
             page.Remove(card);
-            _page.Controls.Remove(card);
-            card.Dispose();
-        }
-        _statsCards.Clear();
 
         // The picker lists each controller, then all; until the user picks, it follows the lowest battery.
         if (_pickerChoice is not (null or AllControllers) && !shown.Any(s => s.Id == _pickerChoice))
@@ -228,17 +224,39 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
 
         var cards = showing == AllControllers ? shown : shown.Where(s => s.Id == showing).ToList();
 
-        int? lowWarning = Settings.LowWarningEnabled ? Settings.LowWarning : null;
+        // A controller already showing keeps its card, updated in place, so a stepper in use keeps its focus.
+        var defaults = Settings.DefaultWarnings;
+        var ownLevels = Settings.ControllerWarnings;
+        var existing = _statsCards.ToDictionary(c => c.Id);
+        _statsCards.Clear();
         int insertAt = page.IndexOf(_statsNote) + 1;
         foreach (var series in cards)
         {
-            var stats = BatteryStats.Compute(full.GetValueOrDefault(series.Id, series), since, now, lowWarning);
-            var card = new StatsCard(series, stats) { Palette = _palette, Visible = _current == _controllersPage };
-            card.RenameRequested += (_, _) => Rename(series);
-            card.RemoveRequested += (_, _) => Remove(series);
+            bool own = ownLevels.TryGetValue(series.Id, out var levels);
+            levels ??= defaults;
+            var stats = BatteryStats.Compute(full.GetValueOrDefault(series.Id, series), since, now, levels.Low);
+            if (existing.Remove(series.Id, out var card))
+            {
+                card.Update(series, stats, levels, own);
+            }
+            else
+            {
+                card = new StatsCard(series, stats, levels, own) { Palette = _palette };
+                string id = series.Id;
+                // Looked up when clicked, since the card outlives the series it was made with.
+                card.WarningsChanged += (_, changed) => Settings.SetWarnings(id, changed);
+                card.RenameRequested += (_, _) => Rename(card.Series);
+                card.RemoveRequested += (_, _) => Remove(card.Series);
+                _page.Controls.Add(card);
+            }
+            card.Visible = _current == _controllersPage;
             _statsCards.Add(card);
             page.Insert(insertAt++, card);
-            _page.Controls.Add(card);
+        }
+        foreach (var gone in existing.Values)
+        {
+            _page.Controls.Remove(gone);
+            gone.Dispose();
         }
         _statsNote.Visible = _current == _controllersPage && shown.Count > 0;
         PerformLayout();

@@ -6,10 +6,11 @@
 - [The stats](#the-stats)
 - [Battery health](#battery-health)
 - [Renaming a controller](#renaming-a-controller)
+- [A controller's own warning levels](#a-controllers-own-warning-levels)
 - [Removing a controller](#removing-a-controller)
 - [What's stored on your PC](#whats-stored-on-your-pc)
 
-The Controllers page shows each controller's battery history and stats, and lets you rename controllers or remove ones you no longer use. Open **Settings** from the right-click menu (or the gear in the panel) and choose **Controllers**.
+The Controllers page shows each controller's battery history and stats, and lets you rename controllers, give them their own warning levels, or remove ones you no longer use. Open **Settings** from the right-click menu (or the gear in the panel) and choose **Controllers**.
 
 ## The chart
 
@@ -75,6 +76,14 @@ Two controllers of the same model, such as two Xbox controllers, share a name. T
 Choose the controller in the dropdown, click **Rename** on its card, type a name and press Enter. Names can be up to 40 characters.
 
 The new name shows everywhere ControllerHP shows that controller: the tray tooltip, the panel, pop-ups, the chart and the [status file](using-controllerhp.md#sharing-battery-levels-with-other-apps). It doesn't change the name Windows uses. To go back to the controller's own name, rename it again and leave the box empty.
+
+## A controller's own warning levels
+
+Every controller follows the warning levels in Settings (20% and 10% by default). To warn earlier for one that runs down fast, or not at all for one that's always on a cable, give it levels of its own.
+
+Each controller's card has a **Warnings** section, beside **Drops to**, with its **Low** and **Critical** levels. Change either one, and that controller's levels override Settings: the line underneath changes from *Inherited from Settings* to *Overridden*. Step a level below its lowest value to turn that warning off, or use the switch beside the **Warnings** label to turn both off for that controller. As in Settings, the critical level always stays below the low one.
+
+Overridden levels are used for its warning pop-ups, the time left in the tooltip and panel, and its **Until** and **Drops to** figures on this page. Changing the levels in Settings, or turning them off from the right-click menu, doesn't change them. To have it follow Settings again, click **Reset**.
 
 ## Removing a controller
 

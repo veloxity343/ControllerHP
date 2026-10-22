@@ -3,6 +3,9 @@ using Microsoft.Win32;
 
 namespace ControllerHP.Tray;
 
+/// <summary>A controller's battery warning levels, in percent; null when that warning is off.</summary>
+internal sealed record WarningLevels(int? Low, int? Critical);
+
 /// <summary>
 /// User preferences, kept under HKCU\Software\ControllerHP. The tray menu and the settings window both
 /// write here, and <see cref="Changed"/> tells the tray app to apply them.
@@ -143,6 +146,52 @@ internal static class Settings
             .GroupBy(kv => kv.Key).Select(g => g.Last()) // a re-hidden controller keeps its latest time
             .Select(kv => $"{kv.Key}\t{kv.Value.ToString("O", System.Globalization.CultureInfo.InvariantCulture)}")
             .ToArray());
+
+    /// <summary>The warning levels from Settings, each null when that warning is off.</summary>
+    public static WarningLevels DefaultWarnings =>
+        new(LowWarningEnabled ? LowWarning : null, CriticalWarningEnabled ? CriticalWarning : null);
+
+    /// <summary>
+    /// Controllers with warning levels of their own, by controller id. The rest follow
+    /// <see cref="DefaultWarnings"/>.
+    /// </summary>
+    public static IReadOnlyDictionary<string, WarningLevels> ControllerWarnings
+    {
+        get
+        {
+            var levels = new Dictionary<string, WarningLevels>();
+            if (Read(nameof(ControllerWarnings)) is string[] entries)
+            {
+                foreach (var entry in entries)
+                {
+                    // "id<TAB>low<TAB>critical", each level a number or "off".
+                    var parts = entry.Split('\t');
+                    if (parts.Length == 3 && parts[0].Length > 0)
+                        levels[parts[0]] = new(ParseLevel(parts[1]), ParseLevel(parts[2]));
+                }
+            }
+            return levels;
+        }
+    }
+
+    /// <summary>Gives a controller warning levels of its own, or with null, has it follow Settings again.</summary>
+    public static void SetWarnings(string id, WarningLevels? levels)
+    {
+        var all = ControllerWarnings.Where(kv => kv.Key != id).ToDictionary();
+        if (levels is not null)
+            all[id] = levels;
+        Write(nameof(ControllerWarnings), all
+            .Select(kv => $"{kv.Key}\t{FormatLevel(kv.Value.Low)}\t{FormatLevel(kv.Value.Critical)}")
+            .ToArray());
+    }
+
+    private static int? ParseLevel(string text) =>
+        int.TryParse(text, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out int level)
+            ? Math.Clamp(level, MinWarning, MaxWarning)
+            : null;
+
+    private static string FormatLevel(int? level) =>
+        level?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "off";
 
     /// <summary>Names the user gave controllers, by controller id; a renamed controller shows this everywhere.</summary>
     public static IReadOnlyDictionary<string, string> ControllerNames
