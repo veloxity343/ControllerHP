@@ -20,6 +20,7 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 
 ### Changed
 
+- **The tray icon shows the controller itself,** with a thin battery bar along the bottom, instead of a number above a battery, so it's clear at a glance what it's showing. It's drawn pixel by pixel at 16 px, so it stays sharp at 100% scaling. Hover over it for the exact percentage. The panel and pop-ups use it too.
 - The supported controllers tables say which controllers and connections have been **tested** on real hardware, which are **likely** to work, and which are still **untested**.
 
 ## [0.3.0] - 2026-10-21

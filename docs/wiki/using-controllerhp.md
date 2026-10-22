@@ -13,13 +13,13 @@
 
 | The icon shows | Meaning |
 |---|---|
-| A number above a meter | The battery percentage. The meter's colour shifts from green (75% and up) through yellow (50%) to red (20% and below). |
-| A bolt through the meter | Charging. |
-| **USB** with a bolt | Plugged in, with no battery reported (a wired-only controller). |
-| **?** | Connected, but the battery level isn't known yet. |
+| A controller with a thin bar beneath it | The battery level. The bar fills from the left, and its colour shifts from green (75% and up) through yellow (50%) to red (20% and below). |
+| A bolt at the bottom right | Charging. |
+| A full, uncoloured bar with a bolt | Plugged in, with no battery reported (a wired-only controller). |
+| **?** at the bottom right | Connected, but the battery level isn't known yet. |
 | The ControllerHP gamepad | No controllers connected. |
 
-Hover over the icon for the controller's name, its exact reading and, once there's enough history, how long it has left. For example: *Xbox Wireless Controller: 62%, about 3 h to 20%*, or *DualSense Wireless Controller: 85%, charging, about 1 h 30 min to full*.
+Hover over the icon for the controller's name, its exact percentage and, once there's enough history, how long it has left. For example: *Xbox Wireless Controller: 62%, about 3 h to 20%*, or *DualSense Wireless Controller: 85%, charging, about 1 h 30 min to full*.
 
 Time left counts down to your low warning level (or to empty if that warning is off), or up to full while charging. It's the same figure as the [Controllers page](controllers.md#the-stats) shows, and it appears after about an hour on battery.
 

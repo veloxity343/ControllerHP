@@ -9,6 +9,7 @@
 | `--list` | Prints what every battery source reports for each connected controller, raw values included. The same as the report's battery section, but unmasked: for working at a terminal, or when the tray app won't start. |
 | `--hid-probe` | Dumps the raw HID reports of connected Xbox and PlayStation controllers, and Xbox Bluetooth GATT services. For working out a new controller's report format. |
 | `--preview <file.png>` | Renders every tray icon state, the pop-ups and the controller panel, in both modes, to an image. |
+| `--preview-icons <file.png>` | Renders every device in every battery state, on a dark and a light taskbar: each icon large, with its real 16 px tray size beneath. |
 | `--preview-settings <file.png>` | Renders each page of the settings window, in dark and light mode, to an image. Uses sample battery history, so it works without controllers. |
 | `--demo` | Shows the sample pop-ups on screen, one after another. |
 

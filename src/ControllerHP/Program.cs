@@ -35,6 +35,12 @@ internal static partial class Program
             return 0;
         }
 
+        if (args.Length == 2 && args[0] == "--preview-icons")
+        {
+            Preview.WriteIconGrid(args[1]);
+            return 0;
+        }
+
         if (args.Length == 2 && args[0] == "--preview-settings")
         {
             ApplicationConfiguration.Initialize();

@@ -17,6 +17,10 @@ internal static partial class Preview
         ("4%", Sample(4)), ("charging 60%", Sample(60, ChargeState.Charging)),
         ("wired", Sample(null, ChargeState.Wired)), ("unknown", Sample(null, ChargeState.Unknown)),
         ("none", null),
+        ("mouse 62%", Sample(62) with { Kind = DeviceKind.Mouse }),
+        ("keyboard 35%", Sample(35) with { Kind = DeviceKind.Keyboard }),
+        ("headset 80%", Sample(80, ChargeState.Charging) with { Kind = DeviceKind.Headset }),
+        ("other 15%", Sample(15) with { Kind = DeviceKind.Other }),
     ];
 
     /// <summary>A two-player evening: one pad running low on Bluetooth, one charging on USB.</summary>
@@ -95,6 +99,79 @@ internal static partial class Preview
             Palette.Dark, 1f, timeLeft: SampleTimeLeft);
         Flyout.PaintContent(g, new Rectangle(rowHeader + flyoutSize.Width + 20, y, flyoutSize.Width, flyoutSize.Height),
             SampleFlyout, Palette.LightMode, 1f, timeLeft: SampleTimeLeft);
+
+        sheet.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+    }
+
+    private static readonly (string Label, DeviceKind Kind)[] GridDevices =
+    [
+        ("Controller", DeviceKind.Gamepad), ("Mouse", DeviceKind.Mouse), ("Keyboard", DeviceKind.Keyboard),
+        ("Headset", DeviceKind.Headset), ("Other Bluetooth", DeviceKind.Other),
+    ];
+
+    private static readonly (string Label, int? Percent, ChargeState Power)[] GridStates =
+    [
+        ("100%", 100, ChargeState.Discharging), ("75%", 75, ChargeState.Discharging),
+        ("50%", 50, ChargeState.Discharging), ("30%", 30, ChargeState.Discharging),
+        ("15%", 15, ChargeState.Discharging), ("Charging", 60, ChargeState.Charging),
+        ("Wired", null, ChargeState.Wired), ("Unknown", null, ChargeState.Unknown),
+    ];
+
+    /// <summary>
+    /// Every device in every state, on a dark and a light taskbar: each icon large, with its real 16 px
+    /// tray size beneath it.
+    /// </summary>
+    public static void WriteIconGrid(string path)
+    {
+        const int large = 64, small = 16, cellWidth = 96, labelWidth = 130, top = 36, headerHeight = 28;
+        const int rowHeight = large + small + 26, sectionGap = 12;
+        int sectionHeight = top + headerHeight + GridDevices.Length * rowHeight + 8;
+        int width = labelWidth + GridStates.Length * cellWidth + 12;
+
+        using var sheet = new Bitmap(width, 2 * sectionHeight + sectionGap, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+        using var g = Graphics.FromImage(sheet);
+        g.Clear(Color.White);
+        g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+        using var title = new Font("Segoe UI Semibold", 15f, GraphicsUnit.Pixel);
+        using var label = new Font("Segoe UI", 14f, GraphicsUnit.Pixel);
+        using var header = new Font("Segoe UI", 12f, GraphicsUnit.Pixel);
+        var centred = new StringFormat { Alignment = StringAlignment.Center };
+
+        int y = 0;
+        foreach (bool light in new[] { false, true })
+        {
+            var background = light ? Color.FromArgb(243, 243, 243) : Color.FromArgb(32, 32, 32);
+            var text = light ? Color.FromArgb(26, 26, 26) : Color.White;
+            var dim = light ? Color.FromArgb(110, 110, 110) : Color.FromArgb(160, 160, 160);
+            using (var fill = new SolidBrush(background))
+                g.FillRectangle(fill, 0, y, width, sectionHeight);
+            using var textBrush = new SolidBrush(text);
+            using var dimBrush = new SolidBrush(dim);
+
+            g.DrawString(light ? "Light taskbar" : "Dark taskbar", title, textBrush, 14, y + 10);
+            for (int i = 0; i < GridStates.Length; i++)
+                g.DrawString(GridStates[i].Label, header, dimBrush,
+                    new RectangleF(labelWidth + i * cellWidth, y + top, cellWidth, headerHeight), centred);
+
+            int rowY = y + top + headerHeight;
+            foreach (var (name, kind) in GridDevices)
+            {
+                g.DrawString(name, label, textBrush, 14, rowY + large / 2 - 9);
+                for (int i = 0; i < GridStates.Length; i++)
+                {
+                    var (_, percent, power) = GridStates[i];
+                    var battery = new ControllerBattery("preview", name, "preview", percent,
+                        percent is int p ? ControllerBattery.LevelFromPercent(p) : BatteryLevel.Unknown, power, Kind: kind);
+                    int x = labelWidth + i * cellWidth;
+                    using (var icon = BatteryIconRenderer.RenderBitmap(battery, light, large))
+                        g.DrawImage(icon, x + (cellWidth - large) / 2, rowY);
+                    using (var icon = BatteryIconRenderer.RenderBitmap(battery, light, small))
+                        g.DrawImage(icon, x + (cellWidth - small) / 2, rowY + large + 8);
+                }
+                rowY += rowHeight;
+            }
+            y += sectionHeight + sectionGap;
+        }
 
         sheet.Save(path, System.Drawing.Imaging.ImageFormat.Png);
     }
