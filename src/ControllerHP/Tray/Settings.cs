@@ -56,6 +56,13 @@ internal static class Settings
         set => Write(nameof(ShareStatus), value ? 1 : 0);
     }
 
+    /// <summary>Play Windows' battery alarm sound with each battery warning.</summary>
+    public static bool WarningSounds
+    {
+        get => Read(nameof(WarningSounds)) is int value && value != 0;
+        set => Write(nameof(WarningSounds), value ? 1 : 0);
+    }
+
     /// <summary>Hold pop-ups while a fullscreen app runs; they're always held in exclusive fullscreen.</summary>
     public static bool HoldInFullscreen
     {

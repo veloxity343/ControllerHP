@@ -13,6 +13,7 @@ Each problem below has its likely cause and what to do. If yours isn't here, see
 - [The charging bolt is late or missing on an Xbox controller](#the-charging-bolt-is-late-or-missing-on-an-xbox-controller)
 - [The percentage only moves in 10% steps](#the-percentage-only-moves-in-10-steps)
 - [Pop-ups don't appear while I'm playing](#pop-ups-dont-appear-while-im-playing)
+- [Battery warnings don't make a sound](#battery-warnings-dont-make-a-sound)
 - [The Controllers page says "Needs more data"](#the-controllers-page-says-needs-more-data)
 - [There are gaps in the battery history](#there-are-gaps-in-the-battery-history)
 - [Resetting everything](#resetting-everything)
@@ -74,6 +75,12 @@ If it's still missing, run `ControllerHP.exe --list` (see [Reporting a bug](#rep
 - **Hold while a game is fullscreen is on** in Settings, which also holds them in borderless games until the game closes.
 - **The pop-up is turned off.** Check **Connection pop-ups** and **Battery warnings** in the right-click menu, or the levels in Settings.
 - **Each warning only shows once per discharge.** It shows again after the controller charges.
+
+## Battery warnings don't make a sound
+
+**Causes and fixes:**
+- **Play a sound is off.** It's off by default: turn it on under Battery warnings in Settings. Turning it on plays the low battery chime once, so you can check it.
+- **ControllerHP is muted or turned down.** Check its entry in the Windows volume mixer: right-click the speaker icon in the taskbar and choose **Volume mixer**. It only appears there once ControllerHP has played a sound.
 
 ## The Controllers page says "Needs more data"
 

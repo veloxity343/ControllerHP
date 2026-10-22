@@ -403,6 +403,7 @@ internal sealed class TrayApp : ApplicationContext
         _notifier.ConnectionToasts = Settings.ConnectionToasts;
         _notifier.HoldInFullscreen = Settings.HoldInFullscreen;
         _notifier.FullyChargedToasts = Settings.FullyChargedToasts;
+        _notifier.WarningSounds = Settings.WarningSounds;
         var defaults = Settings.DefaultWarnings;
         var ownLevels = Settings.ControllerWarnings;
         _notifier.WarningsFor = id => ownLevels.GetValueOrDefault(id, defaults);

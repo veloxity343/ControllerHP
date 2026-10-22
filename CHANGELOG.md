@@ -16,6 +16,7 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 - **Pop-ups during fullscreen games:** in exclusive fullscreen, where pop-ups can't appear, they're now held and shown once the game closes, instead of being lost. A new **Hold while a game is fullscreen** setting does the same for borderless games. At most one shows per controller, and a held battery warning is dropped if the controller was charged meanwhile.
 - **Fully charged** pop-up when a charging controller reaches 100%, once per charge. It can be turned off in Settings.
 - **Time left** in the tray tooltip and the controller panel, such as "about 3 h to 20%" or "1 h 30 min to full", once there's enough history. It's the same figure as the Controllers page shows.
+- **Warning sounds:** a new **Play a sound** setting plays a short chime with each battery warning, two notes for low and three, ending lower, for critical, even while a fullscreen game holds the pop-up. Off by default.
 - **Leave a controller out of the chart** by clicking its name in the chart's legend, and click it again to bring it back. Its history and stats are kept.
 - **A controller's own warning levels:** each controller's card on the Controllers page has a switch and low and critical levels, for that controller alone, which its pop-ups, time left and stats use. Others keep following Settings.
 - **Rename a controller** from its card on the Controllers page, to tell two of the same model apart. The name shows everywhere ControllerHP shows it, and leaving it empty restores the controller's own.

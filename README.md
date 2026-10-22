@@ -22,7 +22,7 @@
 ## Features
 
 - **A controller icon in the taskbar** with a battery bar beneath it that turns from green to red, and a bolt while charging. Hover for the exact percentage.
-- **Pop-ups** when a controller connects or disconnects, and when its battery runs low (20% and 10% by default, or levels of its own).
+- **Pop-ups** when a controller connects or disconnects, and when its battery runs low (20% and 10% by default, or levels of its own), with a sound if you like.
 - **One icon for several controllers**, showing whichever is lowest, or one icon each if you prefer.
 - **A panel on left-click** listing every controller with its charge and connection.
 - **A Controllers page** with each controller's battery history, average drain, time left, play time and a battery health estimate, and a way to rename controllers or remove ones you no longer use.

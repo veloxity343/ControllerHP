@@ -35,6 +35,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
     private readonly ToggleSwitch _fullyCharged = new();
     private readonly SwitchedStepper _low = new(Settings.MinWarning + Settings.WarningStep, Settings.MaxWarning, Settings.WarningStep);
     private readonly SwitchedStepper _critical = new(Settings.MinWarning, Settings.MaxWarning - Settings.WarningStep, Settings.WarningStep);
+    private readonly ToggleSwitch _warningSounds = new();
     private readonly ToggleSwitch _shareStatus = new();
     private readonly ToggleSwitch _startWithWindows = new();
 
@@ -160,8 +161,9 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
         items.Add(new Heading("Battery warnings", 15));
         items.Add(new Note("Pop-ups when a controller's battery runs down, whatever the connection pop-ups setting."));
         items.Add(new Note("A controller can have its own levels, set on its card on the Controllers page."));
-        items.Add(new SettingCard("Low battery", "Warn when a controller drops to this level.", _low));
+        items.Add(new SettingCard("Low battery", "Warn when it drops to this level.", _low));
         items.Add(new SettingCard("Critical battery", "Warn again at this lower level.", _critical));
+        items.Add(new SettingCard("Play a sound", "A short chime, even while a game holds the pop-up.", _warningSounds));
 
         items.Add(new Heading("Other apps", 15));
         items.Add(new Note($"Battery levels in {StatusFile.DisplayPath}, for other apps to read."));
@@ -280,6 +282,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
         _low.Stepper.Value = Settings.LowWarning;
         _critical.Stepper.Maximum = _low.Stepper.Value - Settings.WarningStep;
         _critical.Stepper.Value = Settings.CriticalWarning;
+        _warningSounds.Checked = Settings.WarningSounds;
         _shareStatus.Checked = Settings.ShareStatus;
         _startWithWindows.Checked = Settings.StartWithWindows;
         _loading = false;
@@ -337,6 +340,15 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
         {
             if (!_loading)
                 Settings.CriticalWarningEnabled = _critical.Switch.Checked;
+        };
+        _warningSounds.CheckedChanged += (_, _) =>
+        {
+            if (_loading)
+                return;
+            Settings.WarningSounds = _warningSounds.Checked;
+            // A sample on switching it on, as choosing a pop-up corner shows a sample pop-up.
+            if (_warningSounds.Checked && !_sampleData)
+                WarningSound.Play(critical: false);
         };
         _shareStatus.CheckedChanged += (_, _) =>
         {

@@ -109,6 +109,12 @@ internal sealed class ControllerNotifier : IDisposable
     /// <summary>Whether a controller that charges to 100% gets a toast.</summary>
     public bool FullyChargedToasts { get; set; } = true;
 
+    /// <summary>
+    /// Whether battery warnings play Windows' battery alarm sound. It plays when the warning happens, even if
+    /// a fullscreen game is holding the pop-up, which is when it's most useful.
+    /// </summary>
+    public bool WarningSounds { get; set; }
+
     public ToastCorner Corner
     {
         get => _toasts.Corner;
@@ -154,6 +160,8 @@ internal sealed class ControllerNotifier : IDisposable
             bool announcing = !tracked.Announced;
             tracked.Announced = true;
             // With connection toasts off, a controller that connects low still gets its battery warning.
+            if (crossed is int level && WarningSounds)
+                WarningSound.Play(critical: level == WarningsFor(reading.Id).Critical);
             if (announcing && ConnectionToasts)
             {
                 var accent = crossed is not null && reading.EffectivePercent is int p

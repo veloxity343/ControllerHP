@@ -82,6 +82,7 @@ internal static partial class Diagnostics
         w.WriteLine($"Hold while a game is fullscreen: {OnOff(Settings.HoldInFullscreen)}");
         w.WriteLine($"Low battery: {OnOff(Settings.LowWarningEnabled)}, {Settings.LowWarning}%");
         w.WriteLine($"Critical battery: {OnOff(Settings.CriticalWarningEnabled)}, {Settings.CriticalWarning}%");
+        w.WriteLine($"Warning sounds: {OnOff(Settings.WarningSounds)}");
         w.WriteLine($"Share battery levels: {OnOff(Settings.ShareStatus)}");
         w.WriteLine($"Start with Windows: {OnOff(Settings.StartWithWindows)}");
         w.WriteLine($"Removed controllers: {Settings.HiddenControllers.Count}");

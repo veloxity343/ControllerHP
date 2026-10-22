@@ -73,6 +73,8 @@ Pop-ups disappear after a few seconds; click one to dismiss it sooner. You can m
 
 Held pop-ups show once the game closes, at most one per controller, the latest for each. A held battery warning is dropped if the controller was charged in the meantime.
 
+**Sounds:** turn on **Play a sound** in Settings to hear battery warnings too: a soft two-note chime for low, and for critical, a quicker one that carries on to a lower third note. It plays the moment the warning happens, even while a fullscreen game holds the pop-up. Connection and fully charged pop-ups stay silent. To change how loud it is, set ControllerHP's volume in Windows' volume mixer.
+
 ## The right-click menu
 
 | Item | What it does |
@@ -103,6 +105,7 @@ Open it from the panel's gear or **Settings** in the right-click menu. It follow
 | **Hold while a game is fullscreen** | Off | On or off. Pop-ups are always held in exclusive fullscreen, where they can't show |
 | **Low battery** | On, 20% | On or off; 10% to 50%, in 5% steps |
 | **Critical battery** | On, 10% | On or off; 5% to 45%, always below the low level |
+| **Play a sound** | Off | On or off. Plays a chime with each battery warning |
 | **Share battery levels** | Off | On or off. See [below](#sharing-battery-levels-with-other-apps) |
 | **Start with Windows** | Off | On or off |
 
