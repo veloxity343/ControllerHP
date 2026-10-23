@@ -50,6 +50,11 @@ internal sealed class HistoryChart : ThemedControl
 
     protected override Size? LogicalSize => new Size(600, 380);
 
+    /// <summary>Taller by a row for each extra row the legend wraps onto, so the plot keeps its height.</summary>
+    public override int HeightFor(int width) => S(380) + (LegendLayout(width).Rows - 1) * S(LegendRow);
+
+    public override int MinimumWidth => S(320);
+
     public void SetData(IReadOnlyList<HistorySeries> series, DateTime start, DateTime end, IReadOnlySet<string>? leftOut = null)
     {
         // Eight slots and no more: a ninth controller would need a generated colour nobody could tell apart.
@@ -61,6 +66,7 @@ internal sealed class HistoryChart : ThemedControl
         _snapTimes = [.. _drawn.SelectMany(s => s.Points).Select(p => p.Time).Append(end)
             .Where(t => t >= start && t <= end).Distinct().Order()];
         _hoverTime = null;
+        _legend = null;
         Invalidate();
     }
 
@@ -69,8 +75,55 @@ internal sealed class HistoryChart : ThemedControl
     /// <summary>A controller's line colour, for keying other views (the stats cards) to the chart.</summary>
     public static Color ColorFor(int slot, bool light) => (light ? LightSlots : DarkSlots)[slot % LightSlots.Length];
 
+    private const int LegendRow = 28;
+
+    /// <summary>
+    /// Where each legend entry goes at this width: left to right, wrapping onto another row when the next one
+    /// won't fit, and each name cut short only if it's wider than a whole row.
+    /// </summary>
+    private (List<(HistorySeries Series, int X, int Y, int TextWidth)> Entries, int Rows) LegendLayout(int width)
+    {
+        using var font = MakeFont(12);
+        var entries = new List<(HistorySeries, int, int, int)>();
+        int left = S(16), right = width - S(16), x = left, y = S(16), rows = 1;
+        foreach (var s in _series)
+        {
+            // Measured without EndEllipsis, which would measure the name already cut down to fit.
+            int textWidth = TextRenderer.MeasureText(s.Name, font, Size.Empty, TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Width;
+            textWidth = Math.Min(textWidth, right - left - S(22));
+            if (x > left && x + S(20) + textWidth > right)
+            {
+                x = left;
+                y += S(LegendRow);
+                rows++;
+            }
+            entries.Add((s, x, y, textWidth));
+            x += S(20) + textWidth + S(20);
+        }
+        return (entries, rows);
+    }
+
     // Layout, in device pixels.
-    private int LegendHeight => S(28);
+    private int LegendHeight => Legend.Rows * S(LegendRow);
+
+    /// <summary>The legend at the current width, kept until the data, size or DPI changes: the plot's bounds,
+    /// read for every point drawn, depend on it.</summary>
+    private (List<(HistorySeries Series, int X, int Y, int TextWidth)> Entries, int Rows) Legend
+    {
+        get
+        {
+            if (_legend is null || _legendWidth != Width || _legendDpi != DeviceDpi)
+            {
+                _legend = LegendLayout(Width);
+                _legendWidth = Width;
+                _legendDpi = DeviceDpi;
+            }
+            return _legend.Value;
+        }
+    }
+
+    private (List<(HistorySeries Series, int X, int Y, int TextWidth)> Entries, int Rows)? _legend;
+    private int _legendWidth, _legendDpi;
     private Rectangle Plot => Rectangle.FromLTRB(S(52), S(16) + LegendHeight + S(12), Width - S(64), Height - S(36));
 
     private float X(DateTime t) => Plot.Left + (float)((t - _start).TotalSeconds / (_end - _start).TotalSeconds) * Plot.Width;
@@ -109,14 +162,13 @@ internal sealed class HistoryChart : ThemedControl
     private void DrawLegend(Graphics g)
     {
         using var font = MakeFont(12);
-        int x = S(16), y = S(16);
         _legendHits.Clear();
-        foreach (var s in _series)
+        foreach (var (s, x, y, textWidth) in Legend.Entries)
         {
             // A short line key mirrors the line mark; the name stays in text ink. Left out of the chart, the
             // key is a hollow outline and the name fades, but it stays here to click back in.
             bool leftOut = _leftOut.Contains(s.Id);
-            float keyY = y + LegendHeight / 2f;
+            float keyY = y + S(LegendRow) / 2f;
             // Halfway from the legend's grey to the background: plainly dimmed, still readable.
             var faded = Color.FromArgb((Palette.SubtleText.R + Palette.Surface.R) / 2, (Palette.SubtleText.G + Palette.Surface.G) / 2,
                 (Palette.SubtleText.B + Palette.Surface.B) / 2);
@@ -130,12 +182,9 @@ internal sealed class HistoryChart : ThemedControl
                 using var pen = new Pen(SeriesColor(s), S(2)) { StartCap = LineCap.Round, EndCap = LineCap.Round };
                 g.DrawLine(pen, x, keyY, x + S(14), keyY);
             }
-            // Measured without EndEllipsis, which would measure the name already cut down to fit.
-            int textWidth = TextRenderer.MeasureText(g, s.Name, font, Size.Empty, TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Width;
-            TextRenderer.DrawText(g, s.Name, font, new Rectangle(x + S(20), y, textWidth + S(2), LegendHeight),
+            TextRenderer.DrawText(g, s.Name, font, new Rectangle(x + S(20), y, textWidth + S(2), S(LegendRow)),
                 leftOut ? faded : Palette.SubtleText, TextFlags);
-            _legendHits.Add((new Rectangle(x - S(4), y, S(20) + textWidth + S(8), LegendHeight), s.Id));
-            x += S(20) + textWidth + S(20);
+            _legendHits.Add((new Rectangle(x - S(4), y, S(20) + textWidth + S(8), S(LegendRow)), s.Id));
         }
     }
 
@@ -158,15 +207,18 @@ internal sealed class HistoryChart : ThemedControl
         var tick = step >= TimeSpan.FromDays(1)
             ? _start.Date.AddDays(1)
             : _start.Date.AddHours(Math.Ceiling((_start - _start.Date).TotalHours / step.TotalHours) * step.TotalHours);
+        float lastRight = float.MinValue;
         for (; tick <= _end; tick += step)
         {
             float x = X(tick);
             g.DrawLine(baseline, x, plot.Bottom, x, plot.Bottom + S(4));
             string label = tick.ToString(format, CultureInfo.CurrentCulture);
             int width = TextRenderer.MeasureText(g, label, font).Width;
-            // A label hanging past the plot's ends would collide with the 0% label or the end values.
-            if (x - width / 2f < plot.Left - S(4) || x + width / 2f > plot.Right + S(4))
+            // A label hanging past the plot's ends would collide with the 0% label or the end values; one
+            // running into the label before it (a narrow window) is skipped, leaving its tick.
+            if (x - width / 2f < plot.Left - S(4) || x + width / 2f > plot.Right + S(4) || x - width / 2f < lastRight + S(8))
                 continue;
+            lastRight = x + width / 2f;
             TextRenderer.DrawText(g, label, font, new Rectangle((int)(x - width / 2f), plot.Bottom + S(6), width, S(18)), Palette.SubtleText,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.NoPadding);
         }

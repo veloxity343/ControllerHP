@@ -43,6 +43,15 @@ internal abstract class ThemedControl : Control
     /// <summary>A fixed size at 96 DPI, for controls that size themselves; null leaves sizing to the parent.</summary>
     protected virtual Size? LogicalSize => null;
 
+    /// <summary>
+    /// Its height when laid out this wide: controls whose text wraps grow taller as they narrow. The settings
+    /// page stacks its items with it.
+    /// </summary>
+    public virtual int HeightFor(int width) => Height;
+
+    /// <summary>The narrowest it can be laid out without cutting anything off; the window keeps at least this.</summary>
+    public virtual int MinimumWidth => 0;
+
     /// <summary>Call at the end of a derived constructor, once <see cref="LogicalSize"/> can be computed.</summary>
     protected void ResizeForDpi()
     {
@@ -61,6 +70,21 @@ internal abstract class ThemedControl : Control
 
     protected const TextFormatFlags TextFlags = TextFormatFlags.Left | TextFormatFlags.VerticalCenter |
         TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix | TextFormatFlags.SingleLine | TextFormatFlags.NoPadding;
+
+    /// <summary>Text that wraps onto as many lines as it needs, breaking a word only if it can't fit a line.</summary>
+    protected const TextFormatFlags WrapFlags = TextFormatFlags.Left | TextFormatFlags.WordBreak |
+        TextFormatFlags.TextBoxControl | TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding;
+
+    protected static int TextHeight(string text, Font font, int width) =>
+        TextRenderer.MeasureText(text, font, new Size(Math.Max(1, width), 0), WrapFlags).Height;
+
+    /// <summary>Wrapped text, centred vertically in <paramref name="r"/> while it fits, otherwise from its top.</summary>
+    protected static void DrawWrapped(Graphics g, string text, Font font, Rectangle r, Color color)
+    {
+        int height = TextHeight(text, font, r.Width);
+        TextRenderer.DrawText(g, text, font, new Rectangle(r.X, r.Y + Math.Max(0, (r.Height - height) / 2), r.Width, Math.Max(height, r.Height)),
+            color, WrapFlags);
+    }
 
     protected static GraphicsPath RoundedRect(RectangleF r, float radius)
     {
@@ -141,10 +165,16 @@ internal sealed class Heading : ThemedControl
 
     protected override Size? LogicalSize => new Size(400, (int)(_size * 1.6f));
 
+    public override int HeightFor(int width)
+    {
+        using var font = MakeFont(_size, semibold: true);
+        return Math.Max(S(_size * 1.6f), TextHeight(Text, font, width) + S(_size * 0.4f));
+    }
+
     protected override void OnPaint(PaintEventArgs e)
     {
         using var font = MakeFont(_size, semibold: true);
-        TextRenderer.DrawText(e.Graphics, Text, font, ClientRectangle, Palette.Text, TextFlags);
+        DrawWrapped(e.Graphics, Text, font, ClientRectangle, Palette.Text);
     }
 }
 
@@ -159,10 +189,16 @@ internal sealed class Note : ThemedControl
 
     protected override Size? LogicalSize => new Size(400, 20);
 
+    public override int HeightFor(int width)
+    {
+        using var font = MakeFont(12);
+        return Math.Max(S(20), TextHeight(Text, font, width) + S(4));
+    }
+
     protected override void OnPaint(PaintEventArgs e)
     {
         using var font = MakeFont(12);
-        TextRenderer.DrawText(e.Graphics, Text, font, ClientRectangle, Palette.SubtleText, TextFlags);
+        DrawWrapped(e.Graphics, Text, font, ClientRectangle, Palette.SubtleText);
     }
 }
 
@@ -219,7 +255,8 @@ internal sealed class NavItem : ThemedControl
 
 /// <summary>
 /// A setting laid out like Windows 11's Settings: a rounded card with a title and description, and its
-/// control on the right, or underneath when the control is wide.
+/// control on the right, or underneath when the control is wide or the card too narrow for both. The text
+/// wraps rather than being cut off.
 /// </summary>
 internal sealed class SettingCard : ThemedControl
 {
@@ -236,8 +273,34 @@ internal sealed class SettingCard : ThemedControl
         Controls.Add(control);
     }
 
-    /// <summary>Height for the current DPI; the card lays out its control to match.</summary>
-    public int PreferredHeight => _stacked ? S(70) + _control.Height + S(14) : S(70);
+    /// <summary>Narrower than this beside its control, the text moves the control underneath it instead.</summary>
+    private const int MinTextWidth = 180;
+
+    private bool StacksAt(int width) => _stacked || width - _control.Width - S(48) < S(MinTextWidth);
+
+    private int TextWidthAt(int width) => StacksAt(width) ? width - S(32) : width - _control.Width - S(48);
+
+    /// <summary>The title and description's heights at this width, as wrapped.</summary>
+    private (int Title, int Description) TextHeights(int width)
+    {
+        using var titleFont = MakeFont(14);
+        using var descriptionFont = MakeFont(12);
+        int textWidth = TextWidthAt(width);
+        return (Math.Max(S(20), TextHeight(Text, titleFont, textWidth)), Math.Max(S(18), TextHeight(_description, descriptionFont, textWidth)));
+    }
+
+    /// <summary>The title and description together, with the gap between them.</summary>
+    private int TextBlock(int width)
+    {
+        var (title, description) = TextHeights(width);
+        return title + S(2) + description;
+    }
+
+    public override int HeightFor(int width) => StacksAt(width)
+        ? S(14) + TextBlock(width) + S(8) + _control.Height + S(22)
+        : Math.Max(S(70), TextBlock(width) + S(30));
+
+    public override int MinimumWidth => _control.Width + S(32);
 
     // The control sits on the card, so whatever it doesn't paint (its anti-aliased edges) should blend
     // into the card. Set on every palette change; a stale colour shows as fringes after a theme switch.
@@ -247,8 +310,8 @@ internal sealed class SettingCard : ThemedControl
     {
         base.OnLayout(e);
         _control.BackColor = Palette.Surface;
-        _control.Location = _stacked
-            ? new Point(S(16), S(62))
+        _control.Location = StacksAt(Width)
+            ? new Point(S(16), S(14) + TextBlock(Width) + S(8))
             : new Point(Width - _control.Width - S(16), (Height - _control.Height) / 2);
     }
 
@@ -256,13 +319,14 @@ internal sealed class SettingCard : ThemedControl
     {
         var g = e.Graphics;
         Fill(g, new RectangleF(0, 0, Width, Height), S(6), Palette.Surface);
-        int textRight = _stacked ? Width - S(16) : _control.Left - S(16);
+        int textWidth = TextWidthAt(Width);
+        var (title, description) = TextHeights(Width);
+        // Beside the control, the text is centred on the card; above it, it starts at the top.
+        int top = StacksAt(Width) ? S(14) : Math.Max(S(14), (Height - (title + S(2) + description)) / 2);
         using var titleFont = MakeFont(14);
         using var descriptionFont = MakeFont(12);
-        TextRenderer.DrawText(g, Text, titleFont, new Rectangle(S(16), S(14), textRight - S(16), S(20)),
-            Enabled ? Palette.Text : Palette.SubtleText, TextFlags);
-        TextRenderer.DrawText(g, _description, descriptionFont,
-            new Rectangle(S(16), S(36), textRight - S(16), S(18)), Palette.SubtleText, TextFlags);
+        DrawWrapped(g, Text, titleFont, new Rectangle(S(16), top, textWidth, title), Enabled ? Palette.Text : Palette.SubtleText);
+        DrawWrapped(g, _description, descriptionFont, new Rectangle(S(16), top + title + S(2), textWidth, description), Palette.SubtleText);
     }
 }
 
@@ -377,6 +441,8 @@ internal sealed class ChipGroup : ThemedControl
 
     protected override Size? LogicalSize => new Size(ChipWidth * _options.Length, 32);
 
+    public override int MinimumWidth => Width;
+
     private int ChipWidth { get; }
 
     public bool this[int index]
@@ -461,6 +527,8 @@ internal sealed class SegmentedControl : ThemedControl
     }
 
     protected override Size? LogicalSize => new Size(SegmentWidth * _options.Length, 32);
+
+    public override int MinimumWidth => Width;
 
     private int SegmentWidth { get; }
 
@@ -700,6 +768,8 @@ internal sealed class DropDown : ThemedControl
 
     protected override Size? LogicalSize => new Size(LogicalWidth, 32);
 
+    public override int MinimumWidth => Width;
+
     /// <summary>Replaces the choices without raising <see cref="SelectedChanged"/>.</summary>
     public void SetItems(IReadOnlyList<string> items, int selected)
     {
@@ -850,6 +920,12 @@ internal sealed class UndoBar : ThemedControl
 
     protected override Size? LogicalSize => new Size(600, 48);
 
+    public override int HeightFor(int width)
+    {
+        using var font = MakeFont(13);
+        return Math.Max(S(48), TextHeight(Text, font, width - _undo.Width - S(50)) + S(24));
+    }
+
     /// <summary>Raised when the bar appears or goes, so the page can make or close the room for it.</summary>
     public event EventHandler? ShownChanged;
 
@@ -889,7 +965,7 @@ internal sealed class UndoBar : ThemedControl
         Fill(g, new RectangleF(0, 0, Width, Height), S(6), Palette.Surface);
         Fill(g, new RectangleF(0, S(10), S(3), Height - S(20)), S(1.5f), Palette.Accent);
         using var font = MakeFont(13);
-        TextRenderer.DrawText(g, Text, font, new Rectangle(S(16), 0, _undo.Left - S(24), Height), Palette.Text, TextFlags);
+        DrawWrapped(g, Text, font, new Rectangle(S(16), 0, _undo.Left - S(24), Height), Palette.Text);
     }
 
     protected override void Dispose(bool disposing)

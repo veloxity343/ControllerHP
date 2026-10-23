@@ -83,18 +83,19 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
         _sampleData = loadHistory is not null;
         Text = "ControllerHP";
         Icon = Icon.ExtractAssociatedIcon(Environment.ProcessPath!);
-        StartPosition = FormStartPosition.CenterScreen;
+        // Placed by hand once it has its size: Windows centres a new window at its size when the handle is
+        // created, which is before this one is sized for its DPI, so it grew off to the right and down.
+        StartPosition = FormStartPosition.Manual;
         AutoScaleMode = AutoScaleMode.None; // the controls scale themselves
         KeyPreview = true;
 
         _ = Handle;
-        ClientSize = new Size(S(780), S(600));
-        MinimumSize = SizeFromClientSize(new Size(S(640), S(420)));
-
         Controls.Add(_page);
         AddPage("Settings", BuildSettingsPage());
         AddPage("Devices", BuildControllersPage());
         _controllersPage = _pages.Count - 1;
+        UpdateMinimumSize();
+        SizeAndCentre();
         ShowPage(0);
 
         LoadValues();
@@ -106,6 +107,44 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
     }
 
     private int S(float logicalPixels) => (int)Math.Round(logicalPixels * DeviceDpi / 96f);
+
+    /// <summary>The size it opens at, room for every page's widest row and a good stretch of the chart.</summary>
+    private const int OpenWidth = 900, OpenHeight = 700;
+
+    /// <summary>
+    /// Opens at <see cref="OpenWidth"/> by <see cref="OpenHeight"/>, or as much of it as the screen it opens on
+    /// has room for, centred on that screen (the one with the pointer: the tray's).
+    /// </summary>
+    private void SizeAndCentre()
+    {
+        var area = Screen.FromPoint(Cursor.Position).WorkingArea;
+        var wanted = SizeFromClientSize(new Size(S(OpenWidth), S(OpenHeight)));
+        var size = new Size(Math.Max(MinimumSize.Width, Math.Min(wanted.Width, area.Width)),
+            Math.Max(MinimumSize.Height, Math.Min(wanted.Height, area.Height)));
+        Bounds = new Rectangle(area.X + Math.Max(0, (area.Width - size.Width) / 2), area.Y + Math.Max(0, (area.Height - size.Height) / 2),
+            size.Width, size.Height);
+    }
+
+    /// <summary>
+    /// The smallest the window can be with nothing cut off: the navigation, the page's padding and scroll bar,
+    /// and the widest thing on any page (the device-type chips, a device's card at one column). Narrower than
+    /// that, everything wraps or reflows instead.
+    /// </summary>
+    private void UpdateMinimumSize()
+    {
+        int content = _pages.SelectMany(p => p).OfType<ThemedControl>().Select(c => c.MinimumWidth).DefaultIfEmpty(0).Max();
+        int width = S(NavWidth) + S(PagePadding) * 2 + content + SystemInformation.GetVerticalScrollBarWidthForDpi(DeviceDpi);
+        var minimum = SizeFromClientSize(new Size(width, S(420)));
+        if (MinimumSize != minimum)
+            MinimumSize = minimum;
+    }
+
+    protected override void OnDpiChanged(DpiChangedEventArgs e)
+    {
+        base.OnDpiChanged(e);
+        // The controls resize for the new DPI after this; take the minimum from their new sizes.
+        BeginInvoke(UpdateMinimumSize);
+    }
 
     private void AddPage(string title, List<Control> items)
     {
@@ -274,6 +313,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
         }
         _statsNote.Visible = _current == _controllersPage && shown.Count > 0;
         _chartNote.Visible = _current == _controllersPage && shown.Count > 0;
+        UpdateMinimumSize(); // a card's widest tile can be wider than before
         PerformLayout();
     }
 
@@ -571,13 +611,18 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
                 continue; // takes no room until it has something to say
             if (item == _restoreButton)
             {
-                // Beside the dropdown rather than below it; hidden while nothing is removed.
+                // Beside the dropdown, or under it if the page is too narrow; hidden while nothing is removed.
                 if (_restoreButton.Visible && previous is not null)
                 {
-                    // With every controller removed the dropdown hides, so the button takes its place.
-                    _restoreButton.Location = previous.Visible
-                        ? new Point(previous.Right + S(8), previous.Top + (previous.Height - _restoreButton.Height) / 2)
-                        : previous.Location;
+                    if (!previous.Visible)
+                        _restoreButton.Location = previous.Location; // every device removed: it takes the dropdown's place
+                    else if (previous.Right + S(8) + _restoreButton.Width <= x + width)
+                        _restoreButton.Location = new Point(previous.Right + S(8), previous.Top + (previous.Height - _restoreButton.Height) / 2);
+                    else
+                    {
+                        _restoreButton.Location = new Point(x, y);
+                        y += _restoreButton.Height + S(CardGap);
+                    }
                 }
                 continue;
             }
@@ -585,9 +630,10 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
                 y += S(SectionGap) - S(CardGap);
             else if (item is DropDown && (previous is HistoryChart || previous == _chartNote))
                 y += S(18); // the chart, its note and the box below them read as one block without room between
-            int height = item is SettingCard card ? card.PreferredHeight : item.Height;
-            // Choice rows keep their own width; everything else spans the page.
-            item.Bounds = new Rectangle(x, y, item is SegmentedControl or DropDown ? item.Width : width, height);
+            // Choice rows keep their own width; everything else spans the page, as tall as its text needs there.
+            bool ownWidth = item is SegmentedControl or DropDown;
+            int height = item is ThemedControl themed && !ownWidth ? themed.HeightFor(width) : item.Height;
+            item.Bounds = new Rectangle(x, y, ownWidth ? item.Width : width, height);
             y += height + S(CardGap);
             previous = item;
         }

@@ -31,6 +31,7 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 
 - **Controllers are now devices** throughout the app and the wiki, as other devices show too: the Controllers page is the **Devices** page, and the wiki's Controllers and Supported controllers pages are now **Devices** and **Supported devices**.
 - **The tray icon shows the device itself,** with a thin battery bar along the bottom, instead of a number above a battery, so it's clear at a glance what it's showing. It's drawn pixel by pixel at 16 px, so it stays sharp at 100% scaling. Hover over it for the exact percentage. The panel and pop-ups use it too.
+- **The settings window opens larger and in the middle of the screen,** instead of growing off to the right. Nothing in it is cut off at any size it can be made: text wraps, a device's figures drop to two or one columns, the chart's legend wraps onto more rows, and Restore removed moves under the device list when there isn't room beside it. Dialog titles with a long device name wrap too.
 - **A much smaller download:** the usual zip is under 1 MB instead of about 6 MB, and the standalone one about 67 MB instead of 72. Only the part of Windows' device and Bluetooth library the app uses is shipped.
 - The supported devices tables say which devices and connections have been **tested** on real hardware, which are **likely** to work, and which are still **untested**.
 

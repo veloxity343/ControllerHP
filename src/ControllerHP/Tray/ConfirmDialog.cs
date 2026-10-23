@@ -13,6 +13,8 @@ internal sealed class ConfirmDialog : Form
     private readonly string _title, _message;
     private readonly ActionButton _confirm, _cancel = new("Cancel");
     private readonly TextBox? _input;
+    /// <summary>The title's height: one line, or more for a long device name.</summary>
+    private readonly int _titleHeight;
 
     private ConfirmDialog(string title, string message, string confirmText, Palette palette, string? text = null,
         int maxLength = 0)
@@ -43,7 +45,10 @@ internal sealed class ConfirmDialog : Form
         _confirm.Click += (_, _) => Close(DialogResult.OK);
         _cancel.Click += (_, _) => Close(DialogResult.Cancel);
 
-        // Height follows the wrapped message, and the text box if there is one.
+        // Height follows the wrapped title and message, and the text box if there is one.
+        using (var titleFont = TitleFont())
+            _titleHeight = Math.Max(S(28), TextRenderer.MeasureText(title, titleFont, new Size(S(LogicalWidth - Padding_ * 2), 0),
+                TitleFlags).Height + S(4));
         using var font = MessageFont();
         int textHeight = TextRenderer.MeasureText(message, font, new Size(S(LogicalWidth - Padding_ * 2), 0),
             TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix).Height;
@@ -58,7 +63,7 @@ internal sealed class ConfirmDialog : Form
                 BorderStyle = BorderStyle.FixedSingle,
                 BackColor = palette.Surface,
                 ForeColor = palette.Text,
-                Location = new Point(S(Padding_), S(Padding_) + S(28) + S(8) + textHeight + S(12)),
+                Location = new Point(S(Padding_), S(Padding_) + _titleHeight + S(8) + textHeight + S(12)),
                 Width = S(LogicalWidth - Padding_ * 2),
             };
             _input.KeyDown += (_, e) =>
@@ -72,7 +77,7 @@ internal sealed class ConfirmDialog : Form
             Controls.Add(_input);
             inputHeight = S(12) + _input.Height;
         }
-        ClientSize = new Size(S(LogicalWidth), S(Padding_) + S(28) + S(8) + textHeight + inputHeight + S(24) + _cancel.Height + S(Padding_));
+        ClientSize = new Size(S(LogicalWidth), S(Padding_) + _titleHeight + S(8) + textHeight + inputHeight + S(24) + _cancel.Height + S(Padding_));
         _cancel.Location = new Point(ClientSize.Width - S(Padding_) - _cancel.Width, ClientSize.Height - S(Padding_) - _cancel.Height);
         _confirm.Location = new Point(_cancel.Left - S(8) - _confirm.Width, _cancel.Top);
     }
@@ -95,6 +100,10 @@ internal sealed class ConfirmDialog : Form
     private int S(float logicalPixels) => (int)Math.Round(logicalPixels * DeviceDpi / 96f);
 
     private Font MessageFont() => new("Segoe UI", 13f * DeviceDpi / 96f, GraphicsUnit.Pixel);
+    private Font TitleFont() => new("Segoe UI Semibold", 16f * DeviceDpi / 96f, GraphicsUnit.Pixel);
+
+    private const TextFormatFlags TitleFlags = TextFormatFlags.Left | TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl |
+        TextFormatFlags.NoPrefix;
 
     private void Close(DialogResult result)
     {
@@ -127,12 +136,16 @@ internal sealed class ConfirmDialog : Form
     {
         var g = e.Graphics;
         int width = ClientSize.Width - S(Padding_) * 2;
-        using (var titleFont = new Font("Segoe UI Semibold", 16f * DeviceDpi / 96f, GraphicsUnit.Pixel))
-            TextRenderer.DrawText(g, _title, titleFont, new Rectangle(S(Padding_), S(Padding_), width, S(28)), _palette.Text,
-                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+        using (var titleFont = TitleFont())
+        {
+            // One line sits centred in its row, as before; more start at its top.
+            int textHeight = TextRenderer.MeasureText(_title, titleFont, new Size(width, 0), TitleFlags).Height;
+            int top = S(Padding_) + Math.Max(0, (_titleHeight - textHeight) / 2);
+            TextRenderer.DrawText(g, _title, titleFont, new Rectangle(S(Padding_), top, width, textHeight), _palette.Text, TitleFlags);
+        }
         using var font = MessageFont();
         TextRenderer.DrawText(g, _message, font,
-            new Rectangle(S(Padding_), S(Padding_) + S(28) + S(8), width, (_input?.Top - S(12) ?? _cancel.Top - S(24)) - S(Padding_) - S(36)),
+            new Rectangle(S(Padding_), S(Padding_) + _titleHeight + S(8), width, (_input?.Top - S(12) ?? _cancel.Top - S(24)) - S(Padding_) - _titleHeight - S(8)),
             _palette.SubtleText, TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
     }
 }

@@ -6,10 +6,11 @@ namespace ControllerHP.Tray;
 /// <summary>
 /// One controller's figures under the history chart: a header keyed to its chart line, then a grid of
 /// tiles (label, value, one line of context). Figures without enough history say so instead of guessing.
+/// The grid has three columns, or two or one when the card is too narrow for every tile's text.
 /// </summary>
 internal sealed class StatsCard : ThemedControl
 {
-    private const int Columns = 3, HeaderHeight = 44, TileHeight = 78, Padding_ = 16;
+    private const int MaxColumns = 3, HeaderHeight = 44, TileHeight = 78, Padding_ = 16;
 
     private const string HealthDisclaimer =
         "A rough guide, not a diagnosis. Health compares how long a charge lasts on battery now with this " +
@@ -100,7 +101,9 @@ internal sealed class StatsCard : ThemedControl
         _series = series;
         _stats = stats;
         _tiles = BuildTiles();
+        _grid = null;
         SetLevels(levels, ownLevels);
+        PerformLayout();
         Invalidate();
     }
 
@@ -153,6 +156,7 @@ internal sealed class StatsCard : ThemedControl
     {
         base.OnLayout(e);
         OnPaletteChanged();
+        // The buttons stay level with the name's first line, however many lines it wraps onto.
         int top = (S(HeaderHeight) - _remove.Height) / 2 + S(4);
         _remove.Location = new Point(Width - S(Padding_) - _remove.Width, top);
         _rename.Location = new Point(_remove.Left - S(8) - _rename.Width, top);
@@ -170,8 +174,82 @@ internal sealed class StatsCard : ThemedControl
     private static int LabelWidth(Font font, string text) =>
         TextRenderer.MeasureText(text, font, Size.Empty, TextFormatFlags.NoPrefix | TextFormatFlags.NoPadding).Width;
 
-    /// <summary>The warnings take two tiles' room: beside the last tile, or on a row of their own if there isn't room.</summary>
-    private int WarningsIndex => _tiles.Count % Columns == Columns - 1 ? _tiles.Count + 1 : _tiles.Count;
+    /// <summary>
+    /// How the card is laid out at a width: its header's height (taller while the name wraps), how many tile
+    /// columns, and where the warnings go. The warnings take two tiles' room beside the last tile, or a row
+    /// of their own if there isn't room; with one column they take a tile's.
+    /// </summary>
+    private readonly record struct Grid(int Header, int Columns, int TileWidth, int WarningsIndex, int WarningsSpan);
+
+    private Grid? _grid;
+    private int _gridWidth, _gridDpi;
+
+    private Grid CurrentGrid
+    {
+        get
+        {
+            if (_grid is null || _gridWidth != Width || _gridDpi != DeviceDpi)
+            {
+                _grid = GridFor(Width);
+                _gridWidth = Width;
+                _gridDpi = DeviceDpi;
+            }
+            return _grid.Value;
+        }
+    }
+
+    /// <summary>The room the name has, between the line key and the buttons.</summary>
+    private int NameWidth(int width) => width - S(Padding_) * 2 - S(22) - _rename.Width - S(8) - _remove.Width - S(8);
+
+    private int NameHeight(int width)
+    {
+        using var font = MakeFont(14, semibold: true);
+        return TextHeight(_series.Name, font, NameWidth(width));
+    }
+
+    /// <summary>The width a tile's text needs: its label (and "?"), value and detail each on one line.</summary>
+    private int TileTextWidth(Tile tile)
+    {
+        using var labelFont = MakeFont(12);
+        using var valueFont = MakeFont(17, semibold: true);
+        using var detailFont = MakeFont(11);
+        return Math.Max(LabelWidth(labelFont, tile.Label) + (tile.Help ? S(22) : 0),
+            Math.Max(LabelWidth(valueFont, tile.Value), LabelWidth(detailFont, tile.Detail)));
+    }
+
+    /// <summary>The width the warnings need: the label and switch, the two steppers, and where the levels come from.</summary>
+    private int WarningsWidth()
+    {
+        using var labelFont = MakeFont(12);
+        using var detailFont = MakeFont(11);
+        int steppers = LabelWidth(labelFont, "Low") + S(8) + _low.Width + S(20) + LabelWidth(labelFont, "Critical") + S(8) + _critical.Width;
+        int heading = LabelWidth(labelFont, "Warnings") + S(10) + _enabled.Width;
+        int status = Math.Max(LabelWidth(detailFont, OwnLevelsText + ResetLink), LabelWidth(detailFont, "Inherited from Settings"));
+        return Math.Max(steppers, Math.Max(heading, status));
+    }
+
+    private Grid GridFor(int width)
+    {
+        int header = Math.Max(S(HeaderHeight), NameHeight(width) + S(25));
+        int tileText = _tiles.Count == 0 ? 0 : _tiles.Max(TileTextWidth);
+        int warnings = WarningsWidth();
+        int inner = width - S(Padding_) * 2;
+        for (int columns = MaxColumns; columns >= 1; columns--)
+        {
+            int tileWidth = inner / columns;
+            if (columns > 1 && tileText > tileWidth - S(12))
+                continue;
+            // Two tiles' room if that's enough, else the whole row.
+            int span = Math.Min(2, columns);
+            if (warnings > span * tileWidth - S(12))
+                span = columns;
+            if (columns > 1 && warnings > span * tileWidth - S(12))
+                continue;
+            int index = _tiles.Count % columns + span <= columns ? _tiles.Count : (_tiles.Count + columns - 1) / columns * columns;
+            return new Grid(header, columns, tileWidth, index, span);
+        }
+        throw new InvalidOperationException("One column always fits.");
+    }
 
     /// <summary>The warnings' row is taller than a tile's, for the switch beside its label.</summary>
     private const int WarningsExtraHeight = 14;
@@ -183,8 +261,9 @@ internal sealed class StatsCard : ThemedControl
     {
         get
         {
-            var first = TileBounds(WarningsIndex);
-            return first with { Width = first.Width * 2, Height = first.Height + S(WarningsExtraHeight) };
+            var grid = CurrentGrid;
+            var first = TileBounds(grid.WarningsIndex);
+            return first with { Width = first.Width * grid.WarningsSpan, Height = first.Height + S(WarningsExtraHeight) };
         }
     }
 
@@ -203,8 +282,25 @@ internal sealed class StatsCard : ThemedControl
     private const string OwnLevelsText = "Overridden · ";
     private const string ResetLink = "Reset";
 
-    protected override Size? LogicalSize =>
-        new Size(600, HeaderHeight + (int)Math.Ceiling((WarningsIndex + 2) / (double)Columns) * TileHeight + WarningsExtraHeight + Padding_);
+    protected override Size? LogicalSize => new Size(600, 400);
+
+    public override int HeightFor(int width)
+    {
+        var grid = GridFor(width);
+        int rows = (grid.WarningsIndex + grid.WarningsSpan + grid.Columns - 1) / grid.Columns;
+        return grid.Header + rows * S(TileHeight) + S(WarningsExtraHeight) + S(Padding_);
+    }
+
+    /// <summary>One column wide: the widest tile or the warnings, or the header's buttons beside some of the name.</summary>
+    public override int MinimumWidth
+    {
+        get
+        {
+            int tiles = Math.Max(_tiles.Count == 0 ? 0 : _tiles.Max(TileTextWidth), WarningsWidth()) + S(12);
+            int header = S(22) + S(80) + S(8) + _rename.Width + S(8) + _remove.Width;
+            return Math.Max(tiles, header) + S(Padding_) * 2;
+        }
+    }
 
     private List<Tile> BuildTiles()
     {
@@ -274,9 +370,9 @@ internal sealed class StatsCard : ThemedControl
 
     private Rectangle TileBounds(int index)
     {
-        int width = (Width - S(Padding_) * 2) / Columns;
-        int row = index / Columns, column = index % Columns;
-        return new Rectangle(S(Padding_) + column * width, S(HeaderHeight) + row * S(TileHeight), width, S(TileHeight));
+        var grid = CurrentGrid;
+        int row = index / grid.Columns, column = index % grid.Columns;
+        return new Rectangle(S(Padding_) + column * grid.TileWidth, grid.Header + row * S(TileHeight), grid.TileWidth, S(TileHeight));
     }
 
     /// <summary>The "?" beside a tile's label.</summary>
@@ -293,12 +389,15 @@ internal sealed class StatsCard : ThemedControl
         var g = e.Graphics;
         Fill(g, new RectangleF(0, 0, Width, Height), S(6), Palette.Surface);
 
-        // Header: a line key in the controller's chart colour, then its name in text ink.
-        using (var key = new Pen(HistoryChart.ColorFor(_series.Slot, Palette.Light), S(2)) { StartCap = LineCap.Round, EndCap = LineCap.Round })
-            g.DrawLine(key, S(Padding_), S(HeaderHeight) / 2f, S(Padding_) + S(14), S(HeaderHeight) / 2f);
+        // Header: a line key in the controller's chart colour, then its name in text ink, wrapping if it must.
         using (var nameFont = MakeFont(14, semibold: true))
-            TextRenderer.DrawText(g, _series.Name, nameFont,
-                new Rectangle(S(Padding_) + S(22), 0, _rename.Left - S(Padding_) - S(30), S(HeaderHeight)), Palette.Text, TextFlags);
+        {
+            int header = CurrentGrid.Header, nameHeight = NameHeight(Width);
+            float keyY = Math.Max(0, (header - nameHeight) / 2) + Math.Min(nameHeight, nameFont.Height) / 2f;
+            using (var key = new Pen(HistoryChart.ColorFor(_series.Slot, Palette.Light), S(2)) { StartCap = LineCap.Round, EndCap = LineCap.Round })
+                g.DrawLine(key, S(Padding_), keyY, S(Padding_) + S(14), keyY);
+            DrawWrapped(g, _series.Name, nameFont, new Rectangle(S(Padding_) + S(22), 0, NameWidth(Width), header), Palette.Text);
+        }
 
         using var labelFont = MakeFont(12);
         using var valueFont = MakeFont(17, semibold: true);
