@@ -17,6 +17,9 @@ internal sealed partial class HidCollection(string path, ushort vendor, ushort p
     public ushort UsagePage { get; } = usagePage;
     public ushort Usage { get; } = usage;
 
+    /// <summary>Whether it's a Bluetooth HID device (its path names the Bluetooth HID service).</summary>
+    public bool IsBluetooth => Path.Contains("{00001124-0000-1000-8000-00805f9b34fb}", StringComparison.OrdinalIgnoreCase);
+
     /// <summary>The USB interface number (MI_xx in the path), or -1 for a device with only one.</summary>
     public int Interface { get; } = InterfaceNumber().Match(path) is { Success: true } m ? Convert.ToInt32(m.Groups[1].Value, 16) : -1;
 
@@ -38,6 +41,21 @@ internal sealed partial class HidCollection(string path, ushort vendor, ushort p
             }
             return _caps;
         }
+    }
+
+    /// <summary>
+    /// The product name the device gives now. Read afresh each time: some receivers change it with what's
+    /// linked to them.
+    /// </summary>
+    public string? ProductName()
+    {
+        using var probe = Hid.Open(Path, 0);
+        if (probe.IsInvalid)
+            return null;
+        var buffer = new byte[256];
+        return Hid.HidD_GetProductString(probe, buffer, buffer.Length)
+            ? System.Text.Encoding.Unicode.GetString(buffer).TrimEnd('\0')
+            : null;
     }
 
     /// <summary>Input, output and feature report lengths, each with its report id byte; 0 if unknown.</summary>
@@ -183,7 +201,9 @@ internal sealed record VendorModel(string Name, string Group, DeviceKind Kind, b
 
 /// <summary>What a device said when asked.</summary>
 /// <param name="Off">It answered that it's switched off or out of range, so it goes from the tray at once.</param>
-internal sealed record VendorReading(int? Percent, ChargeState Power, BatteryLevel? Level = null, string? Name = null, bool Off = false)
+/// <param name="Connection">How it's connected, when the protocol can tell; otherwise receiver or cable, by model.</param>
+internal sealed record VendorReading(int? Percent, ChargeState Power, BatteryLevel? Level = null, string? Name = null, bool Off = false,
+    Connection? Connection = null)
 {
     public static readonly VendorReading SwitchedOff = new(null, ChargeState.Unknown, Off: true);
 }
@@ -419,7 +439,8 @@ public sealed class VendorHidSource : IBatterySource, IDisposable
                 var level = reading.Level ?? (percent is int q ? ControllerBattery.LevelFromPercent(q) : BatteryLevel.Unknown);
                 device.Reading = new ControllerBattery($"{protocol.Name.ToLowerInvariant().Replace(' ', '-')}:{device.Group}",
                     reading.Name ?? model.Name, protocol.Name, percent, level, reading.Power,
-                    $"{collection.Vendor:X4}:{collection.Product:X4}", model.Cable ? Connection.Usb : Connection.Receiver, model.Kind);
+                    $"{collection.Vendor:X4}:{collection.Product:X4}",
+                    reading.Connection ?? (model.Cable ? Connection.Usb : Connection.Receiver), model.Kind);
             }
             else
             {

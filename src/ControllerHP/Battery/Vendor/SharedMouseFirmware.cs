@@ -2,7 +2,8 @@ namespace ControllerHP.Battery.Vendor;
 
 /// <summary>
 /// Wireless gaming mice from several makers whose mice run the same firmware family, and so answer the same
-/// battery request: WLmouse, LAMZU and G-Wolves, on their receivers or their cables.
+/// battery request: WLmouse, LAMZU, G-Wolves and MCHOSE's first-generation A5 Pro Max, on their receivers or
+/// their cables.
 /// </summary>
 /// <remarks>
 /// The request is a 64-byte feature report with no report id, the bytes 00 00 02 02 00 83 then zeros. The
@@ -25,7 +26,7 @@ internal sealed class SharedMouseFirmware : VendorProtocol
     private static VendorModel Mouse(string name, string group, bool cable, Request request) =>
         new(name, group, DeviceKind.Mouse, cable, request);
 
-    private const ushort WLmouse = 0x36A7, Lamzu = 0x373E, GWolves = 0x33E4;
+    private const ushort WLmouse = 0x36A7, Lamzu = 0x373E, GWolves = 0x33E4, MchoseA5 = 0x2023;
 
     private static readonly Dictionary<(ushort Vendor, ushort Product), VendorModel> Models = BuildModels();
 
@@ -40,6 +41,10 @@ internal sealed class SharedMouseFirmware : VendorProtocol
             // LAMZU Maya X: its 8K receiver and its cable.
             [(Lamzu, 0x001E)] = Mouse("LAMZU Maya X", "lamzu-maya-x", false, Request.Shared),
             [(Lamzu, 0x001C)] = Mouse("LAMZU Maya X", "lamzu-maya-x", true, Request.Shared),
+            // MCHOSE's first A5 Pro Max: its 1K and 4K receivers, and its cable.
+            [(MchoseA5, 0xF013)] = Mouse("MCHOSE A5 Pro Max", "mchose-a5", false, Request.Shared),
+            [(MchoseA5, 0xF015)] = Mouse("MCHOSE A5 Pro Max", "mchose-a5", false, Request.Shared),
+            [(MchoseA5, 0xF019)] = Mouse("MCHOSE A5 Pro Max", "mchose-a5", true, Request.Shared),
             // G-Wolves' shared 8K receiver, which doesn't say which mouse it has.
             [(GWolves, 0x3854)] = Mouse("G-Wolves mouse", "gwolves-3854", false, Request.Shared),
         };
@@ -91,7 +96,7 @@ internal sealed class SharedMouseFirmware : VendorProtocol
         return models;
     }
 
-    public override IReadOnlyCollection<ushort> Vendors { get; } = [WLmouse, Lamzu, GWolves];
+    public override IReadOnlyCollection<ushort> Vendors { get; } = [WLmouse, Lamzu, GWolves, MchoseA5];
 
     public override VendorModel? Identify(ushort vendor, ushort product) => Models.GetValueOrDefault((vendor, product));
 

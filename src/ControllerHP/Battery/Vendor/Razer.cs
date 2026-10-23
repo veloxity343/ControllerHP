@@ -185,3 +185,51 @@ internal sealed class Razer : VendorProtocol
         }
     }
 }
+
+/// <summary>The Razer BlackShark V2 Pro (2020) headset, on its receiver.</summary>
+/// <remarks>
+/// Not Razer's usual message: a 64-byte feature report FF 0A 00 FD 04 12 F1 02 05 on the FF00:0001
+/// collection, read back as feature report FF. A reply starts FF 0F 05 FE 12 04 1F 08 05, then carries the
+/// power state in byte 11, millivolts big-endian in bytes 12-13 (0 when the headset is off) and the level in
+/// byte 14. A reply starting FF 01 00 means the headset is off. While charging (state 09) the level byte
+/// jumps about, so only charging is shown then; states 01, 02, 03 and 06 (charged) are on battery.
+/// </remarks>
+internal sealed class RazerBlackShark2020 : VendorProtocol
+{
+    public override string Name => "Razer headset";
+
+    public override IReadOnlyCollection<ushort> Vendors { get; } = [0x1532];
+
+    public override VendorModel? Identify(ushort vendor, ushort product) =>
+        product == 0x0528 ? new VendorModel("Razer BlackShark V2 Pro (2020)", "blackshark-v2-pro-2020", DeviceKind.Headset) : null;
+
+    private static readonly byte[] Answered = [0xFF, 0x0F, 0x05, 0xFE, 0x12, 0x04, 0x1F, 0x08, 0x05];
+    private static readonly byte[] NoHeadset = [0xFF, 0x01, 0x00, 0xFE, 0x12, 0x04, 0x1F, 0x08, 0x05];
+
+    public override async Task<VendorReading?> ReadAsync(VendorDevice device, CancellationToken token)
+    {
+        var collection = device.Collections.Values.Select(c => c.Collection).FirstOrDefault(c => c.UsagePage == 0xFF00 && c.Usage == 0x0001);
+        if (collection is null || HidLink.Open(collection) is not { } link)
+            return null;
+        using (link)
+        {
+            if (!link.SetFeature(link.FeatureReport(0xFF, [0x0A, 0x00, 0xFD, 0x04, 0x12, 0xF1, 0x02, 0x05])))
+                return null;
+            byte[]? last = null;
+            for (int i = 0; i < 5; i++)
+            {
+                await Task.Delay(TimeSpan.FromMilliseconds(100), token);
+                last = link.GetFeature(0xFF);
+                if (last is { Length: >= 15 } r && r.AsSpan(0, Answered.Length).SequenceEqual(Answered))
+                {
+                    if ((r[12] << 8 | r[13]) == 0)
+                        return VendorReading.SwitchedOff;
+                    if (r[11] == 0x09)
+                        return new VendorReading(null, ChargeState.Charging);
+                    return r[14] <= 100 ? new VendorReading(r[14], ChargeState.Discharging) : null;
+                }
+            }
+            return last is { Length: >= 9 } l && l.AsSpan(0, NoHeadset.Length).SequenceEqual(NoHeadset) ? VendorReading.SwitchedOff : null;
+        }
+    }
+}

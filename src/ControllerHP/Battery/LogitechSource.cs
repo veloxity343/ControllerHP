@@ -45,6 +45,20 @@ public sealed class LogitechSource : IBatterySource, IDisposable
     // Feature ids.
     private const ushort Root = 0x0000, DeviceInfo = 0x0003, DeviceName = 0x0005;
     private const ushort UnifiedBattery = 0x1004, BatteryStatus = 0x1000, BatteryVoltage = 0x1001;
+    /// <summary>Headsets' battery: millivolts, then flags (bit 0 the headset is connected, bit 1 charging).</summary>
+    private const ushort AdcMeasurement = 0x1F20;
+
+    /// <summary>
+    /// Headsets that speak HID++ directly (no receiver slots), on their long collection: FF43:0202, or
+    /// 000C:0001 on the G535. Names for when a headset doesn't report one.
+    /// </summary>
+    private static readonly Dictionary<ushort, string> Headsets = new()
+    {
+        [0x0A66] = "Logitech G533", [0x0AC4] = "Logitech G535", [0x0A5C] = "Logitech G633", [0x0A89] = "Logitech G635",
+        [0x0A5B] = "Logitech G933", [0x0A87] = "Logitech G935", [0x0AB5] = "Logitech G733", [0x0AFE] = "Logitech G733",
+        [0x0B1F] = "Logitech G733", [0x0AA7] = "Logitech G PRO", [0x0AAA] = "Logitech G PRO X", [0x0ABA] = "Logitech G PRO X",
+        [0x0AFB] = "Logitech G PRO X 2", [0x0AFC] = "Logitech G PRO X 2",
+    };
 
     // Error codes.
     private const byte OldProtocol = 0x01, ConnectFailed = 0x04, EmptySlot = 0x08, Unreachable = 0x09;
@@ -71,6 +85,7 @@ public sealed class LogitechSource : IBatterySource, IDisposable
         public readonly CancellationTokenSource Stop = new();
         public readonly Dictionary<byte, Paired> Devices = [];
         public bool IsReceiver => Receivers.Contains(ProductId);
+        public bool IsHeadset => Headsets.ContainsKey(ProductId);
     }
 
     /// <summary>A device in one of a link's slots: what's known about it, and its latest reading.</summary>
@@ -86,21 +101,38 @@ public sealed class LogitechSource : IBatterySource, IDisposable
     }
 
     private readonly Dictionary<string, Link> _links = [];
-    private readonly DeviceWatcher _watcher;
-    /// <summary>Set once the watcher has listed the receivers already plugged in.</summary>
+    private readonly List<DeviceWatcher> _watchers = [];
+    /// <summary>Set once the watchers have listed the receivers already plugged in.</summary>
     private readonly TaskCompletionSource _listed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private int _unlisted;
     private int _softwareId;
 
     public LogitechSource()
     {
-        // HID++ long reports live on a vendor collection, usage page FF00, usage 0002.
-        _watcher = DeviceInformation.CreateWatcher(HidDevice.GetDeviceSelector(0xFF00, 0x0002), [VendorIdKey, ProductIdKey]);
-        _watcher.Added += (_, device) => OnAdded(device);
-        _watcher.Removed += (_, update) => OnRemoved(update.Id);
-        // Unused, but without an Updated handler the watcher doesn't raise the other events reliably.
-        _watcher.Updated += (_, _) => { };
-        _watcher.EnumerationCompleted += (_, _) => _listed.TrySetResult();
-        _watcher.Start();
+        // HID++ long reports live on a vendor collection, usage page FF00, usage 0002; headsets have theirs
+        // on FF43:0202, or 000C:0001 on the G535.
+        (ushort Page, ushort Usage, Func<ushort, bool> Wanted)[] collections =
+        [
+            (0xFF00, 0x0002, _ => true),
+            (0xFF43, 0x0202, Headsets.ContainsKey),
+            (0x000C, 0x0001, product => product == 0x0AC4),
+        ];
+        _unlisted = collections.Length;
+        foreach (var (page, usage, wanted) in collections)
+        {
+            var watcher = DeviceInformation.CreateWatcher(HidDevice.GetDeviceSelector(page, usage), [VendorIdKey, ProductIdKey]);
+            watcher.Added += (_, device) => OnAdded(device, wanted);
+            watcher.Removed += (_, update) => OnRemoved(update.Id);
+            // Unused, but without an Updated handler the watcher doesn't raise the other events reliably.
+            watcher.Updated += (_, _) => { };
+            watcher.EnumerationCompleted += (_, _) =>
+            {
+                if (Interlocked.Decrement(ref _unlisted) == 0)
+                    _listed.TrySetResult();
+            };
+            watcher.Start();
+            _watchers.Add(watcher);
+        }
     }
 
     /// <summary>
@@ -135,10 +167,10 @@ public sealed class LogitechSource : IBatterySource, IDisposable
         }
     }
 
-    private void OnAdded(DeviceInformation device)
+    private void OnAdded(DeviceInformation device, Func<ushort, bool> wanted)
     {
         if (AsUShort(device.Properties.GetValueOrDefault(VendorIdKey)) != LogitechVendorId ||
-            AsUShort(device.Properties.GetValueOrDefault(ProductIdKey)) is not ushort productId)
+            AsUShort(device.Properties.GetValueOrDefault(ProductIdKey)) is not ushort productId || !wanted(productId))
         {
             return;
         }
@@ -260,7 +292,9 @@ public sealed class LogitechSource : IBatterySource, IDisposable
     /// <summary>Its features, name, type and a stable id, asked once.</summary>
     private async Task DescribeAsync(Link link, FileStream stream, byte slot, Paired device, CancellationToken token)
     {
-        foreach (ushort feature in new[] { DeviceInfo, DeviceName, UnifiedBattery, BatteryStatus, BatteryVoltage })
+        if (link.IsHeadset)
+            device.Kind = DeviceKind.Headset;
+        foreach (ushort feature in new[] { DeviceInfo, DeviceName, UnifiedBattery, BatteryStatus, BatteryVoltage, AdcMeasurement })
         {
             var reply = await RequestAsync(stream, slot, 0, 0, [(byte)(feature >> 8), (byte)feature], ReplyTimeout, token);
             if (reply.Reply is { } r && r[4] != 0)
@@ -310,6 +344,8 @@ public sealed class LogitechSource : IBatterySource, IDisposable
                 unit = null;
         }
         device.Id = unit is not null ? $"logi:{unit}" : $"logi:{link.ProductId:X4}:{slot}";
+        if (string.IsNullOrWhiteSpace(device.Name) && Headsets.TryGetValue(link.ProductId, out var headsetName))
+            device.Name = headsetName;
         if (string.IsNullOrWhiteSpace(device.Name))
             device.Name = device.Kind switch
             {
@@ -324,6 +360,22 @@ public sealed class LogitechSource : IBatterySource, IDisposable
     private async Task<(int? Percent, BatteryLevel Level, ChargeState Power)?> ReadBatteryAsync(
         FileStream stream, byte slot, Paired device, CancellationToken token)
     {
+        if (device.Features.TryGetValue(AdcMeasurement, out byte adc))
+        {
+            // An error reply means the headset is linked but inactive: no reading this time.
+            if ((await RequestAsync(stream, slot, adc, 0, [], ReplyTimeout, token)).Reply is not { } a)
+                return null;
+            if ((a[6] & 0x01) == 0)
+            {
+                device.Reading = null; // switched off: it goes from the tray
+                return null;
+            }
+            int millivolts = a[4] << 8 | a[5];
+            int percent = PercentFromVoltage(millivolts);
+            device.Detail = $"ADC measurement: {millivolts} mV, flags {a[6]:X2}, about {percent}%";
+            return (percent, ControllerBattery.LevelFromPercent(percent), (a[6] & 0x02) != 0 ? ChargeState.Charging : ChargeState.Discharging);
+        }
+
         if (device.Features.TryGetValue(UnifiedBattery, out byte unified) &&
             (await RequestAsync(stream, slot, unified, 1, [], ReplyTimeout, token)).Reply is { } u)
         {
@@ -431,8 +483,11 @@ public sealed class LogitechSource : IBatterySource, IDisposable
 
     public void Dispose()
     {
-        if (_watcher.Status is DeviceWatcherStatus.Started or DeviceWatcherStatus.EnumerationCompleted)
-            _watcher.Stop();
+        foreach (var watcher in _watchers)
+        {
+            if (watcher.Status is DeviceWatcherStatus.Started or DeviceWatcherStatus.EnumerationCompleted)
+                watcher.Stop();
+        }
         lock (_links)
         {
             foreach (var link in _links.Values)

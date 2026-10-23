@@ -25,6 +25,10 @@ internal static partial class Hid
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool HidD_GetFeature(SafeFileHandle device, byte[] buffer, int length);
 
+    [LibraryImport("hid.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool HidD_GetProductString(SafeFileHandle device, byte[] buffer, int length);
+
     [LibraryImport("hid.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool HidD_SetFeature(SafeFileHandle device, byte[] buffer, int length);
