@@ -5,7 +5,7 @@
 - [What each controller reports](#what-each-controller-reports)
 - [Bluetooth mice, keyboards and headsets](#bluetooth-mice-keyboards-and-headsets)
 - [Logitech mice, keyboards and headsets](#logitech-mice-keyboards-and-headsets)
-- [WLmouse, LAMZU and G-Wolves mice](#wlmouse-lamzu-and-g-wolves-mice)
+- [Devices on their makers' receivers](#devices-on-their-makers-receivers)
 - [Known limitations](#known-limitations)
 - [How batteries are read](#how-batteries-are-read)
 - [What isn't supported yet](#what-isnt-supported-yet)
@@ -28,6 +28,11 @@ The last column says whether each one has been tried on real hardware:
 | DualSense Edge | Bluetooth | 10% steps | Yes | Likely |
 | DualSense, DualSense Edge | USB | 10% steps | Yes | Untested |
 | DualShock 4 | USB or Bluetooth | 10% steps | Yes | Untested |
+| Nintendo Switch Pro Controller, Joy-Con (L and R) | Bluetooth | 5 steps | Yes | Untested |
+| Steam Controller (2025) | Its puck | Exact % | Yes | Untested |
+| 8BitDo SF30 Pro, SN30 Pro, Pro 2, Pro 3 (in their own mode) | USB or Bluetooth | Exact %, only while Steam or a game is using it | Yes | Untested |
+
+8BitDo controllers in XInput mode read as Xbox controllers. In their own mode, ControllerHP only listens: switching on the report that carries their battery would stop DirectInput games seeing them, so the level shows only once Steam or a game has done that. A Switch controller is asked once for its device information, which carries the battery, without changing its mode; over USB it isn't read. The Steam Controller's puck is only listened to.
 
 **Have one marked Likely or Untested?** Please help: connect it, run `ControllerHP.exe --list` (see [Reporting a bug](troubleshooting.md#reporting-a-bug)), and post what you see in [Discussions](https://github.com/veloxity343/ControllerHP/discussions), whether it works or not.
 
@@ -59,23 +64,47 @@ Logitech devices on a **Unifying, Bolt or Lightspeed receiver**, or plugged in b
 |---|---|---|---|---|
 | G Pro Wireless | Lightspeed receiver | Estimated from its battery voltage | Yes | **Tested** |
 | Other Logitech mice and keyboards | Unifying, Bolt or Lightspeed receiver | Exact %, or estimated from voltage on older models | Yes | Likely |
-| Logitech headsets | Their USB receiver | Varies | Varies | Untested |
+| Logitech G533, G535, G633, G635, G733, G933, G935, G PRO, G PRO X, G PRO X 2 headsets | Their USB receiver | Estimated from battery voltage | Yes | Untested |
+| Logitech G PRO X 2 LIGHTSPEED headset | Its receiver | Exact % | Yes | Untested |
+| Astro A50 Gen 5 | Its base station | Exact % | Yes, docked | Untested |
 
 The panel shows them as connected by **USB receiver**. A device that's asleep keeps its last reading rather than coming and going, since it doesn't answer until it wakes; one that's switched off or out of range shows as disconnected.
 
-## WLmouse, LAMZU and G-Wolves mice
+## Devices on their makers' receivers
 
-These makers' wireless mice run the same family of firmware, so ControllerHP reads them all the same way, on their receiver or their cable: one battery request every 30 seconds, the one the makers' own web drivers send. Nothing else is ever sent to the mouse.
+Many wireless mice, keyboards and headsets connect through their maker's own USB receiver (a dongle), and Windows doesn't record their battery. ControllerHP reads these through each maker's own protocol, the way their software does, every 30 seconds. For each one:
+- it only ever sends **read** requests, never anything that changes a setting or the device's mode;
+- it only talks to devices it recognises by their maker and product id;
+- it works alongside the maker's own software.
 
-| Mice | Connection | Battery | Charging shown | Tested on hardware |
+Devices that need a mode switched before they'll answer (Razer's BlackShark V2 Pro 2023 and Barracuda Pro headsets) are left out for that reason.
+
+| Maker | Devices | Battery | Charging shown | Tested on hardware |
 |---|---|---|---|---|
-| WLmouse Beast X, Beast X Max, Beast X Mini Pro | Their receivers | Exact % | Yes, on the cable | Untested |
-| LAMZU Maya X | Its 8K receiver, or its cable | Exact % | Yes, on the cable | Untested |
-| G-Wolves mice on the shared 8K receiver, and models with their own receiver (HTX, HSK Pro, Fenrir, HTS Plus and others) | Receiver or cable | Exact % | Yes, on the cable | Untested |
+| Razer | Wireless mice (DeathAdder, Viper, Basilisk, Naga, Cobra, Pro Click, Orochi and more), keyboards (BlackWidow, DeathStalker HyperSpeed and V2/V3/V4 Pro), the Mouse Dock Pro | Exact % | Yes | Untested |
+| Razer | BlackShark V2 Pro (2020) headset | Exact %, or charging only while charging | Yes | Untested |
+| SteelSeries | Arctis Nova 7, 7X, 7P, Nova 5, Nova 3, Arctis 7+, GameBuds, older Arctis 1, 7, 9 and Pro Wireless headsets, the Nova Pro Wireless and Nova Elite base stations | Exact %, or steps on some | Most | Untested |
+| SteelSeries | Rival 3 Wireless, Aerox 3, 5 and 9 Wireless mice | Exact % | Yes | Untested |
+| Corsair | Void v2 Wireless, HS80 Max Wireless, Virtuoso Max Wireless, Virtuoso RGB Wireless SE and XT headsets; Dark Core RGB Pro SE mouse | Exact % | Virtuoso SE and XT only | Untested |
+| HyperX | Cloud II Wireless, Cloud Alpha 2, Cloud III Wireless, Cloud II Core Wireless, Cloud III S Wireless | Exact % | Yes | Untested |
+| ASUS | ROG Gladius III, Chakram, Keris, Spatha X, Harpe Ace, Pugio II, Strix Impact II Wireless, TUF Gaming M4 Wireless and others | Exact %, or 5 steps on older models | Yes | Untested |
+| Keychron | Ultra-Link 8K receiver, M5 | Exact % | No | Untested |
+| Pulsar, ATK, VXE, Hitscan | Pulsar X2 V2 Mini and X2 CrazyLight Mini, ATK VXE R1 SE+, VXE R1 Pro Max, Hitscan Hyperlight | Exact % | Yes, on the cable | Untested |
+| WLmouse, LAMZU, G-Wolves | WLmouse Beast X family, LAMZU Maya X, G-Wolves mice (HTX, HSK, Fenrir, HTS and more) | Exact % | Yes, on the cable | Untested |
+| MCHOSE | L7, M7, A7, K7 families, G7, A5 Pro Max | Exact % | Yes | Untested |
+| Lofree | Hyzen keyboard on its dongle | Exact % | No | Untested |
+| Audeze | Maxwell, Maxwell 2 | Exact % | Yes, on its cable | Untested |
+| JBL | Quantum 910 Wireless | Exact %, when it reports it | No | Untested |
+| NZXT | Lift Elite Wireless | Exact % | Yes | Untested |
+| Angry Miao | AM Infinity 8K mouse | Exact % | No | Untested |
 
-A mouse on its receiver and on its cable is one device. The receivers can't tell a sleeping mouse from one that's switched off, so a mouse that stops answering keeps its last level for 30 minutes before it's dropped. G-Wolves' shared receiver doesn't say which mouse is paired to it, so a mouse on it shows as *G-Wolves mouse*: rename it on the Devices page.
+**A few behave differently:**
+- **Sleeping devices.** Many receivers can't tell a sleeping mouse from one that's switched off. A mouse or keyboard that stops answering keeps its last level for 30 minutes, or for as long as its receiver is plugged in for some models, so a mouse that dozes between games doesn't come and go. A headset that stops answering goes after 2 minutes, and any device that says it's switched off goes at once.
+- **One device on two connections.** A mouse on its receiver and on its cable is one device; the cable says when it's charging.
+- **Unnamed devices.** Some shared receivers (G-Wolves', MCHOSE's) don't say which mouse is paired to them, so it shows with the maker's name: rename it on the Devices page.
+- **Headsets that only speak on events.** The JBL Quantum 910 reports its battery only now and then, for example when it's plugged in to charge, so its level can take a while to appear.
 
-**Other makers' receivers** (dongles) aren't supported yet. Their battery isn't something Windows records, and each maker reads it differently, usually without publishing how.
+**Other makers' receivers** aren't supported yet, nor is a NuPhy keyboard on its dongle: its battery isn't something the dongle makes available.
 
 ## Known limitations
 
@@ -100,7 +129,7 @@ You don't need this to use ControllerHP, but it explains the differences above.
 
 **PlayStation controllers** are read from the battery status in their input reports, sampled every 5 seconds. They show alongside Xbox controllers.
 
-**WLmouse, LAMZU and G-Wolves mice** are sent one read request as a 64-byte feature report on the receiver's vendor collection, and only on a collection whose feature report is exactly that size, as the makers' own web drivers do. The answer carries the percentage and a charging flag.
+**Devices on their makers' receivers** are read through each maker's protocol, on the receiver's vendor collection: a read request, as a feature or output report, and an answer that has to carry the request's echo or a documented reply id before it's believed, so other traffic on the collection is never read as a level. Where a maker's protocol is shared across brands, one protocol covers them all (the WLmouse, LAMZU and G-Wolves mice, for example, run the same firmware).
 
 **Logitech devices** are read through Logitech's HID++ protocol, on the receiver's vendor interface: the device's battery feature (unified battery, battery status, or battery voltage, converted to a percentage along a typical lithium curve), its name and type, and its unit id, which keeps its history together whichever receiver or port it's on.
 
@@ -110,8 +139,9 @@ Connecting and disconnecting are picked up as they happen. A check every 30 seco
 
 ## What isn't supported yet
 
-- **Devices on other makers' USB receivers** (dongles): Logitech's are supported; others are planned, one maker at a time, where the maker's protocol can be read safely.
-- **Nintendo Switch Pro controllers, Joy-Cons and third-party controllers.**
+- **Devices on other makers' USB receivers** (dongles): the makers above are supported; others can be added where the maker's protocol is known and can be read without changing anything on the device.
+- **Razer's BlackShark V2 Pro (2023) and Barracuda Pro headsets,** which need a mode switched before they'll answer.
+- **Nintendo Switch controllers over USB, and other third-party controllers.**
 - **Bluetooth devices Windows shows no battery for.**
 - **Other systems:** ControllerHP is Windows-only for now.
 

@@ -4,7 +4,7 @@
 
 <h1 align="center">ControllerHP</h1>
 
-<p align="center">Battery levels for game controllers and Bluetooth mice, keyboards and headsets, in the Windows taskbar.</p>
+<p align="center">Battery levels for game controllers, mice, keyboards and headsets, in the Windows taskbar.</p>
 
 <p align="center">
   <a href="https://github.com/veloxity343/ControllerHP/releases/latest"><img src="https://img.shields.io/github/v/release/veloxity343/ControllerHP" alt="Latest release"></a>
@@ -62,6 +62,8 @@ Requires Windows 10 version 1809 or later. [Getting started](docs/wiki/getting-s
 | DualSense | **Tested** | Untested | — |
 | DualSense Edge | Likely | Untested | — |
 | DualShock 4 | Untested | Untested | — |
+| Switch Pro Controller, Joy-Con | Untested | — | — |
+| 8BitDo (in its own mode) | Untested | Untested | — |
 
 **Tested** means seen working on real hardware. **Likely** means not tried yet, but it uses the same code as a tested one. **Untested** means written from the device's documented format but not yet tried. Have one that's Likely or Untested? [Tell us how it goes](https://github.com/veloxity343/ControllerHP/discussions).
 
@@ -69,7 +71,9 @@ PlayStation controllers report battery in 10% steps.
 
 **Bluetooth mice, keyboards and headsets** work when Windows itself shows their battery, under Settings → Bluetooth & devices. Tested: a Bluetooth keyboard.
 
-**Logitech mice, keyboards and headsets** on a Unifying, Bolt or Lightspeed receiver are read too. Tested: a G Pro Wireless. **WLmouse, LAMZU and G-Wolves** mice on their receivers are read too (untested). Other makers' USB receivers (dongles) aren't supported yet.
+**Devices on their makers' USB receivers** (dongles) are read through each maker's own protocol, read-only:
+- **Logitech** mice, keyboards and headsets on Unifying, Bolt and Lightspeed receivers. Tested: a G Pro Wireless.
+- **Razer, SteelSeries, Corsair, HyperX, ASUS, Keychron, Pulsar and its sister brands, WLmouse, LAMZU, G-Wolves, MCHOSE, Lofree, Astro, Audeze, JBL, NZXT and Angry Miao** devices, and the Steam Controller's puck. All untested so far.
 
 See [Supported devices](docs/wiki/supported-devices.md) for what each device and connection can report, and the known limitations.
 
