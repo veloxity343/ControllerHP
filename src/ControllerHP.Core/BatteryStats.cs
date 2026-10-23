@@ -1,4 +1,4 @@
-namespace ControllerHP.Tray;
+namespace ControllerHP;
 
 /// <summary>
 /// Figures for one controller, worked out from its battery history. A null figure means there isn't

@@ -1,10 +1,13 @@
 using ControllerHP.Battery;
 using Microsoft.Win32;
 
-namespace ControllerHP.Tray;
+namespace ControllerHP;
 
 /// <summary>A controller's battery warning levels, in percent; null when that warning is off.</summary>
 internal sealed record WarningLevels(int? Low, int? Critical);
+
+/// <summary>Which corner of the screen pop-ups appear in.</summary>
+internal enum ToastCorner { TopRight, TopLeft, BottomRight, BottomLeft }
 
 /// <summary>
 /// User preferences, kept under HKCU\Software\ControllerHP. The tray menu and the settings window both

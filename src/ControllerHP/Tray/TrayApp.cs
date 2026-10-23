@@ -208,7 +208,7 @@ internal sealed class TrayApp : ApplicationContext
         }
         catch (Exception ex)
         {
-            Program.Log($"Diagnostics report failed: {ex}");
+            Log.Write($"Diagnostics report failed: {ex}");
             MessageBox.Show($"Couldn't write the diagnostics report: {ex.Message}", "ControllerHP",
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
@@ -303,8 +303,8 @@ internal sealed class TrayApp : ApplicationContext
 
     /// <summary>Records every change so battery behaviour (step sizes, update latency) can be checked later.</summary>
     private static void LogHistory(IReadOnlyList<ControllerBattery> readings) =>
-        Program.Log(readings.Count == 0 ? "no devices" : string.Join(" | ", readings.Select(r => r.Describe())),
-            Program.HistoryLogFile);
+        Log.Write(readings.Count == 0 ? "no devices" : string.Join(" | ", readings.Select(r => r.Describe())),
+            Log.HistoryFile);
 
     /// <summary>Each source covers different controllers; overlapping ones are grouped in a <see cref="FirstAvailableSource"/>.</summary>
     private List<ControllerBattery> ReadAllSources()
@@ -318,7 +318,7 @@ internal sealed class TrayApp : ApplicationContext
             }
             catch (Exception ex)
             {
-                Program.LogOnce($"{source.Name} failed: {ex.GetType().Name}: {ex.Message}");
+                Log.Once($"{source.Name} failed: {ex.GetType().Name}: {ex.Message}");
             }
         }
         // Types turned off in Settings are left out before anything else sees them: no icon, pop-ups or history.

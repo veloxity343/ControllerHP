@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace ControllerHP.Tray;
+namespace ControllerHP;
 
 /// <summary>
 /// ControllerHP's own warning chimes, made when first needed rather than shipped as files: a soft two-note

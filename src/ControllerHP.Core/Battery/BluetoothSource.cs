@@ -163,7 +163,7 @@ public sealed partial class BluetoothSource : IBatterySource, IDisposable
         }
         catch (Exception ex)
         {
-            Program.LogOnce($"Bluetooth lookup failed: {ex.GetType().Name}: {ex.Message}");
+            Log.Once($"Bluetooth lookup failed: {ex.GetType().Name}: {ex.Message}");
         }
         return devices;
     }
@@ -190,7 +190,7 @@ public sealed partial class BluetoothSource : IBatterySource, IDisposable
             }
             catch (Exception ex)
             {
-                Program.LogOnce($"Bluetooth device type lookup failed: {ex.GetType().Name}: {ex.Message}");
+                Log.Once($"Bluetooth device type lookup failed: {ex.GetType().Name}: {ex.Message}");
             }
         }
 
@@ -240,7 +240,7 @@ public sealed partial class BluetoothSource : IBatterySource, IDisposable
         }
         catch (Exception ex)
         {
-            Program.LogOnce($"Bluetooth device parts lookup failed: {ex.GetType().Name}: {ex.Message}");
+            Log.Once($"Bluetooth device parts lookup failed: {ex.GetType().Name}: {ex.Message}");
         }
         return DeviceKind.Other;
     }

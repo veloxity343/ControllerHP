@@ -23,7 +23,7 @@ public sealed class GamingInputSource : IBatterySource, IDisposable
         }
         catch (Exception ex)
         {
-            Program.LogOnce($"Windows.Gaming.Input watch failed: {ex.GetType().Name}: {ex.Message}");
+            Log.Once($"Windows.Gaming.Input watch failed: {ex.GetType().Name}: {ex.Message}");
         }
 
         // A Bluetooth pad connecting or disconnecting: look again then, not just at the next poll.
@@ -75,7 +75,7 @@ public sealed class GamingInputSource : IBatterySource, IDisposable
         }
         catch (Exception ex)
         {
-            Program.LogOnce($"Windows.Gaming.Input failed: {ex.GetType().Name}: {ex.Message}");
+            Log.Once($"Windows.Gaming.Input failed: {ex.GetType().Name}: {ex.Message}");
             return [];
         }
     }
@@ -85,7 +85,7 @@ public sealed class GamingInputSource : IBatterySource, IDisposable
         if (pad.VendorId == 0 && pad.NonRoamableId is null)
         {
             // No raw controller behind it: seen while a DualSense disconnects; a real Xbox pad always has one.
-            Program.LogOnce("Windows.Gaming.Input pad without a RawGameController skipped");
+            Log.Once("Windows.Gaming.Input pad without a RawGameController skipped");
             return null;
         }
         // PlayStationSource reads these from their HID reports, which carry the real battery.

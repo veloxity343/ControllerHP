@@ -72,7 +72,7 @@ internal static unsafe partial class GamingInput
                 catch (Exception ex)
                 {
                     // A pad that has just gone away can linger in the list and fail every call; skip it.
-                    Program.LogOnce($"Windows.Gaming.Input pad failed: {ex.GetType().Name}: {ex.Message}");
+                    Log.Once($"Windows.Gaming.Input pad failed: {ex.GetType().Name}: {ex.Message}");
                 }
                 finally
                 {
@@ -269,7 +269,7 @@ internal static unsafe partial class GamingInput
         }
         catch (Exception ex)
         {
-            Program.LogOnce($"A gamepad event failed: {ex.GetType().Name}: {ex.Message}");
+            Log.Once($"A gamepad event failed: {ex.GetType().Name}: {ex.Message}");
         }
         return 0;
     }

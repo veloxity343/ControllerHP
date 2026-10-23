@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace ControllerHP.Tray;
+namespace ControllerHP;
 
 internal enum FullscreenState
 {

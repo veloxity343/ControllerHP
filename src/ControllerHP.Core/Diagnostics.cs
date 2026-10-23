@@ -3,7 +3,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using ControllerHP.Battery;
 using ControllerHP.Battery.Vendor;
-using ControllerHP.Tray;
 
 namespace ControllerHP;
 
@@ -77,7 +76,7 @@ internal static partial class Diagnostics
     public static string WriteReport(IEnumerable<IBatterySource> sources)
     {
         var w = new StringWriter();
-        string version = System.Windows.Forms.Application.ProductVersion.Split('+')[0];
+        string version = AppInfo.Version;
         w.WriteLine("ControllerHP diagnostics report");
         w.WriteLine($"Created {DateTime.Now:yyyy-MM-dd HH:mm:ss zzz}.");
         w.WriteLine("Bluetooth addresses are partly masked (for example ********7583); the last four characters");
@@ -117,18 +116,18 @@ internal static partial class Diagnostics
             w.WriteLine($"{s.Name}: {s.Points.Count} readings, {s.Points[0].Time:yyyy-MM-dd HH:mm} to {s.Points[^1].Time:yyyy-MM-dd HH:mm}, " +
                 $"last {(s.Points[^1].Percent is int p ? $"{p}%" : "disconnected")}  [id={s.Id}]");
 
-        foreach (var (file, title) in new[] { (Program.HistoryLogFile, "readings"), (Program.ErrorLogFile, "errors") })
+        foreach (var (file, title) in new[] { (Log.HistoryFile, "readings"), (Log.ErrorFile, "errors") })
         {
             Section(w, $"{file}, last {LogTailLines} lines ({title})");
-            var lines = ReadTail(Path.Combine(Program.LogDirectory, file));
+            var lines = ReadTail(Path.Combine(Log.Folder, file));
             if (lines.Count == 0)
                 w.WriteLine("(empty)");
             foreach (var line in lines)
                 w.WriteLine(line);
         }
 
-        string path = Path.Combine(Program.LogDirectory, ReportFile);
-        Directory.CreateDirectory(Program.LogDirectory);
+        string path = Path.Combine(Log.Folder, ReportFile);
+        Directory.CreateDirectory(Log.Folder);
         File.WriteAllText(path, MaskAddresses(w.ToString()), Encoding.UTF8);
         return path;
     }

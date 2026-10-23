@@ -186,7 +186,7 @@ public sealed class LogitechSource : IBatterySource, IDisposable
             }
             catch (Exception ex)
             {
-                Program.LogOnce($"Logitech receiver {link.ProductId:X4} failed: {ex.GetType().Name}: {ex.Message}");
+                Log.Once($"Logitech receiver {link.ProductId:X4} failed: {ex.GetType().Name}: {ex.Message}");
             }
 
             try

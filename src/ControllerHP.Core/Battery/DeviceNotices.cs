@@ -39,7 +39,7 @@ internal static partial class DeviceNotices
                 if (CM_Register_Notification(filter, IntPtr.Zero, &OnNotice, out _notification) != 0)
                 {
                     _notification = IntPtr.Zero;
-                    Program.LogOnce("Couldn't register for device notices; devices plugged in or connected later are seen at the next poll.");
+                    Log.Once("Couldn't register for device notices; devices plugged in or connected later are seen at the next poll.");
                 }
             }
         }
@@ -66,7 +66,7 @@ internal static partial class DeviceNotices
                 }
                 catch (Exception ex)
                 {
-                    Program.LogOnce($"A device notice failed: {ex.GetType().Name}: {ex.Message}");
+                    Log.Once($"A device notice failed: {ex.GetType().Name}: {ex.Message}");
                 }
             }
         });

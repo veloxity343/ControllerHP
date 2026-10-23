@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text;
 using ControllerHP.Battery;
 
-namespace ControllerHP.Tray;
+namespace ControllerHP;
 
 /// <summary>One reading in a controller's history; a null percent (disconnected, or level unknown) is a gap.</summary>
 internal readonly record struct HistoryPoint(DateTime Time, int? Percent, bool Charging);
@@ -43,15 +43,15 @@ internal sealed class BatteryHistory
     /// <summary>Long enough for a battery health baseline; older rows are dropped at startup.</summary>
     public static readonly TimeSpan Kept = TimeSpan.FromDays(90);
 
-    private static string FilePath => Path.Combine(Program.LogDirectory, FileName);
-    private static string AlivePath => Path.Combine(Program.LogDirectory, AliveFileName);
+    private static string FilePath => Path.Combine(Log.Folder, FileName);
+    private static string AlivePath => Path.Combine(Log.Folder, AliveFileName);
 
     /// <summary>Notes that the app is running; called on every poll, so it's at most a poll interval stale.</summary>
     public static void Heartbeat()
     {
         try
         {
-            Directory.CreateDirectory(Program.LogDirectory);
+            Directory.CreateDirectory(Log.Folder);
             File.WriteAllText(AlivePath, DateTime.Now.ToString("O", CultureInfo.InvariantCulture));
         }
         catch (IOException) { }
@@ -93,7 +93,7 @@ internal sealed class BatteryHistory
     {
         try
         {
-            Directory.CreateDirectory(Program.LogDirectory);
+            Directory.CreateDirectory(Log.Folder);
             if (!File.Exists(FilePath))
                 File.WriteAllText(FilePath, Header + Environment.NewLine);
             File.AppendAllText(FilePath, rows);

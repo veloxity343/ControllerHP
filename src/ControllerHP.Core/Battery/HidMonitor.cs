@@ -71,7 +71,7 @@ internal static partial class HidMonitor
             }
             catch (Exception ex)
             {
-                Program.LogOnce($"Listing HID devices failed: {ex.GetType().Name}: {ex.Message}");
+                Log.Once($"Listing HID devices failed: {ex.GetType().Name}: {ex.Message}");
             }
             finally
             {
@@ -149,7 +149,7 @@ internal static partial class HidMonitor
             }
             catch (Exception ex)
             {
-                Program.LogOnce($"A HID device event failed: {ex.GetType().Name}: {ex.Message}");
+                Log.Once($"A HID device event failed: {ex.GetType().Name}: {ex.Message}");
             }
         }
     }
@@ -210,7 +210,7 @@ internal static partial class HidMonitor
             }
             catch (Exception ex)
             {
-                Program.LogOnce($"Listing HID devices failed: {ex.GetType().Name}: {ex.Message}");
+                Log.Once($"Listing HID devices failed: {ex.GetType().Name}: {ex.Message}");
             }
         });
     }

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using ControllerHP.Battery;
 
-namespace ControllerHP.Tray;
+namespace ControllerHP;
 
 /// <summary>
 /// status.json: every connected device's battery, kept up to date for other apps (Rainmeter skins,
@@ -14,7 +14,7 @@ internal static class StatusFile
     /// <summary>Bumped if a field changes meaning or goes away; new fields don't bump it.</summary>
     private const int Format = 1;
 
-    public static string FullPath => Path.Combine(Program.LogDirectory, FileName);
+    public static string FullPath => Path.Combine(Log.Folder, FileName);
     public const string DisplayPath = @"%LOCALAPPDATA%\ControllerHP\" + FileName;
 
     private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
@@ -68,7 +68,7 @@ internal static class StatusFile
         {
             app = "ControllerHP",
             format = Format,
-            version = Application.ProductVersion.Split('+')[0],
+            version = AppInfo.Version,
             running,
             // Lets a reader tell a running ControllerHP from one that crashed with running still true.
             pid = Environment.ProcessId,
@@ -78,7 +78,7 @@ internal static class StatusFile
 
         try
         {
-            Directory.CreateDirectory(Program.LogDirectory);
+            Directory.CreateDirectory(Log.Folder);
             string temp = FullPath + ".tmp";
             File.WriteAllText(temp, json);
             File.Move(temp, FullPath, overwrite: true);
@@ -88,7 +88,7 @@ internal static class StatusFile
         {
             // Most likely a reader has it open without sharing; the next check tries again.
             if (!_failureLogged)
-                Program.Log($"Couldn't write {FileName}: {e.Message}");
+                Log.Write($"Couldn't write {FileName}: {e.Message}");
             _failureLogged = true;
         }
     }
@@ -102,7 +102,7 @@ internal static class StatusFile
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            Program.Log($"Couldn't delete {FileName}: {e.Message}");
+            Log.Write($"Couldn't delete {FileName}: {e.Message}");
         }
     }
 }

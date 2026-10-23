@@ -2,10 +2,12 @@
 
 [← Developer docs](README.md)
 
-ControllerHP is a single WinForms app with no window of its own: it lives in the notification area. The code is split in two:
+ControllerHP is a tray app with no window of its own: it lives in the notification area. The code is in two projects:
 
-- `src/ControllerHP/Battery`: finding devices and reading their batteries.
-- `src/ControllerHP/Tray`: everything you see, plus settings and battery history.
+- `src/ControllerHP.Core`: everything that isn't user interface, with no UI framework.
+  - `Battery/`: finding devices and reading their batteries, including each maker's protocol.
+  - Battery history and stats, settings, the status file, warning sounds, fullscreen detection, logs (`Log.cs`) and the diagnostics report.
+- `src/ControllerHP`: the WinForms app: everything you see (`Tray/`) and the entry point (`Program.cs`).
 
 ## From device to tray
 

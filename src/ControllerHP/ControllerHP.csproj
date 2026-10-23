@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <!-- Plain Windows, with no Windows Runtime projection: the few Windows Runtime and device APIs used are
-         called directly (see Battery/GamingInput.cs, DeviceQuery.cs, DeviceNotices.cs). -->
+         called directly (see ControllerHP.Core/Battery: GamingInput.cs, DeviceQuery.cs, DeviceNotices.cs). -->
     <TargetFramework>net10.0-windows</TargetFramework>
     <!-- The framework-dependent build runs on .NET 10, or on a later major version if that's all a PC has. -->
     <RollForward>Major</RollForward>
@@ -24,6 +24,10 @@
     <!-- Shown for the exe in Explorer, Task Manager and Startup apps; the tray icon is drawn at runtime. -->
     <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ControllerHP.Core\ControllerHP.Core.csproj" />
+  </ItemGroup>
 
   <ItemGroup>
     <!-- Also drawn in the tray when no controllers are connected. -->

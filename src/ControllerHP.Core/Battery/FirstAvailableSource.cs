@@ -37,7 +37,7 @@ public sealed class FirstAvailableSource(string name, params IBatterySource[] so
             }
             catch (Exception ex)
             {
-                Program.LogOnce($"{source.Name} failed: {ex.GetType().Name}: {ex.Message}");
+                Log.Once($"{source.Name} failed: {ex.GetType().Name}: {ex.Message}");
             }
         }
         return [];

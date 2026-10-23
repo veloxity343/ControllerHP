@@ -36,7 +36,7 @@ The core logic is portable already: the data model (`ControllerBattery`), batter
 
 So a port would go:
 
-1. **Split the project** (medium). Move the portable core into a `net10.0` class library: the model, history, stats, the warning logic, and the PlayStation report parsing, which is pure code. Keep the Windows sources and interface in the existing app. This step is useful on its own, because it makes the core testable (see [automated tests](#quality-and-reach)).
+1. **Split the project** (partly done). Everything that isn't interface is already in `ControllerHP.Core`, a library with no UI framework. It still targets Windows, as the sources call Windows' device APIs; the next step is to move the Windows sources behind a platform folder, so the rest (model, history, stats, the makers' protocols, the PlayStation report parsing) builds for any platform and can be tested (see [automated tests](#quality-and-reach)).
 2. **Add a platform's battery sources** (medium), behind the existing `IBatterySource` interface.
 3. **Add a platform's interface** (large): a tray icon, pop-ups and settings. A cross-platform UI toolkit such as Avalonia could share one interface between platforms. Native toolkits fit each desktop better.
 

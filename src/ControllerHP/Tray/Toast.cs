@@ -9,7 +9,6 @@ namespace ControllerHP.Tray;
 /// <param name="Accent">Colour of the thin bar on the left edge.</param>
 internal sealed record ToastContent(string Title, string Message, ControllerBattery? Battery, Color Accent);
 
-internal enum ToastCorner { TopRight, TopLeft, BottomRight, BottomLeft }
 
 /// <summary>Stacks toasts in a corner of the primary screen, newest nearest the corner.</summary>
 internal sealed class ToastManager : IDisposable

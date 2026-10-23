@@ -388,7 +388,7 @@ public sealed class VendorHidSource : IBatterySource, IDisposable
         }
         catch (Exception ex)
         {
-            Program.LogOnce($"{protocol.Name} {device.Group} failed: {ex.GetType().Name}: {ex.Message}");
+            Log.Once($"{protocol.Name} {device.Group} failed: {ex.GetType().Name}: {ex.Message}");
         }
 
         lock (_devices)
