@@ -1,7 +1,6 @@
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Microsoft.Win32.SafeHandles;
-using Windows.Devices.Enumeration;
 
 namespace ControllerHP.Battery.Vendor;
 
@@ -47,16 +46,7 @@ internal sealed partial class HidCollection(string path, ushort vendor, ushort p
     /// The product name the device gives now. Read afresh each time: some receivers change it with what's
     /// linked to them.
     /// </summary>
-    public string? ProductName()
-    {
-        using var probe = Hid.Open(Path, 0);
-        if (probe.IsInvalid)
-            return null;
-        var buffer = new byte[256];
-        return Hid.HidD_GetProductString(probe, buffer, buffer.Length)
-            ? System.Text.Encoding.Unicode.GetString(buffer).TrimEnd('\0')
-            : null;
-    }
+    public string? ProductName() => Hid.ProductName(Path);
 
     /// <summary>Input, output and feature report lengths, each with its report id byte; 0 if unknown.</summary>
     public int InputLength => Caps?.InputReportByteLength ?? 0;
@@ -270,31 +260,18 @@ public sealed class VendorHidSource : IBatterySource, IDisposable
     /// <summary>A device with nothing to show is asked a few times at the full rate, then every so many polls.</summary>
     private const int TriesAtFullRate = 3, SilentPollEvery = 5;
 
-    private const string VendorIdKey = "System.DeviceInterface.Hid.VendorId";
-    private const string ProductIdKey = "System.DeviceInterface.Hid.ProductId";
-    private const string UsagePageKey = "System.DeviceInterface.Hid.UsagePage";
-    private const string UsageIdKey = "System.DeviceInterface.Hid.UsageId";
-    private const string HidInterfaceClass = "{4D1E55B2-F16F-11CF-88CB-001111000030}";
-
     private readonly IReadOnlyList<VendorProtocol> _protocols;
     private readonly Dictionary<string, VendorDevice> _devices = [];
-    private readonly DeviceWatcher _watcher;
+    private readonly IDisposable _watch;
     private readonly CancellationTokenSource _stop = new();
-    private readonly TaskCompletionSource _listed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    /// <summary>Done once the collections already plugged in have been seen.</summary>
+    private readonly Task _listed;
 
     internal VendorHidSource(IReadOnlyList<VendorProtocol> protocols)
     {
         _protocols = protocols;
-        var vendors = protocols.SelectMany(p => p.Vendors).Distinct().Select(v => $"{VendorIdKey}:={v}");
-        _watcher = DeviceInformation.CreateWatcher(
-            $"System.Devices.InterfaceClassGuid:=\"{HidInterfaceClass}\" AND ({string.Join(" OR ", vendors)})",
-            [VendorIdKey, ProductIdKey, UsagePageKey, UsageIdKey], DeviceInformationKind.DeviceInterface);
-        _watcher.Added += (_, device) => OnAdded(device);
-        _watcher.Removed += (_, update) => OnRemoved(update.Id);
-        // Unused, but without an Updated handler the watcher doesn't raise the other events reliably.
-        _watcher.Updated += (_, _) => { };
-        _watcher.EnumerationCompleted += (_, _) => _listed.TrySetResult();
-        _watcher.Start();
+        var vendors = protocols.SelectMany(p => p.Vendors).ToHashSet();
+        _watch = HidMonitor.Watch(info => vendors.Contains(info.Vendor), OnAdded, OnRemoved, out _listed);
         _ = Task.Run(() => PollLoopAsync(_stop.Token));
     }
 
@@ -307,7 +284,7 @@ public sealed class VendorHidSource : IBatterySource, IDisposable
     /// <summary>Asks every device now and waits, for diagnostics; lists each device's collections.</summary>
     public IReadOnlyList<string> PollNow(TimeSpan timeout)
     {
-        _listed.Task.Wait(timeout);
+        _listed.Wait(timeout);
         VendorDevice[] devices;
         lock (_devices)
             devices = [.. _devices.Values];
@@ -318,25 +295,19 @@ public sealed class VendorHidSource : IBatterySource, IDisposable
             .ToList();
     }
 
-    private void OnAdded(DeviceInformation info)
+    private void OnAdded(HidInfo info)
     {
-        if (AsUShort(info.Properties.GetValueOrDefault(VendorIdKey)) is not ushort vendor ||
-            AsUShort(info.Properties.GetValueOrDefault(ProductIdKey)) is not ushort product)
-        {
-            return;
-        }
         foreach (var protocol in _protocols)
         {
-            if (protocol.Identify(vendor, product) is not { } model)
+            if (protocol.Identify(info.Vendor, info.Product) is not { } model)
                 continue;
-            var collection = new HidCollection(info.Id, vendor, product,
-                AsUShort(info.Properties.GetValueOrDefault(UsagePageKey)) ?? 0, AsUShort(info.Properties.GetValueOrDefault(UsageIdKey)) ?? 0);
+            var collection = new HidCollection(info.Path, info.Vendor, info.Product, info.UsagePage, info.Usage);
             string key = $"{protocol.Name}|{model.Group}";
             lock (_devices)
             {
                 if (!_devices.TryGetValue(key, out var device))
                     _devices[key] = device = new VendorDevice(protocol, model.Group);
-                device.Collections[info.Id] = (collection, model);
+                device.Collections[info.Path] = (collection, model);
                 // A cable appearing (charging) or a receiver plugged in is worth asking about straight away.
                 device.Skipped = SilentPollEvery;
             }
@@ -362,13 +333,11 @@ public sealed class VendorHidSource : IBatterySource, IDisposable
             ControllersChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    private static ushort? AsUShort(object? value) => value is IConvertible number ? number.ToUInt16(null) : null;
-
     private async Task PollLoopAsync(CancellationToken token)
     {
         try
         {
-            await _listed.Task.WaitAsync(TimeSpan.FromSeconds(10), token);
+            await _listed.WaitAsync(TimeSpan.FromSeconds(10), token);
         }
         catch (TimeoutException) { }
         catch (OperationCanceledException)
@@ -456,7 +425,6 @@ public sealed class VendorHidSource : IBatterySource, IDisposable
     public void Dispose()
     {
         _stop.Cancel();
-        if (_watcher.Status is DeviceWatcherStatus.Started or DeviceWatcherStatus.EnumerationCompleted)
-            _watcher.Stop();
+        _watch.Dispose();
     }
 }

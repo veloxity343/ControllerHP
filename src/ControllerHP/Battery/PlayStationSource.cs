@@ -1,6 +1,4 @@
 using System.Runtime.InteropServices;
-using Windows.Devices.Enumeration;
-using Windows.Devices.HumanInterfaceDevice;
 
 namespace ControllerHP.Battery;
 
@@ -42,9 +40,6 @@ public sealed class PlayStationSource : IBatterySource, IDisposable
     /// <summary>Calibration feature report; reading it over Bluetooth turns on the full input report.</summary>
     private const byte CalibrationReportId = 0x05;
 
-    private const string VendorIdKey = "System.DeviceInterface.Hid.VendorId";
-    private const string ProductIdKey = "System.DeviceInterface.Hid.ProductId";
-
     private sealed record Status(int? Percent, ChargeState Power);
 
     private sealed class Controller(string id, ushort productId)
@@ -65,17 +60,13 @@ public sealed class PlayStationSource : IBatterySource, IDisposable
     public event EventHandler? ControllersChanged;
 
     private readonly Dictionary<string, Controller> _controllers = [];
-    private readonly DeviceWatcher _watcher;
+    private readonly IDisposable _watch;
 
     public PlayStationSource()
     {
         // Game controllers are usage page 0x01 (Generic Desktop), usage 0x05 (Game Pad); keep Sony's.
-        _watcher = DeviceInformation.CreateWatcher(HidDevice.GetDeviceSelector(0x01, 0x05), [VendorIdKey, ProductIdKey]);
-        _watcher.Added += (_, device) => OnAdded(device);
-        _watcher.Removed += (_, update) => OnRemoved(update.Id);
-        // Unused, but without an Updated handler the watcher doesn't raise the other events reliably.
-        _watcher.Updated += (_, _) => { };
-        _watcher.Start();
+        _watch = HidMonitor.Watch(c => c.Vendor == SonyVendorId && c.UsagePage == 0x01 && c.Usage == 0x05 && Models.ContainsKey(c.Product),
+            OnAdded, OnRemoved, out _);
     }
 
     public IReadOnlyList<ControllerBattery> Read()
@@ -92,26 +83,17 @@ public sealed class PlayStationSource : IBatterySource, IDisposable
             $"{SonyVendorId:X4}:{controller.ProductId:X4}", controller.Connection);
     }
 
-    private void OnAdded(DeviceInformation device)
+    private void OnAdded(HidInfo device)
     {
-        if (AsUShort(device.Properties.GetValueOrDefault(VendorIdKey)) != SonyVendorId ||
-            AsUShort(device.Properties.GetValueOrDefault(ProductIdKey)) is not ushort productId ||
-            !Models.ContainsKey(productId))
-        {
-            return;
-        }
-
-        var controller = new Controller(device.Id, productId);
+        var controller = new Controller(device.Path, device.Product);
         lock (_controllers)
         {
-            if (!_controllers.TryAdd(device.Id, controller))
+            if (!_controllers.TryAdd(device.Path, controller))
                 return;
         }
         _ = Task.Run(() => WatchAsync(controller));
         ControllersChanged?.Invoke(this, EventArgs.Empty);
     }
-
-    private static ushort? AsUShort(object? value) => value is IConvertible number ? number.ToUInt16(null) : null;
 
     private void OnRemoved(string id)
     {
@@ -242,8 +224,7 @@ public sealed class PlayStationSource : IBatterySource, IDisposable
 
     public void Dispose()
     {
-        if (_watcher.Status is DeviceWatcherStatus.Started or DeviceWatcherStatus.EnumerationCompleted)
-            _watcher.Stop();
+        _watch.Dispose();
         lock (_controllers)
         {
             foreach (var controller in _controllers.Values)

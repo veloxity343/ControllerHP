@@ -1,7 +1,5 @@
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
-using Windows.Devices.Enumeration;
-using Windows.Devices.HumanInterfaceDevice;
 
 namespace ControllerHP.Battery;
 
@@ -81,8 +79,8 @@ internal static partial class HidProbe
     public static void Dump(ushort vendorId, ushort productId, TimeSpan duration)
     {
         // Game controllers are usage page 0x01 (Generic Desktop), usage 0x05 (Game Pad).
-        string selector = HidDevice.GetDeviceSelector(0x01, 0x05, vendorId, productId);
-        var devices = DeviceInformation.FindAllAsync(selector).AsTask().GetAwaiter().GetResult();
+        var devices = HidMonitor.List()
+            .Where(c => c.Vendor == vendorId && c.Product == productId && c.UsagePage == 0x01 && c.Usage == 0x05).ToList();
         if (devices.Count == 0)
         {
             Console.WriteLine($"  no HID gamepad {vendorId:X4}:{productId:X4}");
@@ -91,8 +89,8 @@ internal static partial class HidProbe
 
         foreach (var device in devices)
         {
-            Console.WriteLine($"  {device.Name}: {device.Id}");
-            using var handle = Hid.Open(device.Id, Hid.GenericRead);
+            Console.WriteLine($"  {Hid.ProductName(device.Path)}: {device.Path}");
+            using var handle = Hid.Open(device.Path, Hid.GenericRead);
             if (handle.IsInvalid)
             {
                 Console.WriteLine($"    open failed: error {Marshal.GetLastWin32Error()}");

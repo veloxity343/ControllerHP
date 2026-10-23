@@ -1,6 +1,4 @@
 using System.Text;
-using Windows.Devices.Enumeration;
-using Windows.Devices.HumanInterfaceDevice;
 
 namespace ControllerHP.Battery;
 
@@ -74,9 +72,6 @@ public sealed class LogitechSource : IBatterySource, IDisposable
         0xC54D,
     ];
 
-    private const string VendorIdKey = "System.DeviceInterface.Hid.VendorId";
-    private const string ProductIdKey = "System.DeviceInterface.Hid.ProductId";
-
     /// <summary>One receiver, or one device on its cable: the HID interface its devices are reached through.</summary>
     private sealed class Link(string path, ushort productId)
     {
@@ -101,38 +96,23 @@ public sealed class LogitechSource : IBatterySource, IDisposable
     }
 
     private readonly Dictionary<string, Link> _links = [];
-    private readonly List<DeviceWatcher> _watchers = [];
-    /// <summary>Set once the watchers have listed the receivers already plugged in.</summary>
-    private readonly TaskCompletionSource _listed = new(TaskCreationOptions.RunContinuationsAsynchronously);
-    private int _unlisted;
+    private readonly IDisposable _watch;
+    /// <summary>Done once the receivers already plugged in have been seen.</summary>
+    private readonly Task _listed;
     private int _softwareId;
 
     public LogitechSource()
     {
         // HID++ long reports live on a vendor collection, usage page FF00, usage 0002; headsets have theirs
         // on FF43:0202, or 000C:0001 on the G535.
-        (ushort Page, ushort Usage, Func<ushort, bool> Wanted)[] collections =
-        [
-            (0xFF00, 0x0002, _ => true),
-            (0xFF43, 0x0202, Headsets.ContainsKey),
-            (0x000C, 0x0001, product => product == 0x0AC4),
-        ];
-        _unlisted = collections.Length;
-        foreach (var (page, usage, wanted) in collections)
+        static bool Wanted(HidInfo c) => c.Vendor == LogitechVendorId && (c.UsagePage, c.Usage) switch
         {
-            var watcher = DeviceInformation.CreateWatcher(HidDevice.GetDeviceSelector(page, usage), [VendorIdKey, ProductIdKey]);
-            watcher.Added += (_, device) => OnAdded(device, wanted);
-            watcher.Removed += (_, update) => OnRemoved(update.Id);
-            // Unused, but without an Updated handler the watcher doesn't raise the other events reliably.
-            watcher.Updated += (_, _) => { };
-            watcher.EnumerationCompleted += (_, _) =>
-            {
-                if (Interlocked.Decrement(ref _unlisted) == 0)
-                    _listed.TrySetResult();
-            };
-            watcher.Start();
-            _watchers.Add(watcher);
-        }
+            (0xFF00, 0x0002) => true,
+            (0xFF43, 0x0202) => Headsets.ContainsKey(c.Product),
+            (0x000C, 0x0001) => c.Product == 0x0AC4,
+            _ => false,
+        };
+        _watch = HidMonitor.Watch(Wanted, OnAdded, OnRemoved, out _listed);
     }
 
     /// <summary>
@@ -141,7 +121,7 @@ public sealed class LogitechSource : IBatterySource, IDisposable
     /// </summary>
     public IReadOnlyList<string> PollNow(TimeSpan timeout)
     {
-        _listed.Task.Wait(timeout);
+        _listed.Wait(timeout);
         Link[] links;
         lock (_links)
             links = [.. _links.Values];
@@ -167,17 +147,12 @@ public sealed class LogitechSource : IBatterySource, IDisposable
         }
     }
 
-    private void OnAdded(DeviceInformation device, Func<ushort, bool> wanted)
+    private void OnAdded(HidInfo device)
     {
-        if (AsUShort(device.Properties.GetValueOrDefault(VendorIdKey)) != LogitechVendorId ||
-            AsUShort(device.Properties.GetValueOrDefault(ProductIdKey)) is not ushort productId || !wanted(productId))
-        {
-            return;
-        }
-        var link = new Link(device.Id, productId);
+        var link = new Link(device.Path, device.Product);
         lock (_links)
         {
-            if (!_links.TryAdd(device.Id, link))
+            if (!_links.TryAdd(device.Path, link))
                 return;
         }
         _ = Task.Run(() => WatchAsync(link));
@@ -194,8 +169,6 @@ public sealed class LogitechSource : IBatterySource, IDisposable
         link.Stop.Cancel();
         ControllersChanged?.Invoke(this, EventArgs.Empty);
     }
-
-    private static ushort? AsUShort(object? value) => value is IConvertible number ? number.ToUInt16(null) : null;
 
     private async Task WatchAsync(Link link)
     {
@@ -483,11 +456,7 @@ public sealed class LogitechSource : IBatterySource, IDisposable
 
     public void Dispose()
     {
-        foreach (var watcher in _watchers)
-        {
-            if (watcher.Status is DeviceWatcherStatus.Started or DeviceWatcherStatus.EnumerationCompleted)
-                watcher.Stop();
-        }
+        _watch.Dispose();
         lock (_links)
         {
             foreach (var link in _links.Values)

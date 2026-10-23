@@ -21,6 +21,17 @@ internal static partial class Hid
     public static SafeFileHandle Open(string path, uint access) =>
         CreateFile(path, access, FileShareReadWrite, IntPtr.Zero, OpenExisting, FileFlagOverlapped, IntPtr.Zero);
 
+    [StructLayout(LayoutKind.Sequential)]
+    public struct HiddAttributes
+    {
+        public int Size;
+        public ushort VendorID, ProductID, VersionNumber;
+    }
+
+    [LibraryImport("hid.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool HidD_GetAttributes(SafeFileHandle device, ref HiddAttributes attributes);
+
     [LibraryImport("hid.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static partial bool HidD_GetFeature(SafeFileHandle device, byte[] buffer, int length);
@@ -52,6 +63,18 @@ internal static partial class Hid
         public ushort NumberLinkCollectionNodes, NumberInputButtonCaps, NumberInputValueCaps, NumberInputDataIndices,
             NumberOutputButtonCaps, NumberOutputValueCaps, NumberOutputDataIndices,
             NumberFeatureButtonCaps, NumberFeatureValueCaps, NumberFeatureDataIndices;
+    }
+
+    /// <summary>The product name the collection gives now, opened with no access; null if it gives none.</summary>
+    public static string? ProductName(string path)
+    {
+        using var handle = Open(path, 0);
+        if (handle.IsInvalid)
+            return null;
+        var buffer = new byte[256];
+        return HidD_GetProductString(handle, buffer, buffer.Length)
+            ? System.Text.Encoding.Unicode.GetString(buffer).TrimEnd('\0')
+            : null;
     }
 
     public static HidpCaps? GetCaps(SafeFileHandle device)
