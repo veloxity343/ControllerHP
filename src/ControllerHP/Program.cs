@@ -16,7 +16,9 @@ internal static partial class Program
         var bluetooth = new BluetoothSource();
         // Logitech mice, keyboards and headsets, on their USB receivers or cables.
         var logitech = new LogitechSource();
-        IBatterySource[] sources = [xbox, playStation, bluetooth, logitech];
+        // Mice from makers sharing one firmware family: WLmouse, LAMZU and G-Wolves.
+        var mice = new MouseReceiverSource();
+        IBatterySource[] sources = [xbox, playStation, bluetooth, logitech, mice];
 
         if (args.Contains("--list"))
             return ListControllers(sources);

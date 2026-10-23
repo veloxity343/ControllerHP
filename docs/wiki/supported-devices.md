@@ -5,6 +5,7 @@
 - [What each controller reports](#what-each-controller-reports)
 - [Bluetooth mice, keyboards and headsets](#bluetooth-mice-keyboards-and-headsets)
 - [Logitech mice, keyboards and headsets](#logitech-mice-keyboards-and-headsets)
+- [WLmouse, LAMZU and G-Wolves mice](#wlmouse-lamzu-and-g-wolves-mice)
 - [Known limitations](#known-limitations)
 - [How batteries are read](#how-batteries-are-read)
 - [What isn't supported yet](#what-isnt-supported-yet)
@@ -62,6 +63,18 @@ Logitech devices on a **Unifying, Bolt or Lightspeed receiver**, or plugged in b
 
 The panel shows them as connected by **USB receiver**. A device that's asleep keeps its last reading rather than coming and going, since it doesn't answer until it wakes; one that's switched off or out of range shows as disconnected.
 
+## WLmouse, LAMZU and G-Wolves mice
+
+These makers' wireless mice run the same family of firmware, so ControllerHP reads them all the same way, on their receiver or their cable: one battery request every 30 seconds, the one the makers' own web drivers send. Nothing else is ever sent to the mouse.
+
+| Mice | Connection | Battery | Charging shown | Tested on hardware |
+|---|---|---|---|---|
+| WLmouse Beast X, Beast X Max, Beast X Mini Pro | Their receivers | Exact % | Yes, on the cable | Untested |
+| LAMZU Maya X | Its 8K receiver, or its cable | Exact % | Yes, on the cable | Untested |
+| G-Wolves mice on the shared 8K receiver, and models with their own receiver (HTX, HSK Pro, Fenrir, HTS Plus and others) | Receiver or cable | Exact % | Yes, on the cable | Untested |
+
+A mouse on its receiver and on its cable is one device. The receivers can't tell a sleeping mouse from one that's switched off, so a mouse that stops answering keeps its last level for 30 minutes before it's dropped. G-Wolves' shared receiver doesn't say which mouse is paired to it, so a mouse on it shows as *G-Wolves mouse*: rename it on the Devices page.
+
 **Other makers' receivers** (dongles) aren't supported yet. Their battery isn't something Windows records, and each maker reads it differently, usually without publishing how.
 
 ## Known limitations
@@ -86,6 +99,8 @@ You don't need this to use ControllerHP, but it explains the differences above.
 | XInput | USB, Xbox Wireless Adapter | A fallback: four levels, no charging state. |
 
 **PlayStation controllers** are read from the battery status in their input reports, sampled every 5 seconds. They show alongside Xbox controllers.
+
+**WLmouse, LAMZU and G-Wolves mice** are sent one read request as a 64-byte feature report on the receiver's vendor collection, and only on a collection whose feature report is exactly that size, as the makers' own web drivers do. The answer carries the percentage and a charging flag.
 
 **Logitech devices** are read through Logitech's HID++ protocol, on the receiver's vendor interface: the device's battery feature (unified battery, battery status, or battery voltage, converted to a percentage along a typical lithium curve), its name and type, and its unit id, which keeps its history together whichever receiver or port it's on.
 
