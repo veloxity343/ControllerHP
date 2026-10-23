@@ -1,11 +1,12 @@
-# Supported controllers
+# Supported devices
 
 [← Wiki home](README.md)
 
 - [What each controller reports](#what-each-controller-reports)
+- [Bluetooth mice, keyboards and headsets](#bluetooth-mice-keyboards-and-headsets)
 - [Known limitations](#known-limitations)
 - [How batteries are read](#how-batteries-are-read)
-- [Controllers that aren't supported yet](#controllers-that-arent-supported-yet)
+- [What isn't supported yet](#what-isnt-supported-yet)
 
 ## What each controller reports
 
@@ -30,12 +31,33 @@ The last column says whether each one has been tried on real hardware:
 
 The panel and Settings show each controller's connection: USB, Bluetooth or Xbox Wireless Adapter.
 
+## Bluetooth mice, keyboards and headsets
+
+Any Bluetooth device works **if Windows shows its battery**: open Settings → Bluetooth & devices, and look for a battery level beside it. ControllerHP reads that same level, so a device Windows shows a battery for appears in ControllerHP too, and one it doesn't, doesn't.
+
+| Device | Connection | Battery | Charging shown | Tested on hardware |
+|---|---|---|---|---|
+| Keyboards | Bluetooth Low Energy | Exact % | Worked out from the % rising | **Tested** |
+| Mice | Bluetooth Low Energy | Exact % | As above | Likely |
+| Headsets, earbuds | Bluetooth (classic) | Exact %, or steps on some models | As above | Untested |
+| Keyboards, mice | Bluetooth (classic) | Exact % | As above | Untested |
+
+Each device is drawn as what it is (a keyboard, mouse, headset or controller), and **Show** in Settings turns whole kinds on or off. ControllerHP works out the kind from:
+1. what the device says it is over Bluetooth;
+2. failing that, the parts Windows installed for it: a keyboard part makes it a keyboard, even when it also has a mouse part for media keys or a touchpad;
+3. failing that, whether it plays audio, which makes it a headset.
+
+Anything else shows as **Other**, with the Bluetooth sign.
+
+Devices that connect through a **USB receiver** (a dongle), as many wireless mice and gaming headsets do, aren't supported yet: their battery isn't something Windows records, and each maker reads it differently.
+
 ## Known limitations
 
 - **PlayStation controllers over Bluetooth:** they only report their battery after being switched to their full input report. ControllerHP does this when one connects, as Steam does. While it's in that mode, games that read it through the older DirectInput interface (some emulators and older games) don't see its input. Steam Input, and games with built-in DualSense or DualShock 4 support, are unaffected. See [a game doesn't see my PlayStation controller](troubleshooting.md#a-game-doesnt-see-my-playstation-controller).
 - **PlayStation controllers held by another tool:** if a tool like DS4Windows with HidHide takes exclusive control of a controller, ControllerHP can't read it, and it shows as *battery unknown*.
 - **Xbox controllers over Bluetooth:** Windows gives no charging signal, so ControllerHP works it out. The bolt appears at the first rise in percentage, and clears at 100% or after 5 minutes without a rise.
 - **Two identical Xbox controllers**, one on Bluetooth and one not, may have their readings swapped.
+- **Bluetooth mice, keyboards and headsets:** Windows doesn't say whether they're charging, so ControllerHP works it out from the level rising, as for Xbox controllers. Windows also only updates their level when the device reports it, which some do rarely.
 - **Exclusive fullscreen:** pop-ups can't appear over games running in exclusive fullscreen, so they're held and shown once the game closes. Borderless and windowed modes are fine.
 
 ## How batteries are read
@@ -52,14 +74,21 @@ You don't need this to use ControllerHP, but it explains the differences above.
 
 **PlayStation controllers** are read from the battery status in their input reports, sampled every 5 seconds. They show alongside Xbox controllers.
 
+**Other Bluetooth devices** are read from the battery level Windows records for each paired device. Whether one is connected comes from Windows' Bluetooth stack, the same as Settings shows, rather than the flag Windows records beside the level, which can read as disconnected for a headset playing audio.
+
 Connecting and disconnecting are picked up as they happen. A check every 30 seconds catches battery changes on connections that don't announce them.
 
-## Controllers that aren't supported yet
+## What isn't supported yet
 
-Nintendo Switch Pro controllers, Joy-Cons and third-party controllers aren't supported yet. ControllerHP is also Windows-only for now. Both are listed in [Help wanted](../dev/help-wanted.md), with where a contributor could start.
+- **Devices on a USB receiver** (dongle): planned, one maker at a time, starting with the most common.
+- **Nintendo Switch Pro controllers, Joy-Cons and third-party controllers.**
+- **Bluetooth devices Windows shows no battery for.**
+- **Other systems:** ControllerHP is Windows-only for now.
 
-If you'd like a controller added, [open a feature request](https://github.com/veloxity343/ControllerHP/issues/new/choose). If you can help test, say so: support for a new controller needs someone with the hardware.
+Several of these are listed in [Help wanted](../dev/help-wanted.md), with where a contributor could start.
+
+If you'd like a device added, [open a feature request](https://github.com/veloxity343/ControllerHP/issues/new/choose). If you can help test, say so: support for a new device needs someone with the hardware.
 
 ---
 
-[← Controllers](controllers.md) · Next: [Troubleshooting →](troubleshooting.md)
+[← Devices](devices.md) · Next: [Troubleshooting →](troubleshooting.md)

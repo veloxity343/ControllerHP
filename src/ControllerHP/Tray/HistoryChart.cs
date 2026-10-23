@@ -22,7 +22,7 @@ internal sealed class HistoryChart : ThemedControl
         [.. new[] { "#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767" }.Select(ColorTranslator.FromHtml)];
 
     public const string NoHistoryMessage =
-        "No battery history yet. Readings are recorded from now on, whenever a controller's battery changes.";
+        "No battery history yet. Readings are recorded from now on, whenever a device's battery changes.";
 
     /// <summary>Shown in place of the chart when there's nothing to draw.</summary>
     public string EmptyMessage { get; set; } = NoHistoryMessage;
@@ -37,7 +37,7 @@ internal sealed class HistoryChart : ThemedControl
     /// <summary>A legend entry was clicked: the controller's id, to leave out of the chart or bring back.</summary>
     public event EventHandler<string>? LegendClicked;
 
-    public const string AllLeftOutMessage = "Every controller is left out of the chart. Click a name above to show it again.";
+    public const string AllLeftOutMessage = "Every device is left out of the chart. Click a name above to show it again.";
     /// <summary>Every reading time in range plus now, sorted, so the crosshair can snap without re-sorting per move.</summary>
     private DateTime[] _snapTimes = [];
     private DateTime _start, _end;

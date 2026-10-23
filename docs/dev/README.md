@@ -4,10 +4,10 @@
 
 For working on ControllerHP itself. To contribute, start with [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
-1. **[Architecture](architecture.md):** how the code is laid out, how readings flow from a controller to the tray, and the design decisions behind it.
-2. **[Diagnostics](diagnostics.md):** the command-line flags for checking controllers and rendering the UI without hardware.
+1. **[Architecture](architecture.md):** how the code is laid out, how readings flow from a device to the tray, and the design decisions behind it.
+2. **[Diagnostics](diagnostics.md):** the command-line flags for checking devices and rendering the UI without hardware.
 3. **[Adding a controller](adding-a-controller.md):** how to support a new controller family.
-4. **[Help wanted](help-wanted.md):** ideas open to contributors, including more controllers, Linux and macOS, features and tests, with where to start on each.
+4. **[Help wanted](help-wanted.md):** ideas open to contributors, including more controllers, devices on USB receivers, Linux and macOS, features and tests, with where to start on each.
 
 ## Building
 

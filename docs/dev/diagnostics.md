@@ -6,11 +6,11 @@
 
 | Flag | What it does |
 |---|---|
-| `--list` | Prints what every battery source reports for each connected controller, raw values included. The same as the report's battery section, but unmasked: for working at a terminal, or when the tray app won't start. |
+| `--list` | Prints what every battery source reports for each connected device, raw values included. The same as the report's battery section, but unmasked: for working at a terminal, or when the tray app won't start. |
 | `--hid-probe` | Dumps the raw HID reports of connected Xbox and PlayStation controllers, and Xbox Bluetooth GATT services. For working out a new controller's report format. |
-| `--preview <file.png>` | Renders every tray icon state, the pop-ups and the controller panel, in both modes, to an image. |
+| `--preview <file.png>` | Renders every tray icon state, the pop-ups and the device panel, in both modes, to an image. |
 | `--preview-icons <file.png>` | Renders every device in every battery state, on a dark and a light taskbar: each icon large, with its real 16 px tray size beneath. |
-| `--preview-settings <file.png>` | Renders each page of the settings window, in dark and light mode, to an image. Uses sample battery history, so it works without controllers. |
+| `--preview-settings <file.png>` | Renders each page of the settings window, in dark and light mode, to an image. Uses sample battery history, so it works without devices. |
 | `--demo` | Shows the sample pop-ups on screen, one after another. |
 
 ## The diagnostics report
@@ -31,14 +31,14 @@ In `%LOCALAPPDATA%\ControllerHP`:
 |---|---|
 | `history.log` | Every reading change, with a timestamp. The quickest way to see when something went wrong. Kept 30 days. |
 | `error.log` | Unhandled errors, and each distinct source failure, logged once. Kept to the newest 1 MB. |
-| `battery.csv` | One row per change per controller: time, id, name, percent, charge state. Kept 90 days. |
+| `battery.csv` | One row per change per device: time, id, name, percent, charge state. Kept 90 days. |
 | `battery.alive` | The last time the app was known to be running. |
 | `status.json` | Battery levels for other apps, while **Share battery levels** is on. See [Sharing battery levels](../wiki/using-controllerhp.md#sharing-battery-levels-with-other-apps). |
 | `diagnostics.txt` | The last report from **Diagnostics**, overwritten each time. |
 
 ## Checking a change
 
-There are no automated tests; changes are checked against real controllers. In your pull request, say which controllers and connections you tried. If you changed how something looks, attach a `--preview` or `--preview-settings` image.
+There are no automated tests; changes are checked against real devices. In your pull request, say which devices and connections you tried. If you changed how something looks, attach a `--preview` or `--preview-settings` image.
 
 ---
 

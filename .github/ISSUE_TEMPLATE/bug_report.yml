@@ -20,14 +20,17 @@ body:
     validations:
       required: true
   - type: dropdown
-    id: controller
+    id: device
     attributes:
-      label: Controller
+      label: Device
       options:
         - Xbox One / Series
         - DualSense
         - DualSense Edge
         - DualShock 4
+        - Bluetooth mouse
+        - Bluetooth keyboard
+        - Bluetooth headset or earbuds
         - Other (say which above)
     validations:
       required: true
@@ -58,5 +61,5 @@ body:
     id: diagnostics
     attributes:
       label: Diagnostics report
-      description: With the controller connected, right-click the tray icon, choose Diagnostics, and paste the report it opens. Bluetooth addresses in it are already partly masked.
+      description: With the device connected, right-click the tray icon, choose Diagnostics, and paste the report it opens. Bluetooth addresses in it are already partly masked.
       render: text

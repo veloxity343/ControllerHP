@@ -23,7 +23,7 @@ Each needs someone who owns the controller, both to work out its format and to t
 | **Joy-Con** (left and right) | Medium | Same protocol as the Pro Controller, but each half is its own device: decide whether a pair shows as one controller or two. |
 | **Xbox Elite Series 2 and Adaptive Controller** | Small | Probably work already through the Xbox sources, but untested. Confirm, and fix whatever doesn't. The Bluetooth match looks for "Xbox" in the device name. |
 | **8BitDo and other third-party pads** | Small to medium | Many pretend to be an Xbox or Switch controller, depending on their mode. Find out which modes already work and what each reports, and add notes to the wiki. |
-| **Any Bluetooth LE controller with a standard battery service** | Medium | `BluetoothLeBattery` already reads the standard Bluetooth battery level that Windows caches, but filters it to Xbox controllers. A careful general version could cover many gamepads at once, without picking up mice and headsets. |
+| **Devices on USB receivers (dongles)** | Medium per maker | Wireless mice, keyboards and headsets on their own receiver don't report battery to Windows; each maker has its own protocol over the receiver's HID interface (Logitech's HID++ for Unifying, Bolt and Lightspeed; Razer; SteelSeries; Corsair; and so on). Each needs someone with the hardware, and a source per maker. |
 | **Steam Controller / Steam Deck controls** | Medium | Not standard HID gamepads. Check whether any battery data is reachable without Steam. |
 
 ## Other operating systems
@@ -51,7 +51,6 @@ If you're interested, open an issue to discuss it first: a port shapes the proje
 
 | Idea | Size | Notes |
 |---|---|---|
-| **Time left in the panel and tooltip** | Small | `BatteryStats` already predicts time to the low level. Show it in the controller panel (`Flyout.cs`) and the tray tooltip, for example "62% · about 3 h". |
 | **A "charge soon" warning** | Small | A pop-up when the predicted time to the low level drops below a set time (say 30 minutes), as well as at fixed percentages. |
 | **Find my controller** | Medium | Make a controller rumble, or flash its light bar, to tell identical ones apart. PlayStation controllers accept this through an output report. Xbox rumble through Windows.Gaming.Input may only work for the app in focus, so test that first. |
 | **Turn off PlayStation controllers over Bluetooth** | Medium | Disconnecting a PlayStation controller over Bluetooth turns it off, as DS4Windows does. This uses a long-standing but undocumented Windows call, so it needs careful handling and testing. |

@@ -4,7 +4,7 @@ using ControllerHP.Battery;
 namespace ControllerHP.Tray;
 
 /// <summary>
-/// status.json: every connected controller's battery, kept up to date for other apps (Rainmeter skins,
+/// status.json: every connected device's battery, kept up to date for other apps (Rainmeter skins,
 /// scripts and the like) when the "Share battery levels" setting is on. It's replaced in one step, so a
 /// reader never sees half a file.
 /// </summary>
@@ -25,7 +25,7 @@ internal static class StatusFile
     public static void Write(IReadOnlyList<ControllerBattery> readings, IReadOnlyDictionary<string, string> timeLeft,
         bool running = true)
     {
-        var controllers = readings.Select(r => new
+        var devices = readings.Select(r => new
         {
             id = r.Id,
             name = r.Name,
@@ -58,7 +58,7 @@ internal static class StatusFile
             timeLeft = timeLeft.GetValueOrDefault(r.Id),
         }).ToList();
 
-        string state = JsonSerializer.Serialize(new { running, controllers });
+        string state = JsonSerializer.Serialize(new { running, devices });
         // Rewritten if it's gone, say someone deleted it, even though nothing changed.
         if (state == _written && File.Exists(FullPath))
             return;
@@ -72,7 +72,7 @@ internal static class StatusFile
             // Lets a reader tell a running ControllerHP from one that crashed with running still true.
             pid = Environment.ProcessId,
             updated = DateTimeOffset.Now,
-            controllers,
+            devices,
         }, Indented);
 
         try

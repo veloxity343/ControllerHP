@@ -17,6 +17,6 @@ body:
     id: testing
     attributes:
       label: Hardware
-      description: For a new controller, support needs someone who has one to test with.
+      description: For a new device, support needs someone who has one to test with.
       options:
-        - label: I have the controller and can help test.
+        - label: I have the device and can help test.

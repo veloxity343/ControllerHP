@@ -317,7 +317,7 @@ internal sealed partial class Flyout : Form
         using var nameFont = new Font("Segoe UI Semibold", 13f * scale, GraphicsUnit.Pixel);
         using var detailFont = new Font("Segoe UI", 12f * scale, GraphicsUnit.Pixel);
 
-        TextRenderer.DrawText(g, "Controllers", headerFont,
+        TextRenderer.DrawText(g, "Devices", headerFont,
             new Rectangle(left, bounds.Y, right - left, S(HeaderHeight)), palette.Text, flags);
 
         var gear = GearBounds(bounds, scale);
@@ -335,7 +335,7 @@ internal sealed partial class Flyout : Form
         int y = bounds.Y + S(HeaderHeight);
         if (readings.Count == 0)
         {
-            TextRenderer.DrawText(g, "No controllers connected", detailFont,
+            TextRenderer.DrawText(g, "No devices connected", detailFont,
                 new Rectangle(left, y, right - left, S(RowHeight)), palette.SubtleText, flags);
             return;
         }

@@ -353,6 +353,96 @@ internal sealed class ToggleSwitch : ThemedControl
     }
 }
 
+/// <summary>
+/// Options side by side like <see cref="SegmentedControl"/>, but any number can be on: each one toggles on
+/// its own. Arrow keys move between them, Space or Enter toggles.
+/// </summary>
+internal sealed class ChipGroup : ThemedControl
+{
+    private readonly string[] _options;
+    private readonly bool[] _on;
+    private int _focused;
+
+    public event EventHandler? CheckedChanged;
+
+    public ChipGroup(string[] options, int logicalChipWidth)
+    {
+        _options = options;
+        _on = new bool[options.Length];
+        ChipWidth = logicalChipWidth;
+        Cursor = Cursors.Hand;
+        TabStop = true;
+        ResizeForDpi();
+    }
+
+    protected override Size? LogicalSize => new Size(ChipWidth * _options.Length, 32);
+
+    private int ChipWidth { get; }
+
+    public bool this[int index]
+    {
+        get => _on[index];
+        set
+        {
+            if (_on[index] == value)
+                return;
+            _on[index] = value;
+            Invalidate();
+            CheckedChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private int IndexAt(Point p) => Math.Clamp(p.X / Math.Max(1, Width / _options.Length), 0, _options.Length - 1);
+
+    protected override void OnMouseClick(MouseEventArgs e)
+    {
+        base.OnMouseClick(e);
+        Focus();
+        _focused = IndexAt(e.Location);
+        this[_focused] = !this[_focused];
+    }
+
+    protected override bool IsInputKey(Keys keyData) => keyData is Keys.Left or Keys.Right || base.IsInputKey(keyData);
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (e.KeyCode == Keys.Left)
+            _focused = Math.Max(0, _focused - 1);
+        else if (e.KeyCode == Keys.Right)
+            _focused = Math.Min(_options.Length - 1, _focused + 1);
+        else if (e.KeyCode is Keys.Space or Keys.Enter)
+            this[_focused] = !this[_focused];
+        Invalidate();
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        var all = new RectangleF(S(0.5f), S(0.5f), Width - S(1), Height - S(1));
+        Fill(g, all, S(5), Palette.Background);
+        Outline(g, all, S(5), Palette.Border, S(1));
+
+        using var font = MakeFont(13);
+        float chip = (float)Width / _options.Length;
+        for (int i = 0; i < _options.Length; i++)
+        {
+            var r = new RectangleF(i * chip + S(3), S(3), chip - S(6), Height - S(6));
+            bool hovered = Hover is Point p && IndexAt(p) == i;
+            if (_on[i])
+                Fill(g, r, S(3), Palette.Accent);
+            else if (hovered)
+                Fill(g, r, S(3), Palette.Hover);
+            var textColor = _on[i] ? (Palette.Light ? Color.White : Palette.Background) : Palette.SubtleText;
+            TextRenderer.DrawText(g, _options[i], font, Rectangle.Round(r), textColor,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix |
+                TextFormatFlags.SingleLine | TextFormatFlags.EndEllipsis);
+            if (i == _focused)
+                DrawFocus(g, r, S(3));
+        }
+    }
+}
+
 /// <summary>A row of mutually exclusive choices, like a radio group drawn as one pill.</summary>
 internal sealed class SegmentedControl : ThemedControl
 {

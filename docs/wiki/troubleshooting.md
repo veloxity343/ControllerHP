@@ -7,14 +7,14 @@ Each problem below has its likely cause and what to do. If yours isn't here, see
 - [I can't see the tray icon](#i-cant-see-the-tray-icon)
 - [Windows says "Windows protected your PC"](#windows-says-windows-protected-your-pc)
 - [It asks me to install .NET](#it-asks-me-to-install-net)
-- [My controller doesn't appear](#my-controller-doesnt-appear)
+- [My device doesn't appear](#my-device-doesnt-appear)
 - [It says "battery unknown" or shows "?"](#it-says-battery-unknown-or-shows-)
 - [A game doesn't see my PlayStation controller](#a-game-doesnt-see-my-playstation-controller)
 - [The charging bolt is late or missing on an Xbox controller](#the-charging-bolt-is-late-or-missing-on-an-xbox-controller)
 - [The percentage only moves in 10% steps](#the-percentage-only-moves-in-10-steps)
 - [Pop-ups don't appear while I'm playing](#pop-ups-dont-appear-while-im-playing)
 - [Battery warnings don't make a sound](#battery-warnings-dont-make-a-sound)
-- [The Controllers page says "Needs more data"](#the-controllers-page-says-needs-more-data)
+- [The Devices page says "Needs more data"](#the-devices-page-says-needs-more-data)
 - [There are gaps in the battery history](#there-are-gaps-in-the-battery-history)
 - [Resetting everything](#resetting-everything)
 - [Reporting a bug](#reporting-a-bug)
@@ -34,11 +34,14 @@ Each problem below has its likely cause and what to do. If yours isn't here, see
 **Cause:** you downloaded the smaller zip, which needs the .NET 8 Desktop Runtime.
 **Fix:** follow Windows' link to install it, or download the `-standalone` zip instead, which needs nothing else.
 
-## My controller doesn't appear
+## My device doesn't appear
 
 **Causes and fixes:**
-- **It isn't connected to Windows.** Check that it shows as *Connected* under Settings → Bluetooth & devices (Windows 11) or Settings → Devices (Windows 10), and that its light is steady rather than flashing.
-- **It isn't supported.** See [Supported controllers](supported-controllers.md).
+- **It isn't connected to Windows.** Check that it shows as *Connected* under Settings → Bluetooth & devices (Windows 11) or Settings → Devices (Windows 10). On a controller, check its light is steady rather than flashing.
+- **Its kind is turned off.** Check **Show** in Settings: if, say, Keyboards is off, no keyboard appears.
+- **Windows shows no battery for it.** For Bluetooth mice, keyboards and headsets, ControllerHP reads the level Windows records. If Settings → Bluetooth & devices shows no battery beside it, ControllerHP has none to show.
+- **It uses a USB receiver (dongle).** Those aren't supported yet.
+- **It isn't supported.** See [Supported devices](supported-devices.md).
 - **It only just connected.** Give it a few seconds, or choose **Refresh now** from the right-click menu.
 
 If it's still missing, run `ControllerHP.exe --list` (see [Reporting a bug](#reporting-a-bug)) to see what each source reports.
@@ -66,7 +69,7 @@ If it's still missing, run `ControllerHP.exe --list` (see [Reporting a bug](#rep
 ## The percentage only moves in 10% steps
 
 **Cause:** that's how DualSense and DualShock 4 controllers report their battery, so "85%" means somewhere between 80% and 89%.
-**Fix:** none needed. The Controllers page's stats account for it.
+**Fix:** none needed. The Devices page's stats account for it.
 
 ## Pop-ups don't appear while I'm playing
 
@@ -74,7 +77,7 @@ If it's still missing, run `ControllerHP.exe --list` (see [Reporting a bug](#rep
 - **The game is in exclusive fullscreen**, which nothing can draw over. ControllerHP holds the pop-ups and shows them once the game closes. To see them during play, switch the game to borderless or windowed mode.
 - **Hold while a game is fullscreen is on** in Settings, which also holds them in borderless games until the game closes.
 - **The pop-up is turned off.** Check **Connection pop-ups** and **Battery warnings** in the right-click menu, or the levels in Settings.
-- **Each warning only shows once per discharge.** It shows again after the controller charges.
+- **Each warning only shows once per discharge.** It shows again after the device charges.
 
 ## Battery warnings don't make a sound
 
@@ -82,14 +85,14 @@ If it's still missing, run `ControllerHP.exe --list` (see [Reporting a bug](#rep
 - **Play a sound is off.** It's off by default: turn it on under Battery warnings in Settings. Turning it on plays the low battery chime once, so you can check it.
 - **ControllerHP is muted or turned down.** Check its entry in the Windows volume mixer: right-click the speaker icon in the taskbar and choose **Volume mixer**. It only appears there once ControllerHP has played a sound.
 
-## The Controllers page says "Needs more data"
+## The Devices page says "Needs more data"
 
-**Cause:** an honest figure needs at least 45 minutes of the controller on battery, with its level falling at least 5%. Battery health needs three weeks of history for its percentage.
-**Fix:** keep using it. See [The stats](controllers.md#the-stats).
+**Cause:** an honest figure needs at least 45 minutes of the device on battery, with its level falling at least 5%. Battery health needs three weeks of history for its percentage.
+**Fix:** keep using it. See [The stats](devices.md#the-stats).
 
 ## There are gaps in the battery history
 
-**Cause:** a gap means the controller was off, or ControllerHP wasn't running, for example before you signed in or after you exited it.
+**Cause:** a gap means the device was off, or ControllerHP wasn't running, for example before you signed in or after you exited it.
 **Fix:** to record continuously, turn on **Start with Windows**.
 
 ## Resetting everything
@@ -103,8 +106,8 @@ If it's still missing, run `ControllerHP.exe --list` (see [Reporting a bug](#rep
 
 [Open a bug report](https://github.com/veloxity343/ControllerHP/issues/new/choose). The form asks for what helps most:
 
-1. **Your controller and connection,** such as *DualSense over Bluetooth*.
-2. **A diagnostics report.** With the controller connected, right-click the tray icon and choose **Diagnostics**. ControllerHP writes a report and opens it. It includes:
+1. **Your device and connection,** such as *DualSense over Bluetooth* or *a Logitech mouse on its USB receiver*.
+2. **A diagnostics report.** With the device connected, right-click the tray icon and choose **Diagnostics**. ControllerHP writes a report and opens it. It includes:
    - your ControllerHP and Windows versions, and your settings;
    - what each battery source sees, raw values included;
    - the recent battery log and any errors.
@@ -117,4 +120,4 @@ Security problems are different: please report them privately, as described in [
 
 ---
 
-[← Supported controllers](supported-controllers.md) · [Wiki home](README.md)
+[← Supported devices](supported-devices.md) · [Wiki home](README.md)

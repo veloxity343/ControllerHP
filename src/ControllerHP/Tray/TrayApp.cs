@@ -42,6 +42,7 @@ internal sealed class TrayApp : ApplicationContext
     /// <summary>Whether status.json is being kept; null until the settings are first applied.</summary>
     private bool? _shareStatus;
     private IReadOnlyDictionary<string, string> _names = Settings.ControllerNames;
+    private IReadOnlySet<DeviceKind> _hiddenKinds = Settings.HiddenKinds;
 
     public TrayApp(IReadOnlyList<IBatterySource> sources)
     {
@@ -302,7 +303,7 @@ internal sealed class TrayApp : ApplicationContext
 
     /// <summary>Records every change so battery behaviour (step sizes, update latency) can be checked later.</summary>
     private static void LogHistory(IReadOnlyList<ControllerBattery> readings) =>
-        Program.Log(readings.Count == 0 ? "no controllers" : string.Join(" | ", readings.Select(r => r.Describe())),
+        Program.Log(readings.Count == 0 ? "no devices" : string.Join(" | ", readings.Select(r => r.Describe())),
             Program.HistoryLogFile);
 
     /// <summary>Each source covers different controllers; overlapping ones are grouped in a <see cref="FirstAvailableSource"/>.</summary>
@@ -320,6 +321,10 @@ internal sealed class TrayApp : ApplicationContext
                 Program.LogOnce($"{source.Name} failed: {ex.GetType().Name}: {ex.Message}");
             }
         }
+        // Types turned off in Settings are left out before anything else sees them: no icon, pop-ups or history.
+        var hiddenKinds = Settings.HiddenKinds;
+        if (hiddenKinds.Count > 0)
+            readings.RemoveAll(r => hiddenKinds.Contains(r.Kind));
         var names = Settings.ControllerNames;
         return names.Count == 0 ? readings : [.. readings.Select(r => Settings.Named(r, names))];
     }
@@ -329,7 +334,7 @@ internal sealed class TrayApp : ApplicationContext
         _menu.Items.Clear();
 
         if (_readings.Count == 0)
-            _menu.Items.Add(new ToolStripMenuItem("No controllers connected") { Enabled = false });
+            _menu.Items.Add(new ToolStripMenuItem("No devices connected") { Enabled = false });
         foreach (var reading in _readings)
             _menu.Items.Add(new ToolStripMenuItem(reading.Describe()) { Enabled = false });
 
@@ -386,7 +391,7 @@ internal sealed class TrayApp : ApplicationContext
     }
 
     private static readonly (int Limit, string Label)[] IconLimitLabels =
-        [(1, "1"), (2, "2"), (0, "One per controller")];
+        [(1, "1"), (2, "2"), (0, "One per device")];
 
 
     private static readonly (ToastCorner Corner, string Label)[] CornerLabels =
@@ -427,11 +432,14 @@ internal sealed class TrayApp : ApplicationContext
                 StatusFile.Delete();
         }
 
-        // A rename shows straight away: in the tray, the panel and the status file.
+        // A rename, or a device type turned on or off, shows straight away: in the tray, the panel and the
+        // status file.
         var names = Settings.ControllerNames;
-        if (!names.OrderBy(kv => kv.Key).SequenceEqual(_names.OrderBy(kv => kv.Key)))
+        var hiddenKinds = Settings.HiddenKinds;
+        if (!names.OrderBy(kv => kv.Key).SequenceEqual(_names.OrderBy(kv => kv.Key)) || !hiddenKinds.SetEquals(_hiddenKinds))
         {
             _names = names;
+            _hiddenKinds = hiddenKinds;
             if (_slots.Count > 0)
                 Refresh();
         }
@@ -491,7 +499,7 @@ internal sealed class TrayEntry : IDisposable
         };
     }
 
-    /// <param name="battery">null shows the "no controllers" placeholder.</param>
+    /// <param name="battery">null shows the "no devices" placeholder.</param>
     /// <param name="more">Controllers without an icon of their own, appended to the tooltip.</param>
     /// <param name="timeLeft">e.g. "3 h to 20%", added to the tooltip when known.</param>
     public void Update(ControllerBattery? battery, bool lightTaskbar, string? more = null, string? timeLeft = null)
@@ -505,7 +513,7 @@ internal sealed class TrayEntry : IDisposable
         _image?.Dispose();
         _image = image;
 
-        string text = battery?.Describe() ?? "ControllerHP: no controllers connected";
+        string text = battery?.Describe() ?? "ControllerHP: no devices connected";
         if (battery is not null && timeLeft is not null)
             text += $", about {timeLeft}";
         if (more is not null)

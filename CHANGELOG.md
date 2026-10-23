@@ -13,20 +13,23 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 
 ### Added
 
-- **Pop-ups during fullscreen games:** in exclusive fullscreen, where pop-ups can't appear, they're now held and shown once the game closes, instead of being lost. A new **Hold while a game is fullscreen** setting does the same for borderless games. At most one shows per controller, and a held battery warning is dropped if the controller was charged meanwhile.
-- **Fully charged** pop-up when a charging controller reaches 100%, once per charge. It can be turned off in Settings.
-- **Time left** in the tray tooltip and the controller panel, such as "about 3 h to 20%" or "1 h 30 min to full", once there's enough history. It's the same figure as the Controllers page shows.
+- **Bluetooth mice, keyboards and headsets:** any Bluetooth device Windows shows a battery for, in Settings → Bluetooth & devices, now shows in ControllerHP too, over Bluetooth Low Energy or classic Bluetooth. Each is drawn as what it is, worked out from what it says it is or the parts Windows installed for it. Devices on a USB receiver aren't supported yet.
+- **Show** setting: choose which kinds of device ControllerHP watches (controllers, mice, keyboards, headsets and others). Kinds turned off get no icon, pop-ups or history. All are on by default.
+- **Pop-ups during fullscreen games:** in exclusive fullscreen, where pop-ups can't appear, they're now held and shown once the game closes, instead of being lost. A new **Hold while a game is fullscreen** setting does the same for borderless games. At most one shows per device, and a held battery warning is dropped if the device was charged meanwhile.
+- **Fully charged** pop-up when a charging device reaches 100%, once per charge. It can be turned off in Settings.
+- **Time left** in the tray tooltip and the device panel, such as "about 3 h to 20%" or "1 h 30 min to full", once there's enough history. It's the same figure as the Devices page shows.
 - **Warning sounds:** a new **Play a sound** setting plays a short chime with each battery warning, two notes for low and three, ending lower, for critical, even while a fullscreen game holds the pop-up. Off by default.
-- **Leave a controller out of the chart** by clicking its name in the chart's legend, and click it again to bring it back. Its history and stats are kept.
-- **A controller's own warning levels:** each controller's card on the Controllers page has a switch and low and critical levels, for that controller alone, which its pop-ups, time left and stats use. Others keep following Settings.
-- **Rename a controller** from its card on the Controllers page, to tell two of the same model apart. The name shows everywhere ControllerHP shows it, and leaving it empty restores the controller's own.
-- **Share battery levels** setting: keeps `%LOCALAPPDATA%\ControllerHP\status.json` up to date with every connected controller's battery, for other apps such as Rainmeter skins, Stream Deck plugins or scripts to read. Off by default.
+- **Leave a device out of the chart** by clicking its name in the chart's legend, and click it again to bring it back. Its history and stats are kept.
+- **A device's own warning levels:** each device's card on the Devices page has a switch and low and critical levels, for that device alone, which its pop-ups, time left and stats use. Others keep following Settings.
+- **Rename a device** from its card on the Devices page, to tell two of the same model apart. The name shows everywhere ControllerHP shows it, and leaving it empty restores the device's own.
+- **Share battery levels** setting: keeps `%LOCALAPPDATA%\ControllerHP\status.json` up to date with every connected device's battery, for other apps such as Rainmeter skins, Stream Deck plugins or scripts to read. Off by default.
 - **Diagnostics** in the right-click menu writes a report of what ControllerHP sees and opens it, for bug reports, instead of running `--list` from a terminal. Bluetooth addresses in it are partly masked, so it can be posted as it is.
 
 ### Changed
 
-- **The tray icon shows the controller itself,** with a thin battery bar along the bottom, instead of a number above a battery, so it's clear at a glance what it's showing. It's drawn pixel by pixel at 16 px, so it stays sharp at 100% scaling. Hover over it for the exact percentage. The panel and pop-ups use it too.
-- The supported controllers tables say which controllers and connections have been **tested** on real hardware, which are **likely** to work, and which are still **untested**.
+- **Controllers are now devices** throughout the app and the wiki, as other devices show too: the Controllers page is the **Devices** page, and the wiki's Controllers and Supported controllers pages are now **Devices** and **Supported devices**.
+- **The tray icon shows the device itself,** with a thin battery bar along the bottom, instead of a number above a battery, so it's clear at a glance what it's showing. It's drawn pixel by pixel at 16 px, so it stays sharp at 100% scaling. Hover over it for the exact percentage. The panel and pop-ups use it too.
+- The supported devices tables say which devices and connections have been **tested** on real hardware, which are **likely** to work, and which are still **untested**.
 
 ## [0.3.0] - 2026-10-21
 

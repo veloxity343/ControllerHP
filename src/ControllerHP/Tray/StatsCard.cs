@@ -13,7 +13,7 @@ internal sealed class StatsCard : ThemedControl
 
     private const string HealthDisclaimer =
         "A rough guide, not a diagnosis. Health compares how long a charge lasts on battery now with this " +
-        "controller's own first week of tracking, so it needs about three weeks of history. Time spent " +
+        "device's own first week of tracking, so it needs about three weeks of history. Time spent " +
         "charging, including playing on the cable, is left out, and so are charge cycles. Vibration, the " +
         "light bar, audio and how you play all change runtime, so expect it to move around. Typical ranges " +
         "are commonly reported figures, not official ones.";

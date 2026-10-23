@@ -1,3 +1,4 @@
+using ControllerHP.Battery;
 using Microsoft.Win32;
 
 namespace ControllerHP.Tray;
@@ -28,7 +29,11 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
     private bool _loading;
 
     // The Settings page's controls, kept to refresh them when settings change elsewhere (the tray menu).
-    private readonly SegmentedControl _iconLimit = new(["1", "2", "One per controller"], 130);
+    /// <summary>The Show chips, in order, and the device type each stands for.</summary>
+    private static readonly DeviceKind[] ShownKinds =
+        [DeviceKind.Gamepad, DeviceKind.Mouse, DeviceKind.Keyboard, DeviceKind.Headset, DeviceKind.Other];
+    private readonly ChipGroup _shownKinds = new(["Controllers", "Mice", "Keyboards", "Headsets", "Other"], 88);
+    private readonly SegmentedControl _iconLimit = new(["1", "2", "One per device"], 130);
     private readonly SegmentedControl _corner = new(["Top left", "Top right", "Bottom left", "Bottom right"], 105);
     private readonly ToggleSwitch _connectionToasts = new();
     private readonly ToggleSwitch _holdInFullscreen = new();
@@ -44,9 +49,9 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
     private static readonly TimeSpan[] Ranges =
         [TimeSpan.FromHours(2), TimeSpan.FromHours(6), TimeSpan.FromHours(24), TimeSpan.FromDays(7)];
     private readonly HistoryChart _chart = new();
-    private readonly Note _chartNote = new("Click a controller's name above the chart to leave its line out, or bring it back.");
+    private readonly Note _chartNote = new("Click a device's name above the chart to leave its line out, or bring it back.");
     private readonly Note _statsNote = new("Averages and totals cover the range above. Predictions and health use recent history.");
-    private readonly Note _historyNote = new($"Recorded whenever a controller's battery changes, and kept for {BatteryHistory.Kept.Days} days.");
+    private readonly Note _historyNote = new($"Recorded whenever a device's battery changes, and kept for {BatteryHistory.Kept.Days} days.");
     private readonly List<StatsCard> _statsCards = [];
     private readonly UndoBar _undoBar = new();
     /// <summary>Beside the dropdown, while any controllers are removed: lists them to restore.</summary>
@@ -88,7 +93,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
 
         Controls.Add(_page);
         AddPage("Settings", BuildSettingsPage());
-        AddPage("Controllers", BuildControllersPage());
+        AddPage("Devices", BuildControllersPage());
         _controllersPage = _pages.Count - 1;
         ShowPage(0);
 
@@ -147,20 +152,25 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
     {
         var items = new List<Control> { new Heading("Settings", 26) };
 
+        items.Add(new Heading("Devices", 15));
+        items.Add(new SettingCard("Show",
+            "Kinds of device to watch. Ones turned off get no icon, pop-ups or history.",
+            _shownKinds, stacked: true));
+
         items.Add(new Heading("Tray", 15));
         items.Add(new SettingCard("Tray icons",
-            "How many controllers get their own icon. The rest are listed when you hover or click.",
+            "How many devices get their own icon. The rest are listed when you hover or click.",
             _iconLimit, stacked: true));
 
         items.Add(new Heading("Pop-ups", 15));
         items.Add(new SettingCard("Position", "Which corner of the screen pop-ups appear in.", _corner, stacked: true));
-        items.Add(new SettingCard("Connection pop-ups", "When a controller connects or disconnects.", _connectionToasts));
-        items.Add(new SettingCard("Fully charged", "When a charging controller reaches 100%.", _fullyCharged));
+        items.Add(new SettingCard("Connection pop-ups", "When a device connects or disconnects.", _connectionToasts));
+        items.Add(new SettingCard("Fully charged", "When a charging device reaches 100%.", _fullyCharged));
         items.Add(new SettingCard("Hold while a game is fullscreen", "Show them once the game closes.", _holdInFullscreen));
 
         items.Add(new Heading("Battery warnings", 15));
-        items.Add(new Note("Pop-ups when a controller's battery runs down, whatever the connection pop-ups setting."));
-        items.Add(new Note("A controller can have its own levels, set on its card on the Controllers page."));
+        items.Add(new Note("Pop-ups when a device's battery runs down, whatever the connection pop-ups setting."));
+        items.Add(new Note("A device can have its own levels, set on its card on the Devices page."));
         items.Add(new SettingCard("Low battery", "Warn when it drops to this level.", _low));
         items.Add(new SettingCard("Critical battery", "Warn again at this lower level.", _critical));
         items.Add(new SettingCard("Play a sound", "A short chime, even while a game holds the pop-up.", _warningSounds));
@@ -193,7 +203,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
             PerformLayout();
         };
         _restoreButton.Click += (_, _) => OpenRestoreList();
-        return [new Heading("Controllers", 26), _undoBar, _range, _chart, _chartNote, _controllerPicker, _restoreButton, _statsNote, _historyNote];
+        return [new Heading("Devices", 26), _undoBar, _range, _chart, _chartNote, _controllerPicker, _restoreButton, _statsNote, _historyNote];
     }
 
     private void ReloadHistory()
@@ -208,7 +218,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
         _restoreButton.Text = $"Restore removed ({_removed.Count})";
         _restoreButton.Visible = _current == _controllersPage && _removed.Count > 0;
         _chart.EmptyMessage = shown.Count == 0 && hidden.Count > 0
-            ? "Every controller with history here has been removed. Use Restore removed below to bring one back."
+            ? "Every device with history here has been removed. Use Restore removed below to bring one back."
             : HistoryChart.NoHistoryMessage;
         _chart.SetData(shown, since, now, Settings.LeftOutOfChart);
 
@@ -223,7 +233,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
         string? lowest = LowestFirst(shown).FirstOrDefault()?.Id;
         string? showing = _pickerChoice ?? lowest;
         _pickerKeys = [.. shown.Select(s => s.Id), AllControllers];
-        _controllerPicker.SetItems([.. shown.Select(s => s.Name), "All controllers"], Math.Max(0, _pickerKeys.IndexOf(showing ?? "")));
+        _controllerPicker.SetItems([.. shown.Select(s => s.Name), "All devices"], Math.Max(0, _pickerKeys.IndexOf(showing ?? "")));
         _controllerPicker.Visible = _current == _controllersPage && shown.Count > 0;
 
         var cards = showing == AllControllers ? shown : shown.Where(s => s.Id == showing).ToList();
@@ -270,6 +280,9 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
     private void LoadValues()
     {
         _loading = true;
+        var hiddenKinds = Settings.HiddenKinds;
+        for (int i = 0; i < ShownKinds.Length; i++)
+            _shownKinds[i] = !hiddenKinds.Contains(ShownKinds[i]);
         _iconLimit.SelectedIndex = Math.Max(0, Array.IndexOf(IconLimits, Settings.TrayIconLimit));
         _corner.SelectedIndex = Math.Max(0, Array.IndexOf(Corners, Settings.ToastCorner));
         _connectionToasts.Checked = Settings.ConnectionToasts;
@@ -290,6 +303,13 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
 
     private void WireEvents()
     {
+        _shownKinds.CheckedChanged += (_, _) =>
+        {
+            if (_loading)
+                return;
+            for (int i = 0; i < ShownKinds.Length; i++)
+                Settings.SetKindShown(ShownKinds[i], _shownKinds[i]);
+        };
         _iconLimit.SelectedChanged += (_, _) =>
         {
             if (!_loading)
@@ -374,7 +394,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
     private void Rename(HistorySeries series)
     {
         string? name = ConfirmDialog.AskText(this, $"Rename {series.Name}",
-            $"The new name shows everywhere ControllerHP shows this controller. Leave it empty to go back to {series.DeviceName}.",
+            $"The new name shows everywhere ControllerHP shows this device. Leave it empty to go back to {series.DeviceName}.",
             series.Name, Settings.MaxNameLength, "Rename", _palette);
         if (name is null)
             return;
@@ -387,7 +407,7 @@ internal sealed partial class SettingsWindow : Form, IMessageFilter
     private void Remove(HistorySeries series)
     {
         if (!ConfirmDialog.Ask(this, $"Remove {series.Name}?",
-                "It'll be hidden from the Controllers page. Its history is kept, and it comes back by itself the next " +
+                "It'll be hidden from the Devices page. Its history is kept, and it comes back by itself the next " +
                 "time it connects. You can also restore it with Restore removed, on this page.",
                 "Remove", _palette))
             return;

@@ -78,7 +78,8 @@ internal static partial class Diagnostics
         w.WriteLine(RuntimeInformation.FrameworkDescription);
 
         Section(w, "Settings");
-        w.WriteLine($"Tray icons: {(Settings.TrayIconLimit == 0 ? "one per controller" : Settings.TrayIconLimit)}");
+        w.WriteLine($"Hidden device types: {(Settings.HiddenKinds.Count == 0 ? "none" : string.Join(", ", Settings.HiddenKinds))}");
+        w.WriteLine($"Tray icons: {(Settings.TrayIconLimit == 0 ? "one per device" : Settings.TrayIconLimit)}");
         w.WriteLine($"Pop-up position: {Settings.ToastCorner}");
         w.WriteLine($"Connection pop-ups: {OnOff(Settings.ConnectionToasts)}");
         w.WriteLine($"Fully charged pop-up: {OnOff(Settings.FullyChargedToasts)}");
@@ -88,8 +89,8 @@ internal static partial class Diagnostics
         w.WriteLine($"Warning sounds: {OnOff(Settings.WarningSounds)}");
         w.WriteLine($"Share battery levels: {OnOff(Settings.ShareStatus)}");
         w.WriteLine($"Start with Windows: {OnOff(Settings.StartWithWindows)}");
-        w.WriteLine($"Removed controllers: {Settings.HiddenControllers.Count}");
-        w.WriteLine($"Renamed controllers: {Settings.ControllerNames.Count}");
+        w.WriteLine($"Removed devices: {Settings.HiddenControllers.Count}");
+        w.WriteLine($"Renamed devices: {Settings.ControllerNames.Count}");
         w.WriteLine($"Left out of the chart: {Settings.LeftOutOfChart.Count}");
         foreach (var (id, levels) in Settings.ControllerWarnings)
             w.WriteLine($"Own warning levels for {id}: low {levels.Low?.ToString() ?? "off"}, critical {levels.Critical?.ToString() ?? "off"}");

@@ -2,7 +2,7 @@
 
 Thanks for helping out. ControllerHP is small and Windows-only, so most contributions are one of three things: a bug report, results from a controller nobody has tested yet, or a pull request.
 
-Looking for something to work on? [Help wanted](docs/dev/help-wanted.md) lists open ideas, from supporting more controllers to a Linux or macOS version, each with where to start.
+Looking for something to work on? [Help wanted](docs/dev/help-wanted.md) lists open ideas, from supporting more devices to a Linux or macOS version, each with where to start.
 
 ## Reporting a bug or asking for a feature
 
@@ -16,14 +16,14 @@ For security problems, follow [SECURITY.md](SECURITY.md) instead of opening an i
 
 The [developer docs](docs/dev/README.md) cover building, the [architecture](docs/dev/architecture.md), the [diagnostic flags](docs/dev/diagnostics.md) and [adding a controller](docs/dev/adding-a-controller.md).
 
-There are no automated tests; changes are checked against real controllers. In your pull request, say which controllers and connections you tried, and if you changed how something looks, attach a `--preview` or `--preview-settings` image.
+There are no automated tests; changes are checked against real devices. In your pull request, say which devices and connections you tried, and if you changed how something looks, attach a `--preview` or `--preview-settings` image.
 
 ## Pull requests
 
 - Branch from `main`, and keep each pull request to one change.
 - Match the surrounding code: its naming, its layout, and comments that explain *why* rather than *what*.
 - The CI build must pass before merging.
-- Update the [wiki](docs/wiki/README.md) if you change what users see or which controllers are supported.
+- Update the [wiki](docs/wiki/README.md) if you change what users see or which devices are supported.
 - Add a line under **Unreleased** in [CHANGELOG.md](CHANGELOG.md) for anything users would notice. It becomes the next release's notes.
 - Label it `enhancement`, `bug` or `documentation`, so the release notes group it correctly.
 

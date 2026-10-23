@@ -49,6 +49,22 @@ internal static class Settings
         set => Write(nameof(FullyChargedToasts), value ? 1 : 0);
     }
 
+    /// <summary>
+    /// Device types ControllerHP ignores: no icon, pop-ups or history. Empty by default, so everything with a
+    /// battery shows.
+    /// </summary>
+    public static IReadOnlySet<DeviceKind> HiddenKinds =>
+        Read(nameof(HiddenKinds)) is string[] names
+            ? names.Select(n => Enum.TryParse<DeviceKind>(n, out var kind) ? kind : (DeviceKind?)null).OfType<DeviceKind>().ToHashSet()
+            : [];
+
+    public static void SetKindShown(DeviceKind kind, bool shown)
+    {
+        var hidden = HiddenKinds.ToHashSet();
+        if (shown ? hidden.Remove(kind) : hidden.Add(kind))
+            Write(nameof(HiddenKinds), hidden.Select(k => k.ToString()).ToArray());
+    }
+
     /// <summary>Keep status.json up to date, for other apps to read the battery levels.</summary>
     public static bool ShareStatus
     {

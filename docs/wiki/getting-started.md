@@ -13,7 +13,7 @@
 ## Requirements
 
 - Windows 10 version 1809 or later, or Windows 11, on a 64-bit (x64) PC.
-- A supported controller: see [Supported controllers](supported-controllers.md).
+- A supported controller, or a Bluetooth mouse, keyboard or headset: see [Supported devices](supported-devices.md).
 
 ## Installing
 
@@ -54,7 +54,7 @@ If you move `ControllerHP.exe` later, turn this off and on again so Windows star
 2. Download the new release and replace `ControllerHP.exe` with the new one.
 3. Run it.
 
-Your settings and battery history are kept: they're stored separately from the program (see [what's stored](controllers.md#whats-stored-on-your-pc)).
+Your settings and battery history are kept: they're stored separately from the program (see [what's stored](devices.md#whats-stored-on-your-pc)).
 
 ## Uninstalling
 
