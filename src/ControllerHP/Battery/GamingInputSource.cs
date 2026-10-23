@@ -15,7 +15,7 @@ public sealed class GamingInputSource : IBatterySource, IDisposable
     public event EventHandler? ControllersChanged;
 
     private readonly Windows.Devices.Enumeration.DeviceWatcher? _bluetoothWatcher;
-    private readonly Dictionary<string, ChargeTrend> _trends = [];
+    private readonly ChargeTrends _trends = new();
 
     public GamingInputSource()
     {
@@ -42,9 +42,7 @@ public sealed class GamingInputSource : IBatterySource, IDisposable
         if (pads.Count == 0 && bluetooth.Count == 0)
             return [];
 
-        // Forget trends for controllers that went away, so a reconnect starts fresh.
-        foreach (var address in _trends.Keys.Except(bluetooth.Select(b => b.Address)).ToList())
-            _trends.Remove(address);
+        _trends.KeepOnly(bluetooth.Select(b => b.Address));
 
         var readings = new List<ControllerBattery>();
         foreach (var pad in pads)
@@ -128,44 +126,7 @@ public sealed class GamingInputSource : IBatterySource, IDisposable
     /// Over Bluetooth, Windows exposes no charging flag (the controller's own battery report is filtered
     /// out by the xinputhid driver), so charging is inferred from the percentage rising.
     /// </summary>
-    private sealed class ChargeTrend(int percent)
-    {
-        public int Percent = percent;
-        public bool Rising;
-        public DateTime LastRise;
-    }
-
-    /// <summary>
-    /// No rise for this long is taken to mean it was unplugged. A guess until the real charge rate is
-    /// known; history.log records each step, so tune this from there.
-    /// </summary>
-    private static readonly TimeSpan RiseTimeout = TimeSpan.FromMinutes(5);
-
-    private bool InferCharging(BleBattery ble)
-    {
-        var now = DateTime.UtcNow;
-        if (!_trends.TryGetValue(ble.Address, out var trend))
-        {
-            _trends[ble.Address] = new ChargeTrend(ble.Percent);
-            return false;
-        }
-
-        if (ble.Percent > trend.Percent)
-        {
-            trend.Rising = true;
-            trend.LastRise = now;
-        }
-        else if (ble.Percent < trend.Percent)
-        {
-            trend.Rising = false;
-        }
-        trend.Percent = ble.Percent;
-
-        // Full means done charging, and a long stall means it was unplugged before the next drop.
-        if (trend.Rising && (ble.Percent >= 100 || now - trend.LastRise > RiseTimeout))
-            trend.Rising = false;
-        return trend.Rising;
-    }
+    private bool InferCharging(BleBattery ble) => _trends.Charging(ble.Address, ble.Percent);
 
     private static List<BleBattery> QueryBluetoothBatteries()
     {

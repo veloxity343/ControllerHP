@@ -16,9 +16,9 @@ internal sealed record BleBattery(string Address, string Name, ushort VendorId, 
 internal static partial class BluetoothLeBattery
 {
     // Undocumented devnode properties, the same ones the Settings app reads.
-    private const string BatteryKey = "{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2";
-    private const string ConnectedKey = "{83DA6326-97A6-4088-9453-A1923F573B29} 15";
-    private const string InstanceIdKey = "System.Devices.DeviceInstanceId";
+    internal const string BatteryKey = "{104EA319-6EE2-4701-BD47-8DDBF425BBE5} 2";
+    internal const string ConnectedKey = "{83DA6326-97A6-4088-9453-A1923F573B29} 15";
+    internal const string InstanceIdKey = "System.Devices.DeviceInstanceId";
 
     /// <summary>The device node, e.g. BTHLE\DEV_70F8AE8F7583\..., which carries battery and connection state.</summary>
     [GeneratedRegex(@"^BTHLE\\DEV_([0-9A-F]{12})\\", RegexOptions.IgnoreCase)]
@@ -59,10 +59,10 @@ internal static partial class BluetoothLeBattery
     /// Watches Bluetooth LE device nodes so battery and connection changes are seen as soon as Windows
     /// records them, rather than on the next poll. <paramref name="onChange"/> runs on a thread-pool thread.
     /// </summary>
-    public static DeviceWatcher StartWatcher(Action onChange)
+    public static DeviceWatcher StartWatcher(Action onChange, string instanceIdPrefix = @"BTHLE\DEV_")
     {
         var watcher = DeviceInformation.CreateWatcher(
-            $"{InstanceIdKey}:~<\"BTHLE\\DEV_\"", [BatteryKey, ConnectedKey], DeviceInformationKind.Device);
+            $"{InstanceIdKey}:~<\"{instanceIdPrefix}\"", [BatteryKey, ConnectedKey], DeviceInformationKind.Device);
         // Added fires once per existing device during the initial enumeration; that's harmless.
         watcher.Added += (_, _) => onChange();
         watcher.Updated += (_, _) => onChange();
@@ -72,10 +72,10 @@ internal static partial class BluetoothLeBattery
     }
 
     /// <summary>Every property in the Bluetooth battery property set, for the --list diagnostic.</summary>
-    public static IEnumerable<string> DescribeRawProperties()
+    public static IEnumerable<string> DescribeRawProperties(string instanceIdPrefix = @"BTHLE\DEV_")
     {
         string[] keys = [.. Enumerable.Range(2, 10).Select(i => $"{{104EA319-6EE2-4701-BD47-8DDBF425BBE5}} {i}"), ConnectedKey];
-        foreach (var device in FindDevices(@"BTHLE\DEV_", [InstanceIdKey, .. keys]))
+        foreach (var device in FindDevices(instanceIdPrefix, [InstanceIdKey, .. keys]))
         {
             var values = keys.Select(k => (k, device.Properties.GetValueOrDefault(k)))
                 .Where(kv => kv.Item2 is not null)
@@ -155,12 +155,17 @@ internal static partial class BluetoothLeBattery
         }
     }
 
-    private static DeviceInformationCollection FindDevices(string instanceIdPrefix, string[] properties) =>
+    internal static DeviceInformationCollection FindDevices(string instanceIdPrefix, string[] properties) =>
         DeviceInformation.FindAllAsync(
                 $"{InstanceIdKey}:~<\"{instanceIdPrefix}\"", properties, DeviceInformationKind.Device)
             .AsTask().GetAwaiter().GetResult();
 
-    private static string InstanceId(DeviceInformation device) =>
+    /// <summary>Every device node in a container: the parts Windows installed for one physical device.</summary>
+    internal static DeviceInformationCollection FindByContainer(Guid container, string property) =>
+        DeviceInformation.FindAllAsync($"System.Devices.ContainerId:=\"{{{container}}}\"", [property], DeviceInformationKind.Device)
+            .AsTask().GetAwaiter().GetResult();
+
+    internal static string InstanceId(DeviceInformation device) =>
         device.Properties.GetValueOrDefault(InstanceIdKey) as string ?? device.Id;
 
     private static ushort ParseHex(string hex) => Convert.ToUInt16(hex, 16);

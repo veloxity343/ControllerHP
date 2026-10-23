@@ -12,7 +12,9 @@ internal static partial class Program
         // The Xbox sources see the same controllers, so only the best one that finds any is used.
         var xbox = new FirstAvailableSource("Xbox", new GamingInputSource(), new XInputSource());
         var playStation = new PlayStationSource();
-        IBatterySource[] sources = [xbox, playStation];
+        // Every other Bluetooth device with a battery Windows records: mice, keyboards, headsets.
+        var bluetooth = new BluetoothSource();
+        IBatterySource[] sources = [xbox, playStation, bluetooth];
 
         if (args.Contains("--list"))
             return ListControllers(sources);

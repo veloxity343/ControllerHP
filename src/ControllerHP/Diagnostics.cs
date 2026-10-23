@@ -29,9 +29,9 @@ internal static partial class Diagnostics
             {
                 var readings = source.Read();
                 if (readings.Count == 0)
-                    w.WriteLine("  (no controllers)");
+                    w.WriteLine("  (no devices)");
                 foreach (var r in readings)
-                    w.WriteLine($"  {r.Describe()}  [hw={r.Hardware ?? "?"}, level={r.Level}, power={r.Power}, connection={r.Connection}, id={r.Id}]");
+                    w.WriteLine($"  {r.Describe()}  [type={r.Kind}, hw={r.Hardware ?? "?"}, level={r.Level}, power={r.Power}, connection={r.Connection}, id={r.Id}]");
             }
             catch (Exception ex)
             {
@@ -43,6 +43,9 @@ internal static partial class Diagnostics
             w.WriteLine($"  {line}");
         w.WriteLine("[Raw Bluetooth LE battery properties]");
         foreach (var line in BluetoothLeBattery.DescribeRawProperties())
+            w.WriteLine($"  {line}");
+        w.WriteLine("[Raw classic Bluetooth battery properties]");
+        foreach (var line in BluetoothLeBattery.DescribeRawProperties(@"BTHENUM\DEV_"))
             w.WriteLine($"  {line}");
         w.WriteLine("[Connected Bluetooth LE batteries]");
         foreach (var b in BluetoothLeBattery.QueryConnected())
