@@ -157,3 +157,79 @@ internal sealed class Jbl : VendorProtocol
         }
     }
 }
+
+/// <summary>The Logitech G930 wireless headset on its dongle.</summary>
+/// <remarks>
+/// On the FF00:0001 collection: feature report FF 09 00 FD F4 10 05 B1 BF A0 04, then the same feature
+/// report read back three times, 100 ms apart. Byte 13 of the last is the battery, from 44 (empty) to 91
+/// (full). No charging flag.
+/// </remarks>
+internal sealed class LogitechG930 : VendorProtocol
+{
+    public override string Name => "Logitech G930";
+
+    public override IReadOnlyCollection<ushort> Vendors { get; } = [0x046D];
+
+    public override VendorModel? Identify(ushort vendor, ushort product) =>
+        product == 0x0A1F ? new VendorModel("Logitech G930", "g930", DeviceKind.Headset) : null;
+
+    public override async Task<VendorReading?> ReadAsync(VendorDevice device, CancellationToken token)
+    {
+        var collection = device.Collections.Values.Select(c => c.Collection).FirstOrDefault(c => c.UsagePage == 0xFF00 && c.Usage == 0x0001);
+        if (collection is null || HidLink.Open(collection) is not { } link)
+            return null;
+        using (link)
+        {
+            if (!link.SetFeature(link.FeatureReport(0xFF, [0x09, 0x00, 0xFD, 0xF4, 0x10, 0x05, 0xB1, 0xBF, 0xA0, 0x04])))
+                return null;
+            byte[]? r = null;
+            for (int i = 0; i < 3; i++)
+            {
+                if (i > 0)
+                    await Task.Delay(TimeSpan.FromMilliseconds(100), token);
+                r = link.GetFeature(0xFF);
+                if (r is null)
+                    return null;
+            }
+            if (r is not { Length: > 13 } || r[13] is 0)
+                return null;
+            int percent = Math.Clamp((int)Math.Round((r[13] - 44) * 100.0 / (91 - 44)), 0, 100);
+            return new VendorReading(percent, ChargeState.Discharging);
+        }
+    }
+}
+
+/// <summary>The Lenovo Wireless VoIP headset on its dongle.</summary>
+/// <remarks>
+/// On the FF07:0222 collection (interface 3): feature report 24 01, the status command, answered by a
+/// 61-byte input report 27 01 &lt;error&gt;: a non-zero error means the headset isn't connected to the dongle,
+/// and byte 7 is the level. No charging flag.
+/// </remarks>
+internal sealed class LenovoVoip : VendorProtocol
+{
+    public override string Name => "Lenovo";
+
+    public override IReadOnlyCollection<ushort> Vendors { get; } = [0x17EF];
+
+    public override VendorModel? Identify(ushort vendor, ushort product) =>
+        product == 0xA07D ? new VendorModel("Lenovo Wireless VoIP Headset", "voip-a07d", DeviceKind.Headset) : null;
+
+    public override async Task<VendorReading?> ReadAsync(VendorDevice device, CancellationToken token)
+    {
+        var collection = device.Collections.Values.Select(c => c.Collection).FirstOrDefault(c => c.UsagePage == 0xFF07 && c.Usage == 0x0222);
+        if (collection is null || HidLink.Open(collection) is not { } link)
+            return null;
+        using (link)
+        {
+            while (await link.ReadAsync(_ => true, TimeSpan.FromMilliseconds(30), token) is not null) { }
+            if (!link.SetFeature(link.FeatureReport(0x24, [0x01])))
+                return null;
+            var r = await link.ReadAsync(r => r.Length >= 8 && r[0] == 0x27 && r[1] == 0x01, TimeSpan.FromSeconds(1), token);
+            if (r is null)
+                return null;
+            if (r[2] != 0)
+                return VendorReading.SwitchedOff;
+            return r[7] <= 100 ? new VendorReading(r[7], ChargeState.Discharging) : null;
+        }
+    }
+}

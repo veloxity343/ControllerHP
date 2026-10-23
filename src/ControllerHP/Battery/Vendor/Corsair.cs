@@ -23,7 +23,7 @@ internal sealed class Corsair : VendorProtocol
     private const ushort CorsairVendor = 0x1B1C;
     public override IReadOnlyCollection<ushort> Vendors { get; } = [CorsairVendor];
 
-    private enum Family { Void, DarkCore, Virtuoso }
+    private enum Family { Void, DarkCore, Virtuoso, Older }
 
     private sealed record Model(Family Family, bool Session = false, bool WiredRoute = false);
 
@@ -40,8 +40,14 @@ internal sealed class Corsair : VendorProtocol
         [0x0A62] = ("Corsair Virtuoso RGB Wireless XT", "virtuoso-xt", DeviceKind.Headset, true, new(Family.Virtuoso, WiredRoute: true)),
     };
 
+    /// <summary>Older wireless headsets (Void Wireless, Void Pro, HS70 and their kin), read with C9 64.</summary>
+    private static readonly ushort[] OlderHeadsets =
+        [0x1B27, 0x0A14, 0x0A16, 0x0A17, 0x0A1D, 0x0A1A, 0x1B2A, 0x1B23, 0x1B29, 0x0A55, 0x0A51, 0x0A52, 0x0A38, 0x0A4F, 0x0A2B, 0x0A75, 0x0A56];
+
     public override VendorModel? Identify(ushort vendor, ushort product) =>
-        Models.TryGetValue(product, out var m) ? new VendorModel(m.Name, m.Group, m.Kind, m.Cable, m.Model) : null;
+        Models.TryGetValue(product, out var m) ? new VendorModel(m.Name, m.Group, m.Kind, m.Cable, m.Model)
+        : OlderHeadsets.Contains(product) ? new VendorModel("Corsair wireless headset", $"{product:X4}", DeviceKind.Headset, Detail: new Model(Family.Older))
+        : null;
 
     private const byte Receiver = 0x08, Behind = 0x09, AnswerRoute = 0x01, Get = 0x02;
     private const byte Firmware = 0x13, Heartbeat = 0x12, Battery = 0x0F, Charge = 0x10;
@@ -54,6 +60,15 @@ internal sealed class Corsair : VendorProtocol
         foreach (var (collection, model) in device.ByPreference)
         {
             var detail = (Model)model.Detail!;
+            if (detail.Family == Family.Older)
+            {
+                if (collection.UsagePage != 0xFFC5 || collection.Usage != 0x0001)
+                    continue;
+                using var older = HidLink.Open(collection);
+                if (older is not null && await ReadOlderAsync(older, token) is { } reading)
+                    return reading;
+                continue;
+            }
             var candidates = detail.Family == Family.Void
                 ? (collection.Interface == 4 ? [collection] : Array.Empty<HidCollection>())
                 : (collection.UsagePage == 0xFF42 && collection.Usage == 0x0001 ? [collection] : Array.Empty<HidCollection>());
@@ -70,6 +85,22 @@ internal sealed class Corsair : VendorProtocol
             }
         }
         return null;
+    }
+
+    /// <summary>
+    /// Output report C9 64 on the FFC5:0001 collection; the answer has the battery in byte 2 (bit 7 is the
+    /// microphone up) and the state in byte 4: 0 off, 1 or 2 on battery, 4 or 5 charging.
+    /// </summary>
+    private static async Task<VendorReading?> ReadOlderAsync(HidLink link, CancellationToken token)
+    {
+        var r = await link.AskAsync(link.OutputReport(0xC9, [0x64]), r => r.Length >= 5 && r[4] is 0 or 1 or 2 or 4 or 5,
+            ReadWait, token);
+        if (r is null)
+            return null;
+        if (r[4] == 0)
+            return VendorReading.SwitchedOff;
+        int level = r[2] & 0x7F;
+        return level > 100 ? null : new VendorReading(level, r[4] is 4 or 5 ? ChargeState.Charging : ChargeState.Discharging);
     }
 
     private static async Task<VendorReading?> ReadVoidAsync(HidLink link, CancellationToken token)

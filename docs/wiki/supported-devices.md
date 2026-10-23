@@ -66,6 +66,7 @@ Logitech devices on a **Unifying, Bolt or Lightspeed receiver**, or plugged in b
 | Other Logitech mice and keyboards | Unifying, Bolt or Lightspeed receiver | Exact %, or estimated from voltage on older models | Yes | Likely |
 | Logitech G533, G535, G633, G635, G733, G933, G935, G PRO, G PRO X, G PRO X 2 headsets | Their USB receiver | Estimated from battery voltage | Yes | Untested |
 | Logitech G PRO X 2 LIGHTSPEED headset | Its receiver | Exact % | Yes | Untested |
+| Logitech G930 headset | Its USB receiver | Estimated from the raw level | No | Untested |
 | Astro A50 Gen 5 | Its base station | Exact % | Yes, docked | Untested |
 
 The panel shows them as connected by **USB receiver**. A device that's asleep keeps its last reading rather than coming and going, since it doesn't answer until it wakes; one that's switched off or out of range shows as disconnected.
@@ -86,17 +87,23 @@ Devices that need a mode switched before they'll answer (Razer's BlackShark V2 P
 | SteelSeries | Arctis Nova 7, 7X, 7P, Nova 5, Nova 3, Arctis 7+, GameBuds, older Arctis 1, 7, 9 and Pro Wireless headsets, the Nova Pro Wireless and Nova Elite base stations | Exact %, or steps on some | Most | Untested |
 | SteelSeries | Rival 3 Wireless, Aerox 3, 5 and 9 Wireless mice | Exact % | Yes | Untested |
 | Corsair | Void v2 Wireless, HS80 Max Wireless, Virtuoso Max Wireless, Virtuoso RGB Wireless SE and XT headsets; Dark Core RGB Pro SE mouse | Exact % | Virtuoso SE and XT only | Untested |
-| HyperX | Cloud II Wireless, Cloud Alpha 2, Cloud III Wireless, Cloud II Core Wireless, Cloud III S Wireless | Exact % | Yes | Untested |
+| Corsair | Older wireless headsets: Void Wireless, Void Pro and Void Elite Wireless, HS70 and HS70 Pro Wireless, and their kin | Exact % | Yes | Untested |
+| HyperX | Cloud II Wireless (HP and Kingston models), Cloud Alpha Wireless, Cloud Alpha 2, Cloud III Wireless, Cloud II Core Wireless, Cloud III S Wireless | Exact % | Yes | Untested |
+| HyperX | Cloud Flight Wireless | Estimated from battery voltage | Yes, without a level | Untested |
 | ASUS | ROG Gladius III, Chakram, Keris, Spatha X, Harpe Ace, Pugio II, Strix Impact II Wireless, TUF Gaming M4 Wireless and others | Exact %, or 5 steps on older models | Yes | Untested |
 | Keychron | Ultra-Link 8K receiver, M5 | Exact % | No | Untested |
 | Pulsar, ATK, VXE, Hitscan | Pulsar X2 V2 Mini and X2 CrazyLight Mini, ATK VXE R1 SE+, VXE R1 Pro Max, Hitscan Hyperlight | Exact % | Yes, on the cable | Untested |
 | WLmouse, LAMZU, G-Wolves | WLmouse Beast X family, LAMZU Maya X, G-Wolves mice (HTX, HSK, Fenrir, HTS and more) | Exact % | Yes, on the cable | Untested |
 | MCHOSE | L7, M7, A7, K7 families, G7, A5 Pro Max | Exact % | Yes | Untested |
+| MCHOSE | X9 Wireless headset | Exact % | No | Untested |
 | Lofree | Hyzen keyboard on its dongle | Exact % | No | Untested |
 | Audeze | Maxwell, Maxwell 2 | Exact % | Yes, on its cable | Untested |
 | JBL | Quantum 910 Wireless | Exact %, when it reports it | No | Untested |
 | NZXT | Lift Elite Wireless | Exact % | Yes | Untested |
 | Angry Miao | AM Infinity 8K mouse | Exact % | No | Untested |
+| Sony | INZONE H5 and H9 II headsets | Exact % | Yes | Untested |
+| Sony | INZONE Buds, the lower earbud | Exact %, when the dongle reports it | No | Untested |
+| Lenovo | Wireless VoIP Headset | Exact % | No | Untested |
 
 **A few behave differently:**
 - **Sleeping devices.** Many receivers can't tell a sleeping mouse from one that's switched off. A mouse or keyboard that stops answering keeps its last level for 30 minutes, or for as long as its receiver is plugged in for some models, so a mouse that dozes between games doesn't come and go. A headset that stops answering goes after 2 minutes, and any device that says it's switched off goes at once.

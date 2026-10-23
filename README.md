@@ -73,7 +73,7 @@ PlayStation controllers report battery in 10% steps.
 
 **Devices on their makers' USB receivers** (dongles) are read through each maker's own protocol, read-only:
 - **Logitech** mice, keyboards and headsets on Unifying, Bolt and Lightspeed receivers. Tested: a G Pro Wireless.
-- **Razer, SteelSeries, Corsair, HyperX, ASUS, Keychron, Pulsar and its sister brands, WLmouse, LAMZU, G-Wolves, MCHOSE, Lofree, Astro, Audeze, JBL, NZXT and Angry Miao** devices, and the Steam Controller's puck. All untested so far.
+- **Razer, SteelSeries, Corsair, HyperX, Sony INZONE, Lenovo, ASUS, Keychron, Pulsar and its sister brands, WLmouse, LAMZU, G-Wolves, MCHOSE, Lofree, Astro, Audeze, JBL, NZXT and Angry Miao** devices, and the Steam Controller's puck. All untested so far.
 
 See [Supported devices](docs/wiki/supported-devices.md) for what each device and connection can report, and the known limitations.
 

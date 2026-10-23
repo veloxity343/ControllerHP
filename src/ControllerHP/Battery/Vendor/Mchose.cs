@@ -2,7 +2,7 @@ namespace ControllerHP.Battery.Vendor;
 
 /// <summary>
 /// MCHOSE wireless mice: the 5253 and 3837 families (L7, M7, A7, K7) and the G7, on their receivers or
-/// cables. (The first-generation A5 Pro Max runs the shared mouse firmware: see <see cref="SharedMouseFirmware"/>.)
+/// cables; and the X9 Wireless headset. (The first-generation A5 Pro Max runs the shared mouse firmware: see <see cref="SharedMouseFirmware"/>.)
 /// </summary>
 /// <remarks>
 /// The 5253 and 3837 families answer on their FF01 configuration collection, through feature reports 12
@@ -25,10 +25,13 @@ internal sealed class Mchose : VendorProtocol
 
     private static readonly Dictionary<ushort, string> ModelNames = new() { [0x0031] = "MCHOSE M7 Ultra" };
 
+    private enum Kind { Family, G7, X9 }
+
     public override VendorModel? Identify(ushort vendor, ushort product) => (vendor, product) switch
     {
-        (G7Vendor, G7Product) => new VendorModel("MCHOSE G7", "g7", DeviceKind.Mouse, Detail: true),
-        (FamilyVendor or NewerVendor, _) => new VendorModel("MCHOSE mouse", $"{vendor:X4}", DeviceKind.Mouse, Detail: false),
+        (G7Vendor, G7Product) => new VendorModel("MCHOSE G7", "g7", DeviceKind.Mouse, Detail: Kind.G7),
+        (NewerVendor, 0x6045) => new VendorModel("MCHOSE X9 Wireless", "x9", DeviceKind.Headset, Detail: Kind.X9),
+        (FamilyVendor or NewerVendor, _) => new VendorModel("MCHOSE mouse", $"{vendor:X4}", DeviceKind.Mouse, Detail: Kind.Family),
         _ => null,
     };
 
@@ -39,13 +42,24 @@ internal sealed class Mchose : VendorProtocol
     {
         foreach (var (collection, model) in device.ByPreference)
         {
-            bool g7 = (bool)model.Detail!;
-            if (g7 ? collection.UsagePage != 0xFF01 || collection.Usage != 0x0010 : collection.UsagePage != 0xFF01)
+            var kind = (Kind)model.Detail!;
+            bool wanted = kind switch
+            {
+                Kind.G7 => collection.UsagePage == 0xFF01 && collection.Usage == 0x0010,
+                Kind.X9 => collection.UsagePage == 0xFF90 && collection.Usage == 0x0001,
+                _ => collection.UsagePage == 0xFF01,
+            };
+            if (!wanted)
                 continue;
             using var link = HidLink.Open(collection);
             if (link is null)
                 continue;
-            var reading = g7 ? await ReadG7Async(link, token) : await ReadFamilyAsync(link, token);
+            var reading = kind switch
+            {
+                Kind.G7 => await ReadG7Async(link, token),
+                Kind.X9 => await ReadX9Async(link, token),
+                _ => await ReadFamilyAsync(link, token),
+            };
             if (reading is not null)
                 return reading;
         }
@@ -88,6 +102,14 @@ internal sealed class Mchose : VendorProtocol
             return null;
         return new VendorReading(level, charging != 0 ? ChargeState.Charging : ChargeState.Discharging,
             Name: ModelNames.GetValueOrDefault(model));
+    }
+
+    /// <summary>The X9 headset: output report 55 65 01, answered 55 65 &lt;level&gt; 02. No charging flag.</summary>
+    private static async Task<VendorReading?> ReadX9Async(HidLink link, CancellationToken token)
+    {
+        var r = await link.AskAsync(link.OutputReport(0x55, [0x65, 0x01]),
+            r => r.Length >= 4 && r[0] == 0x55 && r[1] == 0x65 && r[3] == 0x02 && r[2] <= 100, G7Wait, token);
+        return r is null ? null : new VendorReading(r[2], ChargeState.Discharging);
     }
 
     private static async Task<VendorReading?> ReadG7Async(HidLink link, CancellationToken token)

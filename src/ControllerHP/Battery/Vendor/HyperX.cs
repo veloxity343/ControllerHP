@@ -9,13 +9,21 @@ internal sealed class HyperX : VendorProtocol
 {
     public override string Name => "HyperX";
 
-    private const ushort HyperXVendor = 0x03F0;
-    public override IReadOnlyCollection<ushort> Vendors { get; } = [HyperXVendor];
+    private const ushort HyperXVendor = 0x03F0, KingstonVendor = 0x0951;
+    public override IReadOnlyCollection<ushort> Vendors { get; } = [HyperXVendor, KingstonVendor];
 
-    private enum Family { Cloud2, Alpha2, Cloud3, Cloud3S }
+    private enum Family { Cloud2, Alpha2, Cloud3, Cloud3S, AlphaWireless, Flight, KingstonCloud2 }
+
+    private static readonly Dictionary<(ushort, ushort), (string Name, string Group, Family Family)> Kingston = new()
+    {
+        [(KingstonVendor, 0x16C4)] = ("HyperX Cloud Flight Wireless", "flight-16c4", Family.Flight),
+        [(KingstonVendor, 0x1723)] = ("HyperX Cloud Flight Wireless", "flight-1723", Family.Flight),
+        [(KingstonVendor, 0x1718)] = ("HyperX Cloud II Wireless", "cloud2-kingston", Family.KingstonCloud2),
+    };
 
     private static readonly Dictionary<ushort, (string Name, string Group, Family Family)> Models = new()
     {
+        [0x098D] = ("HyperX Cloud Alpha Wireless", "alpha-wireless", Family.AlphaWireless),
         [0x0696] = ("HyperX Cloud II Wireless", "cloud2-0696", Family.Cloud2),
         [0x018B] = ("HyperX Cloud II Wireless", "cloud2-018b", Family.Cloud2),
         [0x08BE] = ("HyperX Cloud Alpha 2", "alpha2", Family.Alpha2),
@@ -28,7 +36,9 @@ internal sealed class HyperX : VendorProtocol
     };
 
     public override VendorModel? Identify(ushort vendor, ushort product) =>
-        Models.TryGetValue(product, out var m) ? new VendorModel(m.Name, m.Group, DeviceKind.Headset, Detail: m.Family) : null;
+        (vendor == HyperXVendor ? Models.TryGetValue(product, out var m) : Kingston.TryGetValue((vendor, product), out m))
+            ? new VendorModel(m.Name, m.Group, DeviceKind.Headset, Detail: m.Family)
+            : null;
 
     private static readonly TimeSpan ReadWait = TimeSpan.FromSeconds(1), AlphaWait = TimeSpan.FromMilliseconds(1500);
 
@@ -41,8 +51,75 @@ internal sealed class HyperX : VendorProtocol
             Family.Cloud2 => await ReadCloud2Async(Find(collections, 0xFF90, 0x0303), token),
             Family.Alpha2 => await ReadAlpha2Async(Find(collections, 0xFF13, 0xFF00), token),
             Family.Cloud3 => await ReadCloud3Async(Find(collections, 0xFF13, 0x0001), token),
-            _ => await ReadCloud3SAsync(collections, token),
+            Family.Cloud3S => await ReadCloud3SAsync(collections, token),
+            _ => await ReadInterfaceZeroAsync(collections, family, token),
         };
+    }
+
+    /// <summary>
+    /// The older families, on interface 0's collections (vendor pages first):
+    /// Cloud Alpha Wireless, 21 BB &lt;cmd&gt; answered with that echo: 03 the link (byte 3 at 01 is off), 0C
+    /// charging (byte 3 at 01), 0B the level in byte 3. Cloud Flight, 21 FF 05, answered with 15 or 20 bytes
+    /// carrying millivolts in bytes 3-4; above 4107 mV it's charging. Kingston's Cloud II Wireless, report 06
+    /// 00 02 00 9A 00 00 68 4A 8E 0A 00 00 00 BB &lt;cmd&gt;, answered 0B .. BB &lt;cmd&gt;: 02 the level in byte 7, 03
+    /// charging in byte 4.
+    /// </summary>
+    private static async Task<VendorReading?> ReadInterfaceZeroAsync(List<HidCollection> collections, Family family, CancellationToken token)
+    {
+        foreach (var collection in collections.Where(c => c.Interface is 0 or -1).OrderBy(c => c.UsagePage >= 0xFF00 ? 0 : 1))
+        {
+            using var link = HidLink.Open(collection);
+            if (link is null)
+                continue;
+            switch (family)
+            {
+                case Family.AlphaWireless:
+                {
+                    async Task<byte[]?> Ask(byte command) => await link.AskAsync(link.OutputReport(0x21, [0xBB, command]),
+                        r => r.Length >= 4 && r[0] == 0x21 && r[1] == 0xBB && r[2] == command, TimeSpan.FromSeconds(2), token);
+                    if (await Ask(0x03) is not { } connection)
+                        continue;
+                    if (connection[3] == 0x01)
+                        return VendorReading.SwitchedOff;
+                    if (await Ask(0x0C) is { } charging && charging[3] == 0x01)
+                        return new VendorReading(null, ChargeState.Charging);
+                    return await Ask(0x0B) is { } level && level[3] <= 100 ? new VendorReading(level[3], ChargeState.Discharging) : null;
+                }
+                case Family.Flight:
+                {
+                    var r = await link.AskAsync(link.OutputReport(0x21, [0xFF, 0x05]), r => r.Length is 15 or 20, ReadWait, token);
+                    if (r is null)
+                        continue;
+                    int millivolts = r[3] << 8 | r[4];
+                    return millivolts > 0x100B
+                        ? new VendorReading(null, ChargeState.Charging)
+                        : new VendorReading(FlightPercent(millivolts), ChargeState.Discharging);
+                }
+                default:
+                {
+                    async Task<byte[]?> Ask(byte command) => await link.AskAsync(
+                        link.OutputReport(0x06, [0x00, 0x02, 0x00, 0x9A, 0x00, 0x00, 0x68, 0x4A, 0x8E, 0x0A, 0x00, 0x00, 0x00, 0xBB, command]),
+                        r => r.Length >= 8 && r[0] == 0x0B && r[2] == 0xBB && r[3] == command, ReadWait, token);
+                    if (await Ask(0x02) is not { } level || level[7] > 100)
+                        continue;
+                    var charging = await Ask(0x03);
+                    return new VendorReading(level[7], Power(charging is not null && charging[4] == 1));
+                }
+            }
+        }
+        return null;
+    }
+
+    /// <summary>The Cloud Flight's charge from its voltage, along the curve fitted for it.</summary>
+    private static int FlightPercent(int millivolts)
+    {
+        if (millivolts <= 3648)
+            return (int)Math.Round(0.00125 * millivolts);
+        if (millivolts > 3975)
+            return 100;
+        double v = millivolts;
+        double percent = 0.00000002547505 * Math.Pow(v, 4) - 0.0003900299 * Math.Pow(v, 3) + 2.238321 * v * v - 5706.256 * v + 5452299.0;
+        return (int)Math.Clamp(Math.Round(percent), 0, 100);
     }
 
     /// <summary>The collection with this usage: these dongles carry several on one interface.</summary>
