@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using ControllerHP.Battery;
+using ControllerHP.Battery.Vendor;
 using ControllerHP.Tray;
 
 namespace ControllerHP;
@@ -25,6 +26,7 @@ internal static partial class Diagnostics
         // Logitech devices are asked in the background a few seconds after start-up; wait for an answer.
         var logitech = sources.OfType<LogitechSource>().FirstOrDefault();
         var logitechDetails = logitech?.PollNow(TimeSpan.FromSeconds(15)) ?? [];
+        var vendorDetails = sources.OfType<VendorHidSource>().FirstOrDefault()?.PollNow(TimeSpan.FromSeconds(15)) ?? [];
         foreach (var source in Expand(sources))
         {
             w.WriteLine($"[{source.Name}]");
@@ -43,6 +45,9 @@ internal static partial class Diagnostics
         }
         w.WriteLine("[Logitech HID++ details]");
         foreach (var line in logitechDetails)
+            w.WriteLine($"  {line}");
+        w.WriteLine("[Vendor protocol details]");
+        foreach (var line in vendorDetails)
             w.WriteLine($"  {line}");
         w.WriteLine("[Raw Windows.Gaming.Input reports]");
         foreach (var line in GamingInputSource.DescribeRawReports())

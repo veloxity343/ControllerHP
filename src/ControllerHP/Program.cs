@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using ControllerHP.Battery;
+using ControllerHP.Battery.Vendor;
 using ControllerHP.Tray;
 
 namespace ControllerHP;
@@ -16,9 +17,9 @@ internal static partial class Program
         var bluetooth = new BluetoothSource();
         // Logitech mice, keyboards and headsets, on their USB receivers or cables.
         var logitech = new LogitechSource();
-        // Mice from makers sharing one firmware family: WLmouse, LAMZU and G-Wolves.
-        var mice = new MouseReceiverSource();
-        IBatterySource[] sources = [xbox, playStation, bluetooth, logitech, mice];
+        // Other makers' devices on their own receivers, each through its maker's protocol.
+        var vendors = new VendorHidSource(VendorProtocols.All);
+        IBatterySource[] sources = [xbox, playStation, bluetooth, logitech, vendors];
 
         if (args.Contains("--list"))
             return ListControllers(sources);
