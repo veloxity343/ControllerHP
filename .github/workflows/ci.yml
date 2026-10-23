@@ -64,7 +64,7 @@ jobs:
 
   # Runs what was just built on Windows, as a user would: both downloads list devices (none on the runner)
   # and draw every page of the settings window. Catches a build that starts but breaks, such as a
-  # trimming or .NET change, before it can be released.
+  # .NET change, before it can be released.
   test:
     needs: build
     runs-on: windows-latest

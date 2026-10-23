@@ -46,7 +46,7 @@ If something isn't working, Troubleshooting is the place to start.
 
    | Download | Size | Needs |
    |---|---|---|
-   | `ControllerHP-x.y.z-win-x64.zip` | Under 1 MB | [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0), or later (Windows offers it if it's missing) |
+   | `ControllerHP-x.y.z-win-x64.zip` | ~0.4 MB | [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0), or later (Windows offers it if it's missing) |
    | `ControllerHP-x.y.z-win-x64-standalone.zip` | ~47 MB | Nothing |
 
 2. Extract `ControllerHP.exe` somewhere permanent, such as `%LOCALAPPDATA%\Programs\ControllerHP`, and run it.

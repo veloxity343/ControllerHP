@@ -21,7 +21,7 @@
 
    | Download | Size | Choose it if… |
    |---|---|---|
-   | `ControllerHP-x.y.z-win-x64.zip` | Under 1 MB | You have, or don't mind installing, the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (or a later version). If it's missing, Windows offers a download link when you first run the app. |
+   | `ControllerHP-x.y.z-win-x64.zip` | ~0.4 MB | You have, or don't mind installing, the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) (or a later version). If it's missing, Windows offers a download link when you first run the app. |
    | `ControllerHP-x.y.z-win-x64-standalone.zip` | ~47 MB | You want nothing else to install, and it keeps working whatever .NET versions come and go. |
 
 2. Extract `ControllerHP.exe` to a folder it can stay in. `%LOCALAPPDATA%\Programs\ControllerHP` is a good choice: paste that into File Explorer's address bar to create it. Don't run it from inside the zip.

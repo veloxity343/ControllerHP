@@ -2,11 +2,11 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <!-- The 10.0.19041 TFM pulls in the WinRT projection used for Windows.Gaming.Input. -->
-    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <!-- Plain Windows, with no Windows Runtime projection: the few Windows Runtime and device APIs used are
+         called directly (see Battery/GamingInput.cs, DeviceQuery.cs, DeviceNotices.cs). -->
+    <TargetFramework>net10.0-windows</TargetFramework>
     <!-- The framework-dependent build runs on .NET 10, or on a later major version if that's all a PC has. -->
     <RollForward>Major</RollForward>
-    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <UseWindowsForms>true</UseWindowsForms>
     <!-- Allows building from Linux/WSL. -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
@@ -29,61 +29,6 @@
     <!-- Also drawn in the tray when no controllers are connected. -->
     <EmbeddedResource Include="app.ico" LogicalName="ControllerHP.app.ico" />
   </ItemGroup>
-
-  <!--
-    The Windows projection (Microsoft.Windows.SDK.NET.dll) is 25 MB, of which the app uses a sliver; it's
-    built to be trimmed, and each app ships its own copy. Neither download is trimmed: trimming drops some
-    of .NET's own files and switches off parts of the runtime that Windows Forms relies on. Instead every
-    publish first runs a private trimmed publish (once per change to the app), with only the projection
-    cut down, and ships that one file from it. .NET itself goes out exactly as Microsoft builds it.
-  -->
-  <PropertyGroup Condition="'$(_TrimmingProjection)' == 'true'">
-    <SelfContained>true</SelfContained>
-    <PublishTrimmed>true</PublishTrimmed>
-    <TrimMode>partial</TrimMode>
-    <_SuppressWinFormsTrimError>true</_SuppressWinFormsTrimError>
-    <!-- Trimming turns these off by default, and the projection is cut down to suit; keep them as the
-         untrimmed app runs. -->
-    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
-    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
-    <CustomResourceTypesSupport>true</CustomResourceTypesSupport>
-  </PropertyGroup>
-
-  <Target Name="TrimOnlyWindowsProjection" Condition="'$(_TrimmingProjection)' == 'true'"
-          AfterTargets="_ComputeManagedAssemblyToLink" BeforeTargets="PrepareForILLink">
-    <ItemGroup>
-      <ManagedAssemblyToLink Condition="'%(Filename)' != 'Microsoft.Windows.SDK.NET'" TrimMode="copy" />
-    </ItemGroup>
-  </Target>
-
-  <PropertyGroup>
-    <_TrimmedProjectionDir>$(BaseIntermediateOutputPath)trimmed-projection/</_TrimmedProjectionDir>
-    <_TrimmedProjection>$(_TrimmedProjectionDir)Microsoft.Windows.SDK.NET.dll</_TrimmedProjection>
-  </PropertyGroup>
-
-  <Target Name="TrimWindowsProjection" Condition="'$(_TrimmingProjection)' != 'true'"
-          AfterTargets="ComputeResolvedFilesToPublishList"
-          Inputs="@(IntermediateAssembly);$(MSBuildProjectFullPath)" Outputs="$(_TrimmedProjection)">
-    <Exec Command="&quot;$(DOTNET_HOST_PATH)&quot; publish &quot;$(MSBuildProjectFullPath)&quot; -c $(Configuration) -p:_TrimmingProjection=true --artifacts-path &quot;$(_TrimmedProjectionDir)artifacts&quot; -p:DebugType=none --nologo -v q" />
-    <ItemGroup>
-      <_LinkedProjection Include="$(_TrimmedProjectionDir)artifacts/obj/**/linked/Microsoft.Windows.SDK.NET.dll" />
-    </ItemGroup>
-    <Error Condition="'@(_LinkedProjection)' == ''" Text="The trimmed Windows projection wasn't produced." />
-    <Copy SourceFiles="@(_LinkedProjection)" DestinationFiles="$(_TrimmedProjection)" />
-  </Target>
-
-  <Target Name="UseTrimmedWindowsProjection" Condition="'$(_TrimmingProjection)' != 'true'"
-          AfterTargets="TrimWindowsProjection">
-    <ItemGroup>
-      <_FullProjection Include="@(ResolvedFileToPublish)" Condition="'%(Filename)%(Extension)' == 'Microsoft.Windows.SDK.NET.dll'" />
-      <ResolvedFileToPublish Remove="@(_FullProjection)" />
-      <ResolvedFileToPublish Include="$(_TrimmedProjection)" Condition="'@(_FullProjection)' != ''">
-        <RelativePath>Microsoft.Windows.SDK.NET.dll</RelativePath>
-        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-        <AssetType>runtime</AssetType>
-      </ResolvedFileToPublish>
-    </ItemGroup>
-  </Target>
 
   <PropertyGroup>
     <!-- Overridden by CI from the release tag (v1.2.3 -> 1.2.3). -->
