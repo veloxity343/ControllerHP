@@ -1,6 +1,5 @@
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
-using Windows.Devices.Bluetooth;
-using Windows.Devices.Enumeration;
 
 namespace ControllerHP.Battery;
 
@@ -16,7 +15,7 @@ public sealed partial class BluetoothSource : IBatterySource, IDisposable
 
     public event EventHandler? ControllersChanged;
 
-    private readonly List<DeviceWatcher> _watchers = [];
+    private readonly IDisposable _notices;
     private readonly ChargeTrends _trends = new();
     /// <summary>A device's type doesn't change, so it's looked up once per address.</summary>
     private readonly Dictionary<string, DeviceKind> _kinds = [];
@@ -42,22 +41,11 @@ public sealed partial class BluetoothSource : IBatterySource, IDisposable
 
     public BluetoothSource()
     {
-        foreach (string prefix in new[] { @"BTHLE\DEV_", @"BTHENUM\DEV_" })
-        {
-            try
-            {
-                _watchers.Add(BluetoothLeBattery.StartWatcher(() => ControllersChanged?.Invoke(this, EventArgs.Empty), prefix));
-            }
-            catch (Exception ex)
-            {
-                // Polling still picks up changes, just less promptly.
-                Program.LogOnce($"Bluetooth watcher for {prefix} failed to start: {ex.Message}");
-            }
-        }
+        // A device connecting or disconnecting brings or takes its interfaces: look again then, not just at the
+        // next poll. Battery levels Windows updates in the meantime come with the poll.
+        _notices = DeviceNotices.Watch(() => ControllersChanged?.Invoke(this, EventArgs.Empty));
     }
 
-    private const string ContainerIdKey = "System.Devices.ContainerId";
-    private const string ClassGuidKey = "System.Devices.ClassGuid";
 
     // Device setup classes Windows files a device's parts under.
     private static readonly Guid KeyboardClass = new("4d36e96b-e325-11ce-bfc1-08002be10318");
@@ -78,25 +66,26 @@ public sealed partial class BluetoothSource : IBatterySource, IDisposable
         foreach (string prefix in new[] { @"BTHLE\DEV_", @"BTHENUM\DEV_" })
         {
             foreach (var node in BluetoothLeBattery.FindDevices(prefix,
-                         [BluetoothLeBattery.InstanceIdKey, BluetoothLeBattery.BatteryKey, BluetoothLeBattery.ConnectedKey, ContainerIdKey]))
+                         [BluetoothLeBattery.BatteryKey, BluetoothLeBattery.ConnectedKey, DeviceQuery.ContainerId]))
             {
                 var match = DeviceNodeId().Match(BluetoothLeBattery.InstanceId(node));
-                if (!match.Success || node.Properties.GetValueOrDefault(BluetoothLeBattery.BatteryKey) is not IConvertible battery)
+                if (!match.Success || node[BluetoothLeBattery.BatteryKey] is not IConvertible battery)
                     continue;
                 string address = match.Groups[2].Value.ToUpperInvariant();
                 devices[address] = new Device(address, node.Name, match.Groups[1].Value.Equals("LE", StringComparison.OrdinalIgnoreCase),
-                    Math.Clamp(battery.ToInt32(null), 0, 100), node.Properties.GetValueOrDefault(BluetoothLeBattery.ConnectedKey) as bool?,
-                    node.Properties.GetValueOrDefault(ContainerIdKey) as Guid?);
+                    Math.Clamp(battery.ToInt32(null), 0, 100), node[BluetoothLeBattery.ConnectedKey] as bool?,
+                    node[DeviceQuery.ContainerId] as Guid?);
             }
         }
         if (devices.Count == 0)
             return [];
         AddServiceDetails(devices);
+        var classic = ClassicDevices();
 
         var readings = new List<ControllerBattery>();
         foreach (var device in devices.Values)
         {
-            var (connected, kind) = Ask(device);
+            var (connected, kind) = Ask(device, device.LowEnergy ? null : classic.GetValueOrDefault(device.Address));
             if (connected != true)
                 continue;
             // Xbox and PlayStation controllers have sources of their own, which see more than the level.
@@ -121,7 +110,7 @@ public sealed partial class BluetoothSource : IBatterySource, IDisposable
     {
         foreach (var (prefix, pattern) in new[] { (@"BTHENUM\{", ClassicServiceNodeId()), (@"BTHLEDEVICE\{", LowEnergyServiceNodeId()) })
         {
-            foreach (var node in BluetoothLeBattery.FindDevices(prefix, [BluetoothLeBattery.InstanceIdKey]))
+            foreach (var node in BluetoothLeBattery.FindDevices(prefix, []))
             {
                 var match = pattern.Match(BluetoothLeBattery.InstanceId(node));
                 if (!match.Success || !devices.TryGetValue(match.Groups[4].Value, out var device))
@@ -137,50 +126,72 @@ public sealed partial class BluetoothSource : IBatterySource, IDisposable
         }
     }
 
+    /// <summary>What the Bluetooth stack records about a paired classic device: whether it's connected, and its class.</summary>
+    private sealed record Endpoint(bool Connected, uint ClassOfDevice);
+
     /// <summary>
-    /// Asks Windows' Bluetooth stack whether it's connected right now, and what sort of device it is.
-    /// Looking a device up by address doesn't scan, so it's quick. The connected flag Windows records
-    /// beside the battery level is the fallback: it can read as disconnected for a headset playing audio.
+    /// Every paired classic device the Bluetooth stack knows, by address: whether it's connected right now,
+    /// and its class of device. It's a listing of what the stack already knows, with no inquiry, so it's quick.
     /// </summary>
-    private (bool? Connected, DeviceKind Kind) Ask(Device device)
+    private static Dictionary<string, Endpoint> ClassicDevices()
     {
-        bool? connected = device.Connected;
-        _kinds.TryGetValue(device.Address, out var kind);
-        bool knowKind = _kinds.ContainsKey(device.Address);
+        var devices = new Dictionary<string, Endpoint>(StringComparer.OrdinalIgnoreCase);
         try
         {
-            ulong address = Convert.ToUInt64(device.Address, 16);
-            var wait = TimeSpan.FromSeconds(3);
-            if (device.LowEnergy)
+            var search = new SearchParams
             {
-                var lookup = BluetoothLEDevice.FromBluetoothAddressAsync(address).AsTask();
-                if (lookup.Wait(wait) && lookup.Result is { } found)
+                Size = Marshal.SizeOf<SearchParams>(),
+                ReturnAuthenticated = 1, ReturnRemembered = 1, ReturnConnected = 1,
+            };
+            var info = new DeviceInfo { Size = Marshal.SizeOf<DeviceInfo>() };
+            IntPtr find = BluetoothFindFirstDevice(search, ref info);
+            if (find == IntPtr.Zero)
+                return devices;
+            try
+            {
+                do
                 {
-                    using (found)
-                    {
-                        connected = found.ConnectionStatus == BluetoothConnectionStatus.Connected;
-                        if (!knowKind)
-                            kind = KindFromAppearance(found.Appearance.RawValue);
-                    }
+                    devices[info.Address.ToString("X12")] = new Endpoint(info.Connected != 0, info.ClassOfDevice);
+                    info = new DeviceInfo { Size = Marshal.SizeOf<DeviceInfo>() };
                 }
+                while (BluetoothFindNextDevice(find, ref info));
             }
-            else
+            finally
             {
-                var lookup = BluetoothDevice.FromBluetoothAddressAsync(address).AsTask();
-                if (lookup.Wait(wait) && lookup.Result is { } found)
-                {
-                    using (found)
-                    {
-                        connected = found.ConnectionStatus == BluetoothConnectionStatus.Connected;
-                        if (!knowKind)
-                            kind = KindFromClass(found.ClassOfDevice.RawValue);
-                    }
-                }
+                BluetoothFindDeviceClose(find);
             }
         }
         catch (Exception ex)
         {
             Program.LogOnce($"Bluetooth lookup failed: {ex.GetType().Name}: {ex.Message}");
+        }
+        return devices;
+    }
+
+    /// <summary>
+    /// Whether it's connected right now, and what sort of device it is. Classic devices are asked of the
+    /// Bluetooth stack; for those the connected flag Windows records beside the battery level is only the
+    /// fallback, as it can read as disconnected for a headset playing audio. Low Energy devices use that flag,
+    /// and the appearance Windows keeps from pairing.
+    /// </summary>
+    private (bool? Connected, DeviceKind Kind) Ask(Device device, Endpoint? endpoint)
+    {
+        bool? connected = endpoint?.Connected ?? device.Connected;
+        bool knowKind = _kinds.TryGetValue(device.Address, out var kind);
+        if (!knowKind)
+        {
+            kind = DeviceKind.Other;
+            try
+            {
+                if (device.LowEnergy && Appearance(device.Address) is uint appearance)
+                    kind = KindFromAppearance(appearance);
+                else if (!device.LowEnergy && endpoint is not null)
+                    kind = KindFromClass(endpoint.ClassOfDevice);
+            }
+            catch (Exception ex)
+            {
+                Program.LogOnce($"Bluetooth device type lookup failed: {ex.GetType().Name}: {ex.Message}");
+            }
         }
 
         if (!knowKind)
@@ -197,6 +208,17 @@ public sealed partial class BluetoothSource : IBatterySource, IDisposable
     }
 
     /// <summary>
+    /// The appearance a Low Energy device advertises (what sort of device it says it is), from the Bluetooth
+    /// stack's own record of the device in the registry, where Windows keeps it from pairing.
+    /// </summary>
+    private static uint? Appearance(string address)
+    {
+        using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
+            $@"SYSTEM\CurrentControlSet\Services\BTHPORT\Parameters\Devices\{address.ToLowerInvariant()}");
+        return key?.GetValue("LEAppearance") is int appearance ? (uint)appearance : null;
+    }
+
+    /// <summary>
     /// A device's type from the parts Windows installed for it: a keyboard part makes it a keyboard (keyboards
     /// often have a mouse part too, for media keys or a touchpad), else a mouse part a mouse, else an audio
     /// part a headset.
@@ -205,8 +227,8 @@ public sealed partial class BluetoothSource : IBatterySource, IDisposable
     {
         try
         {
-            var classes = BluetoothLeBattery.FindByContainer(container, ClassGuidKey)
-                .Select(part => part.Properties.GetValueOrDefault(ClassGuidKey) as Guid?)
+            var classes = BluetoothLeBattery.FindByContainer(container, DeviceQuery.ClassGuid)
+                .Select(part => part[DeviceQuery.ClassGuid] as Guid?)
                 .OfType<Guid>()
                 .ToHashSet();
             if (classes.Contains(KeyboardClass))
@@ -259,12 +281,40 @@ public sealed partial class BluetoothSource : IBatterySource, IDisposable
         };
     }
 
+    // The classic Bluetooth API (bluetoothapis.h): listing the devices the stack remembers.
+    [StructLayout(LayoutKind.Sequential)]
+    private struct SearchParams
+    {
+        public int Size;
+        public int ReturnAuthenticated, ReturnRemembered, ReturnUnknown, ReturnConnected, IssueInquiry;
+        public byte TimeoutMultiplier;
+        public IntPtr Radio; // all radios
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private unsafe struct DeviceInfo
+    {
+        public int Size;
+        public ulong Address;
+        public uint ClassOfDevice;
+        public int Connected, Remembered, Authenticated;
+        public fixed ushort LastSeen[8], LastUsed[8];
+        public fixed char Name[248];
+    }
+
+    [LibraryImport("bthprops.cpl", SetLastError = true)]
+    private static partial IntPtr BluetoothFindFirstDevice(in SearchParams search, ref DeviceInfo info);
+
+    [LibraryImport("bthprops.cpl", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool BluetoothFindNextDevice(IntPtr find, ref DeviceInfo info);
+
+    [LibraryImport("bthprops.cpl")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool BluetoothFindDeviceClose(IntPtr find);
+
     public void Dispose()
     {
-        foreach (var watcher in _watchers)
-        {
-            if (watcher.Status is DeviceWatcherStatus.Started or DeviceWatcherStatus.EnumerationCompleted)
-                watcher.Stop();
-        }
+        _notices.Dispose();
     }
 }

@@ -14,7 +14,7 @@ public sealed class GamingInputSource : IBatterySource, IDisposable
 
     public event EventHandler? ControllersChanged;
 
-    private readonly Windows.Devices.Enumeration.DeviceWatcher? _bluetoothWatcher;
+    private readonly IDisposable? _bluetoothWatcher;
     private readonly ChargeTrends _trends = new();
 
     public GamingInputSource()
@@ -24,15 +24,8 @@ public sealed class GamingInputSource : IBatterySource, IDisposable
         // Touching the collection starts enumeration; already-connected pads arrive via GamepadAdded.
         _ = Gamepad.Gamepads.Count;
 
-        try
-        {
-            _bluetoothWatcher = BluetoothLeBattery.StartWatcher(() => ControllersChanged?.Invoke(this, EventArgs.Empty));
-        }
-        catch (Exception ex)
-        {
-            // Polling still picks up battery changes, just less promptly.
-            System.Diagnostics.Debug.WriteLine($"Bluetooth LE watcher failed to start: {ex}");
-        }
+        // A Bluetooth pad connecting or disconnecting: look again then, not just at the next poll.
+        _bluetoothWatcher = DeviceNotices.Watch(() => ControllersChanged?.Invoke(this, EventArgs.Empty));
     }
 
     public IReadOnlyList<ControllerBattery> Read()
@@ -194,10 +187,6 @@ public sealed class GamingInputSource : IBatterySource, IDisposable
     {
         Gamepad.GamepadAdded -= OnGamepadChanged;
         Gamepad.GamepadRemoved -= OnGamepadChanged;
-        if (_bluetoothWatcher?.Status is Windows.Devices.Enumeration.DeviceWatcherStatus.Started
-            or Windows.Devices.Enumeration.DeviceWatcherStatus.EnumerationCompleted)
-        {
-            _bluetoothWatcher.Stop();
-        }
+        _bluetoothWatcher?.Dispose();
     }
 }
