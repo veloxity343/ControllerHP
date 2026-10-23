@@ -386,6 +386,7 @@ internal sealed partial class Flyout : Form
             Connection.Usb => "USB",
             Connection.Bluetooth => "Bluetooth",
             Connection.WirelessAdapter => "Xbox Wireless Adapter",
+            Connection.Receiver => "USB receiver",
             _ => null,
         };
         if (connection is not null)

@@ -40,7 +40,7 @@ Each problem below has its likely cause and what to do. If yours isn't here, see
 - **It isn't connected to Windows.** Check that it shows as *Connected* under Settings → Bluetooth & devices (Windows 11) or Settings → Devices (Windows 10). On a controller, check its light is steady rather than flashing.
 - **Its kind is turned off.** Check **Show** in Settings: if, say, Keyboards is off, no keyboard appears.
 - **Windows shows no battery for it.** For Bluetooth mice, keyboards and headsets, ControllerHP reads the level Windows records. If Settings → Bluetooth & devices shows no battery beside it, ControllerHP has none to show.
-- **It uses a USB receiver (dongle).** Those aren't supported yet.
+- **It uses a USB receiver (dongle) that isn't Logitech's.** Only Logitech's receivers are supported so far. If the device also has Bluetooth, use that instead: its battery shows if Windows shows it.
 - **It isn't supported.** See [Supported devices](supported-devices.md).
 - **It only just connected.** Give it a few seconds, or choose **Refresh now** from the right-click menu.
 

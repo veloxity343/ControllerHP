@@ -4,6 +4,7 @@
 
 - [What each controller reports](#what-each-controller-reports)
 - [Bluetooth mice, keyboards and headsets](#bluetooth-mice-keyboards-and-headsets)
+- [Logitech mice, keyboards and headsets](#logitech-mice-keyboards-and-headsets)
 - [Known limitations](#known-limitations)
 - [How batteries are read](#how-batteries-are-read)
 - [What isn't supported yet](#what-isnt-supported-yet)
@@ -49,7 +50,19 @@ Each device is drawn as what it is (a keyboard, mouse, headset or controller), a
 
 Anything else shows as **Other**, with the Bluetooth sign.
 
-Devices that connect through a **USB receiver** (a dongle), as many wireless mice and gaming headsets do, aren't supported yet: their battery isn't something Windows records, and each maker reads it differently.
+## Logitech mice, keyboards and headsets
+
+Logitech devices on a **Unifying, Bolt or Lightspeed receiver**, or plugged in by their USB cable, are read the way Logitech's own software reads them: ControllerHP asks each device for its battery, name and type through the receiver, every 30 seconds. It only ever reads; it never changes a setting, and it works alongside G HUB and Logitech Options.
+
+| Device | Connection | Battery | Charging shown | Tested on hardware |
+|---|---|---|---|---|
+| G Pro Wireless | Lightspeed receiver | Estimated from its battery voltage | Yes | **Tested** |
+| Other Logitech mice and keyboards | Unifying, Bolt or Lightspeed receiver | Exact %, or estimated from voltage on older models | Yes | Likely |
+| Logitech headsets | Their USB receiver | Varies | Varies | Untested |
+
+The panel shows them as connected by **USB receiver**. A device that's asleep keeps its last reading rather than coming and going, since it doesn't answer until it wakes; one that's switched off or out of range shows as disconnected.
+
+**Other makers' receivers** (dongles) aren't supported yet. Their battery isn't something Windows records, and each maker reads it differently, usually without publishing how.
 
 ## Known limitations
 
@@ -74,13 +87,15 @@ You don't need this to use ControllerHP, but it explains the differences above.
 
 **PlayStation controllers** are read from the battery status in their input reports, sampled every 5 seconds. They show alongside Xbox controllers.
 
+**Logitech devices** are read through Logitech's HID++ protocol, on the receiver's vendor interface: the device's battery feature (unified battery, battery status, or battery voltage, converted to a percentage along a typical lithium curve), its name and type, and its unit id, which keeps its history together whichever receiver or port it's on.
+
 **Other Bluetooth devices** are read from the battery level Windows records for each paired device. Whether one is connected comes from Windows' Bluetooth stack, the same as Settings shows, rather than the flag Windows records beside the level, which can read as disconnected for a headset playing audio.
 
 Connecting and disconnecting are picked up as they happen. A check every 30 seconds catches battery changes on connections that don't announce them.
 
 ## What isn't supported yet
 
-- **Devices on a USB receiver** (dongle): planned, one maker at a time, starting with the most common.
+- **Devices on other makers' USB receivers** (dongles): Logitech's are supported; others are planned, one maker at a time, where the maker's protocol can be read safely.
 - **Nintendo Switch Pro controllers, Joy-Cons and third-party controllers.**
 - **Bluetooth devices Windows shows no battery for.**
 - **Other systems:** ControllerHP is Windows-only for now.

@@ -67,7 +67,9 @@ Requires Windows 10 version 1809 or later. [Getting started](docs/wiki/getting-s
 
 PlayStation controllers report battery in 10% steps.
 
-**Bluetooth mice, keyboards and headsets** work when Windows itself shows their battery, under Settings → Bluetooth & devices. Tested: a Bluetooth keyboard. Devices on a USB receiver (dongle) aren't supported yet.
+**Bluetooth mice, keyboards and headsets** work when Windows itself shows their battery, under Settings → Bluetooth & devices. Tested: a Bluetooth keyboard.
+
+**Logitech mice, keyboards and headsets** on a Unifying, Bolt or Lightspeed receiver are read too. Tested: a G Pro Wireless. Other makers' USB receivers (dongles) aren't supported yet.
 
 See [Supported devices](docs/wiki/supported-devices.md) for what each device and connection can report, and the known limitations.
 

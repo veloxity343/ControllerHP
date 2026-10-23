@@ -53,6 +53,7 @@ internal static class StatusFile
                 Connection.Usb => "usb",
                 Connection.Bluetooth => "bluetooth",
                 Connection.WirelessAdapter => "wireless-adapter",
+                Connection.Receiver => "receiver",
                 _ => "unknown",
             },
             timeLeft = timeLeft.GetValueOrDefault(r.Id),

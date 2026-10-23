@@ -11,7 +11,9 @@ public enum ChargeState
     Wired,
 }
 
-public enum Connection { Unknown, Usb, Bluetooth, WirelessAdapter }
+/// <summary>How a device is connected. <see cref="WirelessAdapter"/> is Microsoft's Xbox Wireless Adapter;
+/// <see cref="Receiver"/> is a maker's own USB receiver (a dongle), such as Logitech's.</summary>
+public enum Connection { Unknown, Usb, Bluetooth, WirelessAdapter, Receiver }
 
 /// <summary>What sort of device it is, which picks the shape of its tray icon.</summary>
 public enum DeviceKind { Gamepad, Mouse, Keyboard, Headset, Other }

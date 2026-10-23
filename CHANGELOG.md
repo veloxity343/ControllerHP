@@ -14,6 +14,7 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 ### Added
 
 - **Bluetooth mice, keyboards and headsets:** any Bluetooth device Windows shows a battery for, in Settings → Bluetooth & devices, now shows in ControllerHP too, over Bluetooth Low Energy or classic Bluetooth. Each is drawn as what it is, worked out from what it says it is or the parts Windows installed for it. Devices on a USB receiver aren't supported yet.
+- **Logitech mice, keyboards and headsets** on a Unifying, Bolt or Lightspeed receiver, or on their cable, read through Logitech's own protocol: battery, name and type, alongside G HUB, and read-only. The panel shows them as connected by **USB receiver**.
 - **Show** setting: choose which kinds of device ControllerHP watches (controllers, mice, keyboards, headsets and others). Kinds turned off get no icon, pop-ups or history. All are on by default.
 - **Pop-ups during fullscreen games:** in exclusive fullscreen, where pop-ups can't appear, they're now held and shown once the game closes, instead of being lost. A new **Hold while a game is fullscreen** setting does the same for borderless games. At most one shows per device, and a held battery warning is dropped if the device was charged meanwhile.
 - **Fully charged** pop-up when a charging device reaches 100%, once per charge. It can be turned off in Settings.

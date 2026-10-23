@@ -22,6 +22,9 @@ internal static partial class Diagnostics
     /// <summary>What every source reports, raw values included.</summary>
     public static void WriteSources(TextWriter w, IEnumerable<IBatterySource> sources)
     {
+        // Logitech devices are asked in the background a few seconds after start-up; wait for an answer.
+        var logitech = sources.OfType<LogitechSource>().FirstOrDefault();
+        var logitechDetails = logitech?.PollNow(TimeSpan.FromSeconds(15)) ?? [];
         foreach (var source in Expand(sources))
         {
             w.WriteLine($"[{source.Name}]");
@@ -38,6 +41,9 @@ internal static partial class Diagnostics
                 w.WriteLine($"  error: {ex.Message}");
             }
         }
+        w.WriteLine("[Logitech HID++ details]");
+        foreach (var line in logitechDetails)
+            w.WriteLine($"  {line}");
         w.WriteLine("[Raw Windows.Gaming.Input reports]");
         foreach (var line in GamingInputSource.DescribeRawReports())
             w.WriteLine($"  {line}");

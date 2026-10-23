@@ -14,7 +14,9 @@ internal static partial class Program
         var playStation = new PlayStationSource();
         // Every other Bluetooth device with a battery Windows records: mice, keyboards, headsets.
         var bluetooth = new BluetoothSource();
-        IBatterySource[] sources = [xbox, playStation, bluetooth];
+        // Logitech mice, keyboards and headsets, on their USB receivers or cables.
+        var logitech = new LogitechSource();
+        IBatterySource[] sources = [xbox, playStation, bluetooth, logitech];
 
         if (args.Contains("--list"))
             return ListControllers(sources);
