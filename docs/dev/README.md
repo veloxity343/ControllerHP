@@ -11,7 +11,7 @@ For working on ControllerHP itself. To contribute, start with [CONTRIBUTING.md](
 
 ## Building
 
-You need the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0). `global.json` pins the feature band. Open `ControllerHP.sln` in Visual Studio or Rider, or:
+You need the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). `global.json` pins the feature band. Open `ControllerHP.sln` in Visual Studio or Rider, or:
 
 ```bash
 dotnet build ControllerHP.sln

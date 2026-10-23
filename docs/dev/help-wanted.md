@@ -36,7 +36,7 @@ The core logic is portable already: the data model (`ControllerBattery`), batter
 
 So a port would go:
 
-1. **Split the project** (medium). Move the portable core into a `net8.0` class library: the model, history, stats, the warning logic, and the PlayStation report parsing, which is pure code. Keep the Windows sources and interface in the existing app. This step is useful on its own, because it makes the core testable (see [automated tests](#quality-and-reach)).
+1. **Split the project** (medium). Move the portable core into a `net10.0` class library: the model, history, stats, the warning logic, and the PlayStation report parsing, which is pure code. Keep the Windows sources and interface in the existing app. This step is useful on its own, because it makes the core testable (see [automated tests](#quality-and-reach)).
 2. **Add a platform's battery sources** (medium), behind the existing `IBatterySource` interface.
 3. **Add a platform's interface** (large): a tray icon, pop-ups and settings. A cross-platform UI toolkit such as Avalonia could share one interface between platforms. Native toolkits fit each desktop better.
 

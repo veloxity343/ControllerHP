@@ -195,6 +195,13 @@ internal static partial class Preview
             // composed window, and capturing a brand-new window too early comes out black.
             window.Refresh();
             Application.DoEvents();
+            // Since .NET 10 some controls paint a moment later (the last window's navigation came out blank):
+            // let pending paints through before capturing.
+            for (int i = 0; i < 10; i++)
+            {
+                Thread.Sleep(50);
+                Application.DoEvents();
+            }
             DwmFlush();
             DwmFlush();
             var shot = new Bitmap(window.Width, window.Height);

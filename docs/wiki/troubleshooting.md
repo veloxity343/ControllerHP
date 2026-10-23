@@ -31,7 +31,7 @@ Each problem below has its likely cause and what to do. If yours isn't here, see
 
 ## It asks me to install .NET
 
-**Cause:** you downloaded the smaller zip, which needs the .NET 8 Desktop Runtime.
+**Cause:** you downloaded the smaller zip, which needs the .NET 10 Desktop Runtime (a later version works too).
 **Fix:** follow Windows' link to install it, or download the `-standalone` zip instead, which needs nothing else.
 
 ## My device doesn't appear

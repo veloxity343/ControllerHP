@@ -36,7 +36,7 @@ jobs:
       - name: Build
         run: dotnet build "$PROJECT" -c Release -p:Version=${{ steps.version.outputs.version }}
 
-      - name: Publish (needs .NET 8 Desktop Runtime)
+      - name: Publish (needs .NET 10 Desktop Runtime, or later)
         run: >
           dotnet publish "$PROJECT" -c Release -o out/framework
           -p:Version=${{ steps.version.outputs.version }}
@@ -62,8 +62,66 @@ jobs:
           name: ControllerHP-${{ steps.version.outputs.version }}
           path: dist/*.zip
 
-  release:
+  # Runs what was just built on Windows, as a user would: both downloads list devices (none on the runner)
+  # and draw every page of the settings window. Catches a build that starts but breaks, such as a
+  # trimming or .NET change, before it can be released.
+  test:
     needs: build
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: global.json
+          sparse-checkout-cone-mode: false
+
+      # The .NET 10 Desktop Runtime for the smaller download; the standalone brings its own.
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Run both downloads
+        shell: pwsh
+        run: |
+          $failed = $false
+          foreach ($zip in Get-ChildItem dist/*.zip) {
+            $dir = Join-Path $PWD $zip.BaseName
+            Expand-Archive $zip.FullName -DestinationPath $dir
+            $exe = Join-Path $dir ControllerHP.exe
+            foreach ($run in @(@('--list'), @('--preview-settings', (Join-Path $dir 'settings.png')))) {
+              $p = Start-Process $exe -ArgumentList $run -PassThru -WindowStyle Hidden
+              if (-not $p.WaitForExit(120000)) {
+                $p.Kill()
+                Write-Host "::error::$($zip.Name) $($run[0]) didn't finish in 2 minutes (an error dialog, or hung)"
+                $failed = $true
+              } elseif ($p.ExitCode -ne 0) {
+                Write-Host "::error::$($zip.Name) $($run[0]) exited with $($p.ExitCode)"
+                $failed = $true
+              } else {
+                Write-Host "$($zip.Name) $($run[0]): ok"
+              }
+            }
+            if (-not (Test-Path (Join-Path $dir 'settings.png'))) {
+              Write-Host "::error::$($zip.Name) drew no settings preview"
+              $failed = $true
+            }
+          }
+          if ($failed) { exit 1 }
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: settings-previews
+          path: "*/settings.png"
+
+  release:
+    needs: [build, test]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:

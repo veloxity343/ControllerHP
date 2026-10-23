@@ -3,7 +3,9 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <!-- The 10.0.19041 TFM pulls in the WinRT projection used for Windows.Gaming.Input. -->
-    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <!-- The framework-dependent build runs on .NET 10, or on a later major version if that's all a PC has. -->
+    <RollForward>Major</RollForward>
     <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <UseWindowsForms>true</UseWindowsForms>
     <!-- Allows building from Linux/WSL. -->
@@ -12,6 +14,9 @@
     <SelfContained>false</SelfContained>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- WFO1000 asks custom controls' properties to say how the Forms designer saves them. These controls
+         are built in code and never opened in the designer, so there's nothing for it to save. -->
+    <NoWarn>$(NoWarn);WFO1000</NoWarn>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>ControllerHP</AssemblyName>
@@ -26,42 +31,40 @@
   </ItemGroup>
 
   <!--
-    Trimming. The Windows projection (Microsoft.Windows.SDK.NET.dll) is 25 MB, of which the app uses a
-    sliver, and it's built to be trimmed. Windows Forms isn't, and trimming .NET's own libraries under
-    it breaks it (a TypeLoadException drawing the settings window), so only the projection is cut down
-    and everything else is kept whole.
+    The Windows projection (Microsoft.Windows.SDK.NET.dll) is 25 MB, of which the app uses a sliver; it's
+    built to be trimmed, and each app ships its own copy. Neither download is trimmed: trimming drops some
+    of .NET's own files and switches off parts of the runtime that Windows Forms relies on. Instead every
+    publish first runs a private trimmed publish (once per change to the app), with only the projection
+    cut down, and ships that one file from it. .NET itself goes out exactly as Microsoft builds it.
   -->
-  <PropertyGroup Condition="'$(SelfContained)' == 'true'">
+  <PropertyGroup Condition="'$(_TrimmingProjection)' == 'true'">
+    <SelfContained>true</SelfContained>
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>partial</TrimMode>
     <_SuppressWinFormsTrimError>true</_SuppressWinFormsTrimError>
-    <!-- Trimming also turns these off by default; Windows Forms needs COM, and the rest keeps the runtime
-         as an untrimmed app has it. -->
+    <!-- Trimming turns these off by default, and the projection is cut down to suit; keep them as the
+         untrimmed app runs. -->
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
     <CustomResourceTypesSupport>true</CustomResourceTypesSupport>
   </PropertyGroup>
 
-  <Target Name="TrimOnlyWindowsProjection" Condition="'$(SelfContained)' == 'true'"
+  <Target Name="TrimOnlyWindowsProjection" Condition="'$(_TrimmingProjection)' == 'true'"
           AfterTargets="_ComputeManagedAssemblyToLink" BeforeTargets="PrepareForILLink">
     <ItemGroup>
       <ManagedAssemblyToLink Condition="'%(Filename)' != 'Microsoft.Windows.SDK.NET'" TrimMode="copy" />
     </ItemGroup>
   </Target>
 
-  <!--
-    A framework-dependent app can't be trimmed, so its publish first runs a trimmed self-contained one
-    (once per change to the app) and takes the trimmed projection from it.
-  -->
   <PropertyGroup>
     <_TrimmedProjectionDir>$(BaseIntermediateOutputPath)trimmed-projection/</_TrimmedProjectionDir>
     <_TrimmedProjection>$(_TrimmedProjectionDir)Microsoft.Windows.SDK.NET.dll</_TrimmedProjection>
   </PropertyGroup>
 
-  <Target Name="TrimWindowsProjection" Condition="'$(SelfContained)' != 'true'"
+  <Target Name="TrimWindowsProjection" Condition="'$(_TrimmingProjection)' != 'true'"
           AfterTargets="ComputeResolvedFilesToPublishList"
           Inputs="@(IntermediateAssembly);$(MSBuildProjectFullPath)" Outputs="$(_TrimmedProjection)">
-    <Exec Command="&quot;$(DOTNET_HOST_PATH)&quot; publish &quot;$(MSBuildProjectFullPath)&quot; -c $(Configuration) --self-contained true --artifacts-path &quot;$(_TrimmedProjectionDir)artifacts&quot; -p:DebugType=none --nologo -v q" />
+    <Exec Command="&quot;$(DOTNET_HOST_PATH)&quot; publish &quot;$(MSBuildProjectFullPath)&quot; -c $(Configuration) -p:_TrimmingProjection=true --artifacts-path &quot;$(_TrimmedProjectionDir)artifacts&quot; -p:DebugType=none --nologo -v q" />
     <ItemGroup>
       <_LinkedProjection Include="$(_TrimmedProjectionDir)artifacts/obj/**/linked/Microsoft.Windows.SDK.NET.dll" />
     </ItemGroup>
@@ -69,7 +72,7 @@
     <Copy SourceFiles="@(_LinkedProjection)" DestinationFiles="$(_TrimmedProjection)" />
   </Target>
 
-  <Target Name="UseTrimmedWindowsProjection" Condition="'$(SelfContained)' != 'true'"
+  <Target Name="UseTrimmedWindowsProjection" Condition="'$(_TrimmingProjection)' != 'true'"
           AfterTargets="TrimWindowsProjection">
     <ItemGroup>
       <_FullProjection Include="@(ResolvedFileToPublish)" Condition="'%(Filename)%(Extension)' == 'Microsoft.Windows.SDK.NET.dll'" />

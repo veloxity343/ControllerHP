@@ -51,7 +51,18 @@ internal static partial class Program
         if (args.Length == 2 && args[0] == "--preview-settings")
         {
             ApplicationConfiguration.Initialize();
-            Preview.WriteSettingsSheet(args[1]);
+            // A failure ends it with an error code, for CI to catch, instead of an error dialog nobody clicks.
+            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException);
+            try
+            {
+                Preview.WriteSettingsSheet(args[1]);
+            }
+            catch (Exception e)
+            {
+                AttachConsole(-1);
+                Console.Error.WriteLine(e);
+                return 1;
+            }
             return 0;
         }
 
