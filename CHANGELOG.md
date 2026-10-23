@@ -31,6 +31,7 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 
 - **Controllers are now devices** throughout the app and the wiki, as other devices show too: the Controllers page is the **Devices** page, and the wiki's Controllers and Supported controllers pages are now **Devices** and **Supported devices**.
 - **The tray icon shows the device itself,** with a thin battery bar along the bottom, instead of a number above a battery, so it's clear at a glance what it's showing. It's drawn pixel by pixel at 16 px, so it stays sharp at 100% scaling. Hover over it for the exact percentage. The panel and pop-ups use it too.
+- **A much smaller download:** the usual zip is under 1 MB instead of about 6 MB, and the standalone one about 67 MB instead of 72. Only the part of Windows' device and Bluetooth library the app uses is shipped.
 - The supported devices tables say which devices and connections have been **tested** on real hardware, which are **likely** to work, and which are still **untested**.
 
 ## [0.3.0] - 2026-10-21

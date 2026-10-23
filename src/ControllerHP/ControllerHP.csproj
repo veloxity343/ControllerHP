@@ -25,6 +25,63 @@
     <EmbeddedResource Include="app.ico" LogicalName="ControllerHP.app.ico" />
   </ItemGroup>
 
+  <!--
+    Trimming. The Windows projection (Microsoft.Windows.SDK.NET.dll) is 25 MB, of which the app uses a
+    sliver, and it's built to be trimmed. Windows Forms isn't, and trimming .NET's own libraries under
+    it breaks it (a TypeLoadException drawing the settings window), so only the projection is cut down
+    and everything else is kept whole.
+  -->
+  <PropertyGroup Condition="'$(SelfContained)' == 'true'">
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <_SuppressWinFormsTrimError>true</_SuppressWinFormsTrimError>
+    <!-- Trimming also turns these off by default; Windows Forms needs COM, and the rest keeps the runtime
+         as an untrimmed app has it. -->
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+    <CustomResourceTypesSupport>true</CustomResourceTypesSupport>
+  </PropertyGroup>
+
+  <Target Name="TrimOnlyWindowsProjection" Condition="'$(SelfContained)' == 'true'"
+          AfterTargets="_ComputeManagedAssemblyToLink" BeforeTargets="PrepareForILLink">
+    <ItemGroup>
+      <ManagedAssemblyToLink Condition="'%(Filename)' != 'Microsoft.Windows.SDK.NET'" TrimMode="copy" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+    A framework-dependent app can't be trimmed, so its publish first runs a trimmed self-contained one
+    (once per change to the app) and takes the trimmed projection from it.
+  -->
+  <PropertyGroup>
+    <_TrimmedProjectionDir>$(BaseIntermediateOutputPath)trimmed-projection/</_TrimmedProjectionDir>
+    <_TrimmedProjection>$(_TrimmedProjectionDir)Microsoft.Windows.SDK.NET.dll</_TrimmedProjection>
+  </PropertyGroup>
+
+  <Target Name="TrimWindowsProjection" Condition="'$(SelfContained)' != 'true'"
+          AfterTargets="ComputeResolvedFilesToPublishList"
+          Inputs="@(IntermediateAssembly);$(MSBuildProjectFullPath)" Outputs="$(_TrimmedProjection)">
+    <Exec Command="&quot;$(DOTNET_HOST_PATH)&quot; publish &quot;$(MSBuildProjectFullPath)&quot; -c $(Configuration) --self-contained true --artifacts-path &quot;$(_TrimmedProjectionDir)artifacts&quot; -p:DebugType=none --nologo -v q" />
+    <ItemGroup>
+      <_LinkedProjection Include="$(_TrimmedProjectionDir)artifacts/obj/**/linked/Microsoft.Windows.SDK.NET.dll" />
+    </ItemGroup>
+    <Error Condition="'@(_LinkedProjection)' == ''" Text="The trimmed Windows projection wasn't produced." />
+    <Copy SourceFiles="@(_LinkedProjection)" DestinationFiles="$(_TrimmedProjection)" />
+  </Target>
+
+  <Target Name="UseTrimmedWindowsProjection" Condition="'$(SelfContained)' != 'true'"
+          AfterTargets="TrimWindowsProjection">
+    <ItemGroup>
+      <_FullProjection Include="@(ResolvedFileToPublish)" Condition="'%(Filename)%(Extension)' == 'Microsoft.Windows.SDK.NET.dll'" />
+      <ResolvedFileToPublish Remove="@(_FullProjection)" />
+      <ResolvedFileToPublish Include="$(_TrimmedProjection)" Condition="'@(_FullProjection)' != ''">
+        <RelativePath>Microsoft.Windows.SDK.NET.dll</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <AssetType>runtime</AssetType>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
   <PropertyGroup>
     <!-- Overridden by CI from the release tag (v1.2.3 -> 1.2.3). -->
     <Version>0.3.0</Version>

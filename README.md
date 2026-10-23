@@ -46,8 +46,8 @@ If something isn't working, Troubleshooting is the place to start.
 
    | Download | Size | Needs |
    |---|---|---|
-   | `ControllerHP-x.y.z-win-x64.zip` | ~6 MB | [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) (Windows offers it if it's missing) |
-   | `ControllerHP-x.y.z-win-x64-standalone.zip` | ~72 MB | Nothing |
+   | `ControllerHP-x.y.z-win-x64.zip` | Under 1 MB | [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) (Windows offers it if it's missing) |
+   | `ControllerHP-x.y.z-win-x64-standalone.zip` | ~67 MB | Nothing |
 
 2. Extract `ControllerHP.exe` somewhere permanent, such as `%LOCALAPPDATA%\Programs\ControllerHP`, and run it.
 3. If Windows shows **"Windows protected your PC"**, choose **More info → Run anyway**. ControllerHP isn't code-signed, so Windows warns about it until it's widely downloaded.
