@@ -21,6 +21,12 @@ internal static partial class Program
             return Run(args);
         }
 
+        if (args.Contains("--demo"))
+        {
+            App.Startup = Preview.RunToastDemo;
+            return Run(args);
+        }
+
         // One copy at a time, shared with the WinForms app it replaces, so the two never read devices at once.
         using var singleInstance = new Mutex(initiallyOwned: true, @"Local\ControllerHP.SingleInstance", out bool isFirst);
         if (!isFirst)

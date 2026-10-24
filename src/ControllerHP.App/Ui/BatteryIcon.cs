@@ -39,6 +39,38 @@ internal static class BatteryIcon
         return bitmap;
     }
 
+    /// <summary>
+    /// The app icon at <paramref name="size"/>, from its nearest hand-tuned frame (all PNGs), scaled smoothly if
+    /// it has none that size. It's outlined, so it reads on light and dark backgrounds alike.
+    /// </summary>
+    public static Bitmap AppIcon(int size)
+    {
+        using var stream = typeof(BatteryIcon).Assembly.GetManifestResourceStream("ControllerHP.app.ico")!;
+        var ico = new byte[stream.Length];
+        stream.ReadExactly(ico);
+        // The directory: a count, then 16-byte entries of width, height, ..., byte count and offset.
+        int count = BitConverter.ToUInt16(ico, 4), best = -1, bestWidth = 0;
+        for (int i = 0; i < count; i++)
+        {
+            int w = ico[6 + i * 16] == 0 ? 256 : ico[6 + i * 16];
+            // The smallest frame at least this big, else the biggest there is.
+            if (best < 0 || (w >= size && (bestWidth < size || w < bestWidth)) || (bestWidth < size && w > bestWidth))
+                (best, bestWidth) = (i, w);
+        }
+        int length = BitConverter.ToInt32(ico, 6 + best * 16 + 8), offset = BitConverter.ToInt32(ico, 6 + best * 16 + 12);
+        var frame = new Bitmap(new MemoryStream(ico, offset, length));
+        if (frame.PixelSize.Width == size)
+            return frame;
+        using (frame)
+        {
+            var scaled = new RenderTargetBitmap(new PixelSize(size, size), new Vector(96, 96));
+            using (var g = scaled.CreateDrawingContext())
+            using (g.PushRenderOptions(new RenderOptions { BitmapInterpolationMode = BitmapInterpolationMode.HighQuality }))
+                g.DrawImage(frame, new Rect(0, 0, size, size));
+            return scaled;
+        }
+    }
+
     public static Color FillColor(int percent)
     {
         percent = Math.Clamp(percent, 0, 100);

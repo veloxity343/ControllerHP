@@ -8,7 +8,7 @@ namespace ControllerHP;
 
 /// <summary>
 /// Reads the sources and keeps the tray up to date: one icon per device (or a placeholder when none are
-/// connected), its menu, the flyout, battery history and the status file.
+/// connected), its menu, the flyout, pop-ups, battery history and the status file.
 /// </summary>
 internal sealed class TrayController : IDisposable
 {
@@ -33,6 +33,8 @@ internal sealed class TrayController : IDisposable
     private readonly DispatcherTimer _poll = new() { Interval = PollInterval };
     private readonly DispatcherTimer _eventTimer = new() { Interval = EventQuiet };
     private DateTime? _eventPendingSince;
+    private readonly DispatcherTimer _settleTimer = new() { Interval = ControllerNotifier.SettleTime + TimeSpan.FromMilliseconds(100) };
+    private readonly ControllerNotifier _notifier = new();
     private readonly BatteryHistory _history = new();
     private IReadOnlyList<ControllerBattery> _readings = [];
     /// <summary>Each connected device's time left (to the low level, or to full while charging), when known.</summary>
@@ -45,7 +47,6 @@ internal sealed class TrayController : IDisposable
     private bool? _shareStatus;
     private IReadOnlyDictionary<string, string> _names = Settings.ControllerNames;
     private IReadOnlySet<DeviceKind> _hiddenKinds = Settings.HiddenKinds;
-    private Func<string, WarningLevels> _warningsFor = _ => Settings.DefaultWarnings;
 
     public TrayController(IReadOnlyList<IBatterySource> sources, Action exit)
     {
@@ -65,6 +66,12 @@ internal sealed class TrayController : IDisposable
             source.ControllersChanged += OnControllersChanged;
 
         _eventTimer.Tick += (_, _) => RefreshForEvents();
+        // Re-check once a newly connected device has settled, so its toast shows the settled reading.
+        _settleTimer.Tick += (_, _) =>
+        {
+            _settleTimer.Stop();
+            Refresh();
+        };
         _poll.Tick += (_, _) => Refresh();
         _poll.Start();
         Refresh();
@@ -128,6 +135,9 @@ internal sealed class TrayController : IDisposable
             StatusFile.Write(_readings, _timeLeft);
         UpdateSlots();
         _flyout?.SetReadings(Prioritise(_readings).ToList(), _timeLeft);
+
+        if (_notifier.Update(_readings))
+            _settleTimer.Start();
     }
 
     /// <summary>
@@ -143,7 +153,7 @@ internal sealed class TrayController : IDisposable
         var timeLeft = new Dictionary<string, string>();
         foreach (var reading in _readings)
         {
-            int? low = _warningsFor(reading.Id).Low;
+            int? low = _notifier.WarningsFor(reading.Id).Low;
             if (history.TryGetValue(reading.Id, out var series) &&
                 BatteryStats.TimeLeft(BatteryStats.Compute(series, now - TimeSpan.FromDays(7), now, low)) is { } text)
                 timeLeft[reading.Id] = text;
@@ -330,11 +340,10 @@ internal sealed class TrayController : IDisposable
         items.Add(new MenuEntry("Refresh now", Refresh));
         items.Add(new MenuEntry("Tray icons", Submenu:
             [.. IconLimitLabels.Select(l => new MenuEntry(l.Label, () => Settings.TrayIconLimit = l.Limit, Checked: _iconLimit == l.Limit))]));
-        var corner = Settings.ToastCorner;
         items.Add(new MenuEntry("Pop-up position", Submenu:
-            [.. CornerLabels.Select(c => new MenuEntry(c.Label, () => Settings.ToastCorner = c.Corner, Checked: corner == c.Corner))]));
-        bool connectionToasts = Settings.ConnectionToasts;
-        items.Add(new MenuEntry("Connection pop-ups", () => Settings.ConnectionToasts = !connectionToasts, Checked: connectionToasts));
+            [.. CornerLabels.Select(c => new MenuEntry(c.Label, () => Settings.ToastCorner = c.Corner, Checked: _notifier.Corner == c.Corner))]));
+        items.Add(new MenuEntry("Connection pop-ups", () => Settings.ConnectionToasts = !_notifier.ConnectionToasts,
+            Checked: _notifier.ConnectionToasts));
         // Both battery warnings at once; Settings has them separately. Ticked while either is on, so a click
         // turns everything off, and a second click turns both back on. The levels are left as they were.
         bool anyWarning = Settings.LowWarningEnabled || Settings.CriticalWarningEnabled;
@@ -365,9 +374,22 @@ internal sealed class TrayController : IDisposable
     /// <summary>Applies the saved settings, from the tray menu or the settings window.</summary>
     private void ApplySettings()
     {
+        _notifier.ConnectionToasts = Settings.ConnectionToasts;
+        _notifier.HoldInFullscreen = Settings.HoldInFullscreen;
+        _notifier.FullyChargedToasts = Settings.FullyChargedToasts;
+        _notifier.WarningSounds = Settings.WarningSounds;
         var defaults = Settings.DefaultWarnings;
         var ownLevels = Settings.ControllerWarnings;
-        _warningsFor = id => ownLevels.GetValueOrDefault(id, defaults);
+        _notifier.WarningsFor = id => ownLevels.GetValueOrDefault(id, defaults);
+
+        var corner = Settings.ToastCorner;
+        if (corner != _notifier.Corner)
+        {
+            _notifier.Corner = corner;
+            // At startup, before the tray icons exist, the saved corner is just restored without a sample.
+            if (_slots.Count > 0)
+                _notifier.ShowSample();
+        }
 
         bool share = Settings.ShareStatus;
         if (share != _shareStatus)
@@ -403,6 +425,8 @@ internal sealed class TrayController : IDisposable
     {
         _poll.Stop();
         _eventTimer.Stop();
+        _settleTimer.Stop();
+        _notifier.Dispose();
         Settings.Changed -= OnSettingsChanged;
         foreach (var source in _sources)
         {

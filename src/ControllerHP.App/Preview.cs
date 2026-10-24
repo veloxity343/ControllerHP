@@ -23,6 +23,36 @@ internal static class Preview
 
     private static readonly Dictionary<string, string> SampleTimeLeft = new() { ["preview2"] = "1 h 30 min to full" };
 
+    private static readonly ToastContent[] SampleToasts =
+    [
+        new("Xbox Wireless Controller", "Connected · 87%", Sample(87), Color.FromRgb(52, 199, 89)),
+        new("Xbox Wireless Controller", "Battery low · 20%", Sample(20), BatteryIcon.FillColor(20)),
+        new("Xbox Wireless Controller", "Battery critical · 10%", Sample(10), BatteryIcon.FillColor(10)),
+        new("Xbox Wireless Controller", "Disconnected", null, Color.FromRgb(120, 120, 120)),
+    ];
+
+    /// <summary>Shows each sample toast for real, one after another, then exits.</summary>
+    public static void RunToastDemo()
+    {
+        var toasts = new ToastManager();
+        var queue = new Queue<ToastContent>(SampleToasts);
+        int ticksAfterLast = 0;
+        var timer = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1200) };
+        timer.Tick += (_, _) =>
+        {
+            if (queue.TryDequeue(out var next))
+                toasts.Show(next);
+            else if (++ticksAfterLast > 5)
+            {
+                timer.Stop();
+                toasts.Dispose();
+                App.Exit();
+            }
+        };
+        toasts.Show(queue.Dequeue());
+        timer.Start();
+    }
+
     private static readonly DeviceKind[] Kinds = [DeviceKind.Gamepad, DeviceKind.Mouse, DeviceKind.Keyboard, DeviceKind.Headset, DeviceKind.Other];
 
     private static readonly (string Label, int? Percent, ChargeState Power)[] States =
@@ -48,7 +78,7 @@ internal static class Preview
         App.Exit();
     }
 
-    /// <summary>The flyout and menu, dark and light side by side.</summary>
+    /// <summary>The flyout and menu, dark and light side by side, with the toasts underneath.</summary>
     public static void WriteTraySheet(string path)
     {
         const int gap = 20;
@@ -62,7 +92,9 @@ internal static class Preview
         };
         var dark = new MenuPanel(menuEntries, Palette.Dark);
         double menuWidth = dark.MenuWidth, menuHeight = dark.MenuHeight;
-        int width = (int)(2 * (320 + gap + menuWidth) + gap * 2), height = (int)(Math.Max(flyoutHeight, menuHeight) + 2 * gap);
+        int width = (int)(2 * (320 + gap + menuWidth) + gap * 2);
+        double toastsTop = Math.Max(flyoutHeight, menuHeight) + 2 * gap;
+        int height = (int)(toastsTop + SampleToasts.Length * (ToastWindow.LogicalHeight + 10) + gap);
 
         using var sheet = new RenderTargetBitmap(new PixelSize(width, height), new Vector(96, 96));
         using (var g = sheet.CreateDrawingContext())
@@ -75,6 +107,12 @@ internal static class Preview
             var menu = new MenuPanel(menuEntries, palette);
             menu.Highlight(3);
             x = Place(sheet, menu, x, gap, menuWidth, menuHeight) + gap;
+        }
+        double y = toastsTop;
+        foreach (var toast in SampleToasts)
+        {
+            Place(sheet, new ToastView(toast), gap, y, ToastWindow.LogicalWidth, ToastWindow.LogicalHeight);
+            y += ToastWindow.LogicalHeight + 10;
         }
         sheet.Save(path, new PngBitmapEncoderOptions());
         App.Exit();
