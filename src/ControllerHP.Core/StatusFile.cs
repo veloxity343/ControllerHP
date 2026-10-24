@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using ControllerHP.Battery;
 
 namespace ControllerHP;
@@ -17,7 +18,6 @@ internal static class StatusFile
     public static string FullPath => Path.Combine(Log.Folder, FileName);
     public const string DisplayPath = @"%LOCALAPPDATA%\ControllerHP\" + FileName;
 
-    private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
     /// <summary>What was last written, less the time, so an unchanged state isn't rewritten every check.</summary>
     private static string? _written;
     private static bool _failureLogged;
@@ -25,12 +25,11 @@ internal static class StatusFile
     public static void Write(IReadOnlyList<ControllerBattery> readings, IReadOnlyDictionary<string, string> timeLeft,
         bool running = true)
     {
-        var devices = readings.Select(r => new
-        {
-            id = r.Id,
-            name = r.Name,
-            deviceName = r.DeviceName,
-            type = r.Kind switch
+        var devices = readings.Select(r => new StatusDevice(
+            Id: r.Id,
+            Name: r.Name,
+            DeviceName: r.DeviceName,
+            Type: r.Kind switch
             {
                 DeviceKind.Gamepad => "controller",
                 DeviceKind.Mouse => "mouse",
@@ -38,17 +37,17 @@ internal static class StatusFile
                 DeviceKind.Headset => "headset",
                 _ => "other",
             },
-            percent = r.EffectivePercent,
+            Percent: r.EffectivePercent,
             // false when the source only reports a coarse level (empty, low, medium, full).
-            exact = r.Percent is not null,
-            power = r.Power switch
+            Exact: r.Percent is not null,
+            Power: r.Power switch
             {
                 ChargeState.Discharging => "battery",
                 ChargeState.Charging => "charging",
                 ChargeState.Wired => "wired",
                 _ => "unknown",
             },
-            connection = r.Connection switch
+            Connection: r.Connection switch
             {
                 Connection.Usb => "usb",
                 Connection.Bluetooth => "bluetooth",
@@ -56,25 +55,17 @@ internal static class StatusFile
                 Connection.Receiver => "receiver",
                 _ => "unknown",
             },
-            timeLeft = timeLeft.GetValueOrDefault(r.Id),
-        }).ToList();
+            TimeLeft: timeLeft.GetValueOrDefault(r.Id))).ToList();
 
-        string state = JsonSerializer.Serialize(new { running, devices });
+        string state = JsonSerializer.Serialize(new StatusState(running, devices), StatusJson.Default.StatusState);
         // Rewritten if it's gone, say someone deleted it, even though nothing changed.
         if (state == _written && File.Exists(FullPath))
             return;
 
-        string json = JsonSerializer.Serialize(new
-        {
-            app = "ControllerHP",
-            format = Format,
-            version = AppInfo.Version,
-            running,
-            // Lets a reader tell a running ControllerHP from one that crashed with running still true.
-            pid = Environment.ProcessId,
-            updated = DateTimeOffset.Now,
-            devices,
-        }, Indented);
+        // The pid lets a reader tell a running ControllerHP from one that crashed with running still true.
+        string json = JsonSerializer.Serialize(
+            new StatusDocument("ControllerHP", Format, AppInfo.Version, running, Environment.ProcessId, DateTimeOffset.Now, devices),
+            StatusJson.Default.StatusDocument);
 
         try
         {
@@ -106,3 +97,18 @@ internal static class StatusFile
         }
     }
 }
+
+// status.json's shape, field by field, in the order written. The serializer's code for them is generated at
+// build time, as a native build needs.
+internal sealed record StatusDevice(string Id, string Name, string DeviceName, string Type, int? Percent, bool Exact, string Power,
+    string Connection, string? TimeLeft);
+
+internal sealed record StatusState(bool Running, List<StatusDevice> Devices);
+
+internal sealed record StatusDocument(string App, int Format, string Version, bool Running, int Pid, DateTimeOffset Updated,
+    List<StatusDevice> Devices);
+
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, WriteIndented = true)]
+[JsonSerializable(typeof(StatusState))]
+[JsonSerializable(typeof(StatusDocument))]
+internal sealed partial class StatusJson : JsonSerializerContext;

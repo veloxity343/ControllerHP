@@ -32,13 +32,13 @@ ControllerHP is Windows-only today. **This is the biggest opportunity, and also 
 
 The core logic is portable already: the data model (`ControllerBattery`), battery history (`BatteryHistory`) and the stats maths (`BatteryStats`) have no Windows dependencies. So does the logic deciding when to warn, though it's wired to the Windows pop-up today. Everything else is Windows-specific:
 - the battery sources use Windows.Gaming.Input, XInput, Windows' Bluetooth device properties and the Win32 HID API;
-- the interface is WinForms.
+- the interface is on Avalonia, which runs on macOS and Linux too, but the tray icons, the placement of the panel and pop-ups, and some window styling call Windows directly (`src/ControllerHP/Platform/Windows`, `Ui/Appearance.cs`).
 
 So a port would go:
 
 1. **Split the project** (partly done). Everything that isn't interface is already in `ControllerHP.Core`, a library with no UI framework. It still targets Windows, as the sources call Windows' device APIs; the next step is to move the Windows sources behind a platform folder, so the rest (model, history, stats, the makers' protocols, the PlayStation report parsing) builds for any platform and can be tested (see [automated tests](#quality-and-reach)).
 2. **Add a platform's battery sources** (medium), behind the existing `IBatterySource` interface.
-3. **Add a platform's interface** (large): a tray icon, pop-ups and settings. A cross-platform UI toolkit such as Avalonia could share one interface between platforms. Native toolkits fit each desktop better.
+3. **Add a platform's tray** (medium): its tray icons (Avalonia's `TrayIcon`, or the platform's own), and where the panel and pop-ups go. The settings window, panel, pop-ups and menu are Avalonia already, and shared.
 
 | Platform | Where battery data comes from |
 |---|---|

@@ -12,7 +12,7 @@ INSTALL_DIR="$(wslpath -u "$LOCALAPPDATA_WIN")/Programs/ControllerHP"
 
 # A fresh publish folder, so files the app no longer has aren't copied again.
 rm -rf publish
-DOTNET_CLI_TELEMETRY_OPTOUT=1 "$DOTNET" publish src/ControllerHP.App -c Release -o publish --nologo
+DOTNET_CLI_TELEMETRY_OPTOUT=1 "$DOTNET" publish src/ControllerHP -c Release -o publish --nologo
 
 "$WIN/taskkill.exe" /IM ControllerHP.exe /F >/dev/null 2>&1 && sleep 1 || true
 # The install folder holds nothing but the app (settings live in the registry, logs and history in

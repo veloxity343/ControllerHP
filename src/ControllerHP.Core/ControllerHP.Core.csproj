@@ -13,6 +13,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>ControllerHP</RootNamespace>
+    <!-- The app is compiled to native code: flag anything that wouldn't survive that. -->
+    <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
 
   <ItemGroup>

@@ -10,10 +10,13 @@ on:
 
 jobs:
   build:
-    # Windows-targeted builds work on Linux via EnableWindowsTargeting.
-    runs-on: ubuntu-latest
+    # Native AOT compiles for Windows only on Windows: it links with Visual Studio's tools, which the runner has.
+    runs-on: windows-latest
     permissions:
       contents: read
+    defaults:
+      run:
+        shell: bash
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
       PROJECT: src/ControllerHP/ControllerHP.csproj
@@ -33,60 +36,45 @@ jobs:
             echo "version=0.0.0-ci.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build
-        run: dotnet build "$PROJECT" -c Release -p:Version=${{ steps.version.outputs.version }}
+      - name: Build everything
+        run: dotnet build ControllerHP.sln -c Release -p:Version=${{ steps.version.outputs.version }}
 
-      - name: Publish (needs .NET 10 Desktop Runtime, or later)
+      # One native executable, with .NET compiled in: nothing to install. Avalonia's drawing libraries (Skia,
+      # HarfBuzz, ANGLE) are native DLLs that sit beside it.
+      - name: Publish
         run: >
-          dotnet publish "$PROJECT" -c Release -o out/framework
-          -p:Version=${{ steps.version.outputs.version }}
-          -p:PublishSingleFile=true -p:DebugType=none
-
-      - name: Publish (standalone)
-        run: >
-          dotnet publish "$PROJECT" -c Release -o out/standalone
-          -p:Version=${{ steps.version.outputs.version }}
-          --self-contained true -p:PublishSingleFile=true -p:EnableCompressionInSingleFile=true
-          -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none
+          dotnet publish "$PROJECT" -c Release -r win-x64 -o out/app
+          -p:Version=${{ steps.version.outputs.version }} -p:PublishAot=true
 
       - name: Package
+        shell: pwsh
         run: |
-          v=${{ steps.version.outputs.version }}
-          mkdir dist
-          (cd out/framework && zip -q "../../dist/ControllerHP-$v-win-x64.zip" ControllerHP.exe)
-          (cd out/standalone && zip -q "../../dist/ControllerHP-$v-win-x64-standalone.zip" ControllerHP.exe)
-          ls -la dist
+          $v = "${{ steps.version.outputs.version }}"
+          New-Item -ItemType Directory dist | Out-Null
+          $files = Get-ChildItem out/app -File | Where-Object { $_.Extension -ne '.pdb' }
+          Compress-Archive -Path $files.FullName -DestinationPath "dist/ControllerHP-$v-win-x64.zip"
+          Get-ChildItem out/app, dist | Format-Table Name, Length
 
       - uses: actions/upload-artifact@v7
         with:
           name: ControllerHP-${{ steps.version.outputs.version }}
           path: dist/*.zip
 
-  # Runs what was just built on Windows, as a user would: both downloads list devices (none on the runner)
-  # and draw every page of the settings window. Catches a build that starts but breaks, such as a
-  # .NET change, before it can be released.
+  # Runs what was just built on a clean Windows machine, as a user would: it lists devices (none on the runner)
+  # and draws every page of the settings window. Catches a build that starts but breaks, such as something the
+  # native compiler left out, before it can be released.
   test:
     needs: build
     runs-on: windows-latest
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v7
-        with:
-          sparse-checkout: global.json
-          sparse-checkout-cone-mode: false
-
-      # The .NET 10 Desktop Runtime for the smaller download; the standalone brings its own.
-      - uses: actions/setup-dotnet@v6
-        with:
-          global-json-file: global.json
-
       - uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
 
-      - name: Run both downloads
+      - name: Run the download
         shell: pwsh
         run: |
           $failed = $false

@@ -42,14 +42,8 @@ If something isn't working, Troubleshooting is the place to start.
 
 ## Install
 
-1. Download a zip from [Releases](https://github.com/veloxity343/ControllerHP/releases/latest):
-
-   | Download | Size | Needs |
-   |---|---|---|
-   | `ControllerHP-x.y.z-win-x64.zip` | ~0.4 MB | [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0), or later (Windows offers it if it's missing) |
-   | `ControllerHP-x.y.z-win-x64-standalone.zip` | ~47 MB | Nothing |
-
-2. Extract `ControllerHP.exe` somewhere permanent, such as `%LOCALAPPDATA%\Programs\ControllerHP`, and run it.
+1. Download `ControllerHP-x.y.z-win-x64.zip` from [Releases](https://github.com/veloxity343/ControllerHP/releases/latest). It needs nothing else installed: .NET is built in.
+2. Extract the whole zip somewhere permanent, such as `%LOCALAPPDATA%\Programs\ControllerHP`, and run `ControllerHP.exe`. Keep the files together: the exe needs the DLLs beside it.
 3. If Windows shows **"Windows protected your PC"**, choose **More info → Run anyway**. ControllerHP isn't code-signed, so Windows warns about it until it's widely downloaded.
 
 Requires Windows 10 version 1809 or later. [Getting started](docs/wiki/getting-started.md) covers keeping the icon visible, starting with Windows, updating and uninstalling. See [CHANGELOG.md](CHANGELOG.md) for what's new in each version.

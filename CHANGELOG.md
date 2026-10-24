@@ -34,8 +34,9 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 - **Removing a connected device takes it out of the tray** too, along with the panel, the menu and its pop-ups, until it next connects. Before, it stayed in the tray while it was on. Its history keeps recording meanwhile.
 - Stacked pop-ups have a little more room between them.
 - **The settings window opens larger and in the middle of the screen,** instead of growing off to the right. Nothing in it is cut off at any size it can be made: text wraps, a device's figures drop to two or one columns, the chart's legend wraps onto more rows, and Restore removed moves under the device list when there isn't room beside it. Dialog titles with a long device name wrap too.
-- **Runs on .NET 10,** supported until November 2028, instead of .NET 8, whose support ends in November 2026. The usual zip needs the .NET 10 Desktop Runtime, and also runs on any later .NET if that's what a PC has. The standalone zip carries its own .NET, as before.
-- **A much smaller download:** the usual zip is about 0.4 MB instead of about 6 MB, and the standalone one about 47 MB instead of 72. ControllerHP no longer ships Windows' 25 MB device and Bluetooth library at all: it calls Windows directly. .NET itself is shipped as Microsoft builds it.
+- **One download that needs nothing installed.** ControllerHP is now built on Avalonia and compiled to native code, with .NET built in, so there's no runtime to install and no separate standalone zip. Extract the whole zip: the exe needs the DLLs beside it.
+- **Built on .NET 10,** supported until November 2028, instead of .NET 8, whose support ends in November 2026.
+- ControllerHP no longer ships Windows' 25 MB device and Bluetooth library: it calls Windows directly.
 - The supported devices tables say which devices and connections have been **tested** on real hardware, which are **likely** to work, and which are still **untested**.
 
 ## [0.3.0] - 2026-10-21

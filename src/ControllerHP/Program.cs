@@ -1,7 +1,8 @@
 using System.Runtime.InteropServices;
+using Avalonia;
+using Avalonia.Threading;
 using ControllerHP.Battery;
 using ControllerHP.Battery.Vendor;
-using ControllerHP.Tray;
 
 namespace ControllerHP;
 
@@ -9,6 +10,57 @@ internal static partial class Program
 {
     [STAThread]
     private static int Main(string[] args)
+    {
+        if (args.Contains("--list"))
+            return ListDevices(CreateSources());
+
+        // Design aids, rendered off screen: they need Avalonia running, but no tray or sources.
+        if (args.Length == 2 && args[0] is "--preview-tray" or "--dump-icons")
+        {
+            App.Startup = () => (args[0] == "--preview-tray" ? (Action<string>)Preview.WriteTraySheet : Preview.DumpIcons)(args[1]);
+            return Run(args);
+        }
+
+        if (args.Length >= 2 && args[0] == "--preview-settings")
+        {
+            App.Startup = () => Preview.WriteSettingsSheet(args[1], minimum: args.Length > 2 && args[2] == "min");
+            return Run(args);
+        }
+
+        if (args.Contains("--demo"))
+        {
+            App.Startup = Preview.RunToastDemo;
+            return Run(args);
+        }
+
+        // One copy at a time, shared with the WinForms app it replaces, so the two never read devices at once.
+        using var singleInstance = new Mutex(initiallyOwned: true, @"Local\ControllerHP.SingleInstance", out bool isFirst);
+        if (!isFirst)
+            return 0;
+
+        Log.Trim();
+        AppDomain.CurrentDomain.UnhandledException += (_, e) => Log.Write($"Unhandled exception: {e.ExceptionObject}");
+        var sources = CreateSources();
+        App.Startup = () =>
+        {
+            Dispatcher.UIThread.UnhandledException += (_, e) =>
+            {
+                Log.Write($"Unhandled UI exception: {e.Exception}");
+                e.Handled = true;
+            };
+            var tray = new TrayController(sources, App.Exit);
+            App.Exiting += tray.Dispose;
+        };
+        return Run(args);
+    }
+
+    private static int Run(string[] args)
+    {
+        AppBuilder.Configure<App>().UsePlatformDetect().StartWithClassicDesktopLifetime(args, Avalonia.Controls.ShutdownMode.OnExplicitShutdown);
+        return 0;
+    }
+
+    private static IBatterySource[] CreateSources()
     {
         // The Xbox sources see the same controllers, so only the best one that finds any is used.
         var xbox = new FirstAvailableSource("Xbox", new GamingInputSource(), new XInputSource());
@@ -19,82 +71,17 @@ internal static partial class Program
         var logitech = new LogitechSource();
         // Other makers' devices on their own receivers, each through its maker's protocol.
         var vendors = new VendorHidSource(VendorProtocols.All);
-        IBatterySource[] sources = [xbox, playStation, bluetooth, logitech, vendors];
-
-        if (args.Contains("--list"))
-            return ListControllers(sources);
-
-        if (args.Contains("--hid-probe"))
-        {
-            AttachConsole(-1);
-            HidProbe.Dump(0x045E, 0x0B13, TimeSpan.FromSeconds(5));
-            foreach (ushort productId in PlayStationSource.ProductIds)
-                HidProbe.Dump(PlayStationSource.SonyVendorId, productId, TimeSpan.FromSeconds(5));
-            foreach (var b in BluetoothLeBattery.QueryConnected())
-                foreach (var line in BluetoothLeBattery.DescribeGatt(b.Address))
-                    Console.WriteLine($"  {line}");
-            return 0;
-        }
-
-        if (args.Length == 2 && args[0] == "--preview")
-        {
-            Preview.WriteSheet(args[1]);
-            return 0;
-        }
-
-        if (args.Length == 2 && args[0] == "--preview-icons")
-        {
-            Preview.WriteIconGrid(args[1]);
-            return 0;
-        }
-
-        if (args.Length == 2 && args[0] == "--preview-settings")
-        {
-            ApplicationConfiguration.Initialize();
-            // A failure ends it with an error code, for CI to catch, instead of an error dialog nobody clicks.
-            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.ThrowException);
-            try
-            {
-                Preview.WriteSettingsSheet(args[1]);
-            }
-            catch (Exception e)
-            {
-                AttachConsole(-1);
-                Console.Error.WriteLine(e);
-                return 1;
-            }
-            return 0;
-        }
-
-        if (args.Contains("--demo"))
-        {
-            ApplicationConfiguration.Initialize();
-            Preview.RunToastDemo();
-            return 0;
-        }
-
-        using var singleInstance = new Mutex(initiallyOwned: true, @"Local\ControllerHP.SingleInstance", out bool isFirst);
-        if (!isFirst)
-            return 0;
-
-        Log.Trim();
-        Application.ThreadException += (_, e) => Log.Write($"Unhandled UI exception: {e.Exception}");
-        AppDomain.CurrentDomain.UnhandledException += (_, e) => Log.Write($"Unhandled exception: {e.ExceptionObject}");
-
-        ApplicationConfiguration.Initialize();
-        Application.Run(new TrayApp(sources));
-        return 0;
+        return [xbox, playStation, bluetooth, logitech, vendors];
     }
 
     [LibraryImport("kernel32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool AttachConsole(int processId);
 
-    /// <summary>Prints what every source sees, for diagnosing which APIs work with a given controller.</summary>
-    private static int ListControllers(IEnumerable<IBatterySource> sources)
+    /// <summary>Prints what every source sees, for diagnosing which APIs work with a given device.</summary>
+    private static int ListDevices(IEnumerable<IBatterySource> sources)
     {
         AttachConsole(-1); // ATTACH_PARENT_PROCESS, since this is a WinExe.
-
         // Windows.Gaming.Input reports already-connected pads asynchronously after startup.
         Thread.Sleep(TimeSpan.FromSeconds(1.5));
         Diagnostics.WriteSources(Console.Out, sources);

@@ -7,7 +7,7 @@ ControllerHP is a tray app with no window of its own: it lives in the notificati
 - `src/ControllerHP.Core`: everything that isn't user interface, with no UI framework.
   - `Battery/`: finding devices and reading their batteries, including each maker's protocol.
   - Battery history and stats, settings, the status file, warning sounds, fullscreen detection, logs (`Log.cs`) and the diagnostics report.
-- `src/ControllerHP`: the WinForms app: everything you see (`Tray/`) and the entry point (`Program.cs`).
+- `src/ControllerHP`: the tray app, on [Avalonia](https://avaloniaui.net/): everything you see (`Ui/`), the tray logic (`TrayController.cs`, `ControllerNotifier.cs`), the Windows tray icons (`Platform/Windows/NotifyIcons.cs`) and the entry point (`Program.cs`). Releases are compiled to one native executable with Native AOT.
 
 ## From device to tray
 
@@ -53,13 +53,15 @@ The app has no Windows Runtime projection: it calls Windows directly, through a 
 
 | Piece | File | Notes |
 |---|---|---|
-| Tray icons | `TrayApp.cs` (`TrayEntry`) | Reused slots, so icons keep their taskbar position. Which devices get one: lowest battery first. Kinds turned off under **Show** are dropped as readings arrive. |
-| Icon drawing | `BatteryIconRenderer.cs` | The device's shape with a battery bar. At 16 px each shape is hand-placed pixels; larger sizes draw smooth shapes on a 16×16 grid, scaled. The "no devices" icon is the embedded `app.ico`. |
-| Pop-ups | `ControllerNotifier.cs`, `Toast.cs` | The notifier decides when, and the toast window draws and stacks them. |
-| Panel | `Flyout.cs` | Opened by left-click. It closes on losing focus, and also on any click outside it via a mouse hook, because rapid tray clicks can leave it without focus. |
-| Settings window | `SettingsWindow.cs`, `Controls.cs` | Custom-drawn controls, because WinForms' own don't follow dark mode. |
-| Devices page | `BatteryHistory.cs`, `BatteryStats.cs`, `HistoryChart.cs`, `StatsCard.cs` | Recording and loading battery history, figures, chart, and stat cards, including Remove. |
-| Theming | `Theme.cs`, `MenuRenderer.cs` | Palettes and Windows 11 styling (rounded corners, dark title bar). The tray menu and panel follow the taskbar's mode; the settings window follows the app mode. |
+| Tray icons | `TrayController.cs` (`TraySlot`), `Platform/Windows/NotifyIcons.cs` | Reused slots, so icons keep their taskbar position. Which devices get one: lowest battery first. Kinds turned off under **Show**, and removed devices, are dropped as readings arrive. The icons go through `Shell_NotifyIcon` directly, for their clicks and tooltips. |
+| Icon drawing | `Ui/BatteryIcon.cs` | The device's shape with a battery bar. At 16 px each shape is hand-placed pixels; larger sizes draw smooth shapes on a 16×16 grid, scaled. The "no devices" icon is the embedded `app.ico`. |
+| Menu | `Ui/TrayMenu.cs` | The right-click menu and its submenus, drawn in the taskbar's colours. |
+| Pop-ups | `ControllerNotifier.cs`, `Ui/Toast.cs` | The notifier decides when, and the toast window draws and stacks them, never taking focus. |
+| Panel | `Ui/Flyout.cs`, `Ui/PopupWindow.cs` | Opened by left-click. It closes on losing focus, and also on any click outside it via a mouse hook, because rapid tray clicks can leave it without focus. |
+| Settings window | `Ui/SettingsWindow.cs`, `Ui/Controls.cs` | Custom-drawn controls in the app's own palette. The page lays its items out to fit any width down to the minimum. |
+| Devices page | `BatteryHistory.cs`, `BatteryStats.cs` (Core), `Ui/HistoryChart.cs`, `Ui/StatsCard.cs` | Recording and loading battery history, figures, chart, and stat cards, including Remove. |
+| Theming | `Ui/Appearance.cs` | Palettes and Windows 11 styling (rounded corners, dark title bar). The tray menu and panel follow the taskbar's mode; the settings window follows the app mode. |
+| Design aids | `Preview.cs` | `--preview-tray`, `--preview-settings` (CI checks this one), `--dump-icons` and `--demo` render the interface off screen, or show sample pop-ups. |
 | Settings | `Settings.cs` | `HKCU\Software\ControllerHP`. Raises `Changed` on every write, so the menu and the window stay in step. |
 
 ## Design decisions worth knowing

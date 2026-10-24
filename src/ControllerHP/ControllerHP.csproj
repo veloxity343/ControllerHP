@@ -1,45 +1,51 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+  <!--
+    The tray app, on Avalonia: the tray icons, menu, flyout, pop-ups and settings window. It builds on
+    ControllerHP.Core for everything that isn't interface.
+  -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <!-- Plain Windows, with no Windows Runtime projection: the few Windows Runtime and device APIs used are
-         called directly (see ControllerHP.Core/Battery: GamingInput.cs, DeviceQuery.cs, DeviceNotices.cs). -->
+    <!-- Windows for now; Avalonia itself runs on macOS and Linux too. -->
     <TargetFramework>net10.0-windows</TargetFramework>
-    <!-- The framework-dependent build runs on .NET 10, or on a later major version if that's all a PC has. -->
-    <RollForward>Major</RollForward>
-    <UseWindowsForms>true</UseWindowsForms>
-    <!-- Allows building from Linux/WSL. -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>false</SelfContained>
-    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <!-- WFO1000 asks custom controls' properties to say how the Forms designer saves them. These controls
-         are built in code and never opened in the designer, so there's nothing for it to save. -->
-    <NoWarn>$(NoWarn);WFO1000</NoWarn>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>ControllerHP</AssemblyName>
     <RootNamespace>ControllerHP</RootNamespace>
-    <!-- Shown for the exe in Explorer, Task Manager and Startup apps; the tray icon is drawn at runtime. -->
+    <!-- ControllerHP.exe, always: Windows keeps a tray icon's place (pinned or in the overflow) and the
+         Start with Windows entry by the program's path. -->
+    <AssemblyName>ControllerHP</AssemblyName>
+    <!-- Released as one native executable, with no .NET to install (see the release workflow). -->
+    <EnableAotAnalyzer>true</EnableAotAnalyzer>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Shown for the exe in Explorer, Task Manager and Startup apps; the tray icons are drawn at runtime. -->
     <ApplicationIcon>app.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The tray's "no devices" icon. -->
+    <EmbeddedResource Include="app.ico" LogicalName="ControllerHP.app.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ControllerHP.Core\ControllerHP.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Also drawn in the tray when no controllers are connected. -->
-    <EmbeddedResource Include="app.ico" LogicalName="ControllerHP.app.ico" />
+    <PackageReference Include="Avalonia" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
   </ItemGroup>
 
   <PropertyGroup>
-    <!-- Overridden by CI from the release tag (v1.2.3 -> 1.2.3). -->
     <Version>0.3.0</Version>
     <Product>ControllerHP</Product>
     <Title>ControllerHP</Title>
-    <Description>Battery meter for game controllers in the Windows taskbar.</Description>
+    <Description>Battery meter for game controllers and other devices, in the Windows taskbar.</Description>
     <Authors>rcheong</Authors>
     <Copyright>Copyright © 2026 rcheong</Copyright>
   </PropertyGroup>

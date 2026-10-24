@@ -87,7 +87,7 @@ jobs:
     - name: Run manual build steps
       if: matrix.build-mode == 'manual'
       shell: bash
-      run: dotnet build src/ControllerHP/ControllerHP.csproj -c Release
+      run: dotnet build ControllerHP.sln -c Release
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4

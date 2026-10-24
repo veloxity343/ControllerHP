@@ -17,4 +17,6 @@ You need the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). `
 dotnet build ControllerHP.sln
 ```
 
-The project also builds on Linux (`EnableWindowsTargeting`), which is how CI runs it, but the app itself only runs on Windows.
+The projects also build on Linux (`EnableWindowsTargeting`), but the app itself only runs on Windows. A normal build runs on the .NET 10 runtime; `deploy.sh` builds that from WSL and installs it.
+
+Releases are compiled to native code with Native AOT (`-p:PublishAot=true`), so they need no .NET installed. That compile only works on Windows, with Visual Studio's C++ build tools, so CI does it on a Windows runner. The trimming and AOT analysers are on, so anything that wouldn't survive it shows as a build warning.

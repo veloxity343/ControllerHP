@@ -29,10 +29,10 @@ Each problem below has its likely cause and what to do. If yours isn't here, see
 **Cause:** ControllerHP isn't code-signed, so Windows SmartScreen warns about it.
 **Fix:** choose **More info → Run anyway**. See [why this happens](getting-started.md#the-windows-protected-your-pc-warning).
 
-## It asks me to install .NET
+## It won't start, or says a DLL is missing
 
-**Cause:** you downloaded the smaller zip, which needs the .NET 10 Desktop Runtime (a later version works too).
-**Fix:** follow Windows' link to install it, or download the `-standalone` zip instead, which needs nothing else.
+**Cause:** `ControllerHP.exe` was copied out of the zip on its own, or run from inside the zip. It needs the DLLs that come with it (they draw the panel and windows).
+**Fix:** extract the whole zip to a folder, and run `ControllerHP.exe` from there.
 
 ## My device doesn't appear
 
