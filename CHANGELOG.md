@@ -11,6 +11,8 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-24
+
 ### Added
 
 - **Bluetooth mice, keyboards and headsets:** any Bluetooth device Windows shows a battery for, in Settings → Bluetooth & devices, now shows in WattsLeft too, over Bluetooth Low Energy or classic Bluetooth. Each is drawn as what it is, worked out from what it says it is or the parts Windows installed for it. Devices on a USB receiver aren't supported yet.
@@ -98,7 +100,8 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 - Pop-ups when a controller connects or disconnects, and when its battery reaches 20% and 10%.
 - **Start with Windows**.
 
-[Unreleased]: https://github.com/veloxity343/WattsLeft/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/veloxity343/WattsLeft/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/veloxity343/WattsLeft/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/veloxity343/WattsLeft/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/veloxity343/WattsLeft/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/veloxity343/WattsLeft/compare/v0.1.0...v0.1.1

@@ -51,6 +51,7 @@ If you're interested, open an issue to discuss it first: a port shapes the proje
 
 | Idea | Size | Notes |
 |---|---|---|
+| **Better charging detection over Bluetooth** | Medium | Windows doesn't say whether a Bluetooth device is charging, so `ChargeTrends.cs` guesses from the level: charging once it has risen 2 points from its low, and not at 100%, on a drop, or after 5 minutes without a rise. That's slow on devices that report in 1% steps (a few minutes for an Xbox controller) and can still be fooled. A real signal would be better: perhaps the Xbox controller's own charging state over Bluetooth, the Battery Level Status characteristic (Bluetooth Battery Service 1.1) on devices that have it, or a device property Windows keeps. Only ever read: never send a device a command. |
 | **A "charge soon" warning** | Small | A pop-up when the predicted time to the low level drops below a set time (say 30 minutes), as well as at fixed percentages. |
 | **Find my controller** | Medium | Make a controller rumble, or flash its light bar, to tell identical ones apart. PlayStation controllers accept this through an output report. Xbox rumble through Windows.Gaming.Input may only work for the app in focus, so test that first. |
 | **Turn off PlayStation controllers over Bluetooth** | Medium | Disconnecting a PlayStation controller over Bluetooth turns it off, as DS4Windows does. This uses a long-standing but undocumented Windows call, so it needs careful handling and testing. |

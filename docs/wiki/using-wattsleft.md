@@ -120,7 +120,7 @@ Turn on **Share battery levels** in Settings, and WattsLeft keeps `%LOCALAPPDATA
 {
   "app": "WattsLeft",
   "format": 1,
-  "version": "0.3.0",
+  "version": "0.4.0",
   "running": true,
   "pid": 9696,
   "updated": "2026-10-22T12:41:09.5679406+11:00",

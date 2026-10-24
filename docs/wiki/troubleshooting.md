@@ -10,7 +10,7 @@ Each problem below has its likely cause and what to do. If yours isn't here, see
 - [My device doesn't appear](#my-device-doesnt-appear)
 - [It says "battery unknown" or shows "?"](#it-says-battery-unknown-or-shows-)
 - [A game doesn't see my PlayStation controller](#a-game-doesnt-see-my-playstation-controller)
-- [The charging bolt is late or missing on an Xbox controller](#the-charging-bolt-is-late-or-missing-on-an-xbox-controller)
+- [The charging bolt is late, missing or wrong over Bluetooth](#the-charging-bolt-is-late-missing-or-wrong-over-bluetooth)
 - [The percentage only moves in 10% steps](#the-percentage-only-moves-in-10-steps)
 - [Pop-ups don't appear while I'm playing](#pop-ups-dont-appear-while-im-playing)
 - [Battery warnings don't make a sound](#battery-warnings-dont-make-a-sound)
@@ -61,10 +61,10 @@ If it's still missing, run `WattsLeft.exe --list` (see [Reporting a bug](#report
 - Or connect the controller by USB, where this doesn't happen.
 - Or, for that game only: exit WattsLeft, then turn the controller off and on. It reconnects in its basic mode. Note that WattsLeft switches it again the next time it sees the controller connect.
 
-## The charging bolt is late or missing on an Xbox controller
+## The charging bolt is late, missing or wrong over Bluetooth
 
-**Cause:** over Bluetooth, Windows doesn't say whether an Xbox controller is charging, so WattsLeft works it out from the percentage rising. It waits for a rise of 2 points, since a controller that's been resting can tick up a point on its own, so the bolt shows a few minutes after you plug it in. It stops showing at 100% or after 5 minutes without a rise.
-**Fix:** none needed. Over USB or the Xbox Wireless Adapter, charging shows straight away.
+**Cause:** over Bluetooth, Windows doesn't say whether an Xbox controller, mouse, keyboard or headset is charging, so WattsLeft works it out from the level rising. It waits for a rise of 2 points, since a battery that's been resting can tick up a point on its own. So on a device that reports in 1% steps, the bolt shows a few minutes after you plug it in. It goes at 100%, when the level drops, or after 5 minutes without a rise. See [Charging over Bluetooth](supported-devices.md#charging-over-bluetooth) for the details.
+**Fix:** none needed; it catches up. An Xbox controller on USB or the Xbox Wireless Adapter shows charging straight away. If the bolt shows while a device isn't charging, please [report it](#reporting-a-bug) with your `history.log`, which records each step.
 
 ## The percentage only moves in 10% steps
 

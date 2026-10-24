@@ -20,7 +20,7 @@ The last column says whether each one has been tried on real hardware:
 
 | Controller | Connection | Battery | Charging shown | Tested on hardware |
 |---|---|---|---|---|
-| Xbox Wireless Controller (One / Series) | Bluetooth | Exact % | Worked out from the % rising (a few minutes after plugging in) | **Tested** (Series controller) |
+| Xbox Wireless Controller (One / Series) | Bluetooth | Exact % | Worked out from the % rising, a few minutes after plugging in ([why](#charging-over-bluetooth)) | **Tested** (Series controller) |
 | Xbox Elite Series 2, Xbox Adaptive Controller | Bluetooth | Exact % | As above | Likely |
 | Xbox Wireless Controller (One / Series) | USB | Exact %, or 4 levels on some setups | Yes | Untested |
 | Xbox Wireless Controller (One / Series) | Xbox Wireless Adapter | Exact %, or 4 levels on some setups | Yes | Untested |
@@ -44,7 +44,7 @@ Any Bluetooth device works **if Windows shows its battery**: open Settings → B
 
 | Device | Connection | Battery | Charging shown | Tested on hardware |
 |---|---|---|---|---|
-| Keyboards | Bluetooth Low Energy | Exact % | Worked out from the % rising | **Tested** |
+| Keyboards | Bluetooth Low Energy | Exact % | Worked out from the % rising ([why](#charging-over-bluetooth)) | **Tested** |
 | Mice | Bluetooth Low Energy | Exact % | As above | Likely |
 | Headsets, earbuds | Bluetooth (classic) | Exact %, or steps on some models | As above | Untested |
 | Keyboards, mice | Bluetooth (classic) | Exact % | As above | Untested |
@@ -111,16 +111,27 @@ Devices that need a mode switched before they'll answer (Razer's BlackShark V2 P
 - **Unnamed devices.** Some shared receivers (G-Wolves', MCHOSE's) don't say which mouse is paired to them, so it shows with the maker's name: rename it on the Devices page.
 - **Headsets that only speak on events.** The JBL Quantum 910 reports its battery only now and then, for example when it's plugged in to charge, so its level can take a while to appear.
 
-**Other makers' receivers** aren't supported yet, nor is a NuPhy keyboard on its dongle: its battery isn't something the dongle makes available.
+Devices on a USB receiver are covered [below](#logitech-mice-keyboards-and-headsets). A NuPhy keyboard on its dongle isn't supported: its battery isn't something the dongle makes available.
 
 ## Known limitations
 
 - **PlayStation controllers over Bluetooth:** they only report their battery after being switched to their full input report. WattsLeft does this when one connects, as Steam does. While it's in that mode, games that read it through the older DirectInput interface (some emulators and older games) don't see its input. Steam Input, and games with built-in DualSense or DualShock 4 support, are unaffected. See [a game doesn't see my PlayStation controller](troubleshooting.md#a-game-doesnt-see-my-playstation-controller).
 - **PlayStation controllers held by another tool:** if a tool like DS4Windows with HidHide takes exclusive control of a controller, WattsLeft can't read it, and it shows as *battery unknown*.
-- **Xbox controllers over Bluetooth:** Windows gives no charging signal, so WattsLeft works it out. The bolt appears once the percentage has risen 2 points, so a resting controller ticking up a point doesn't count, and clears at 100% or after 5 minutes without a rise.
+- **Charging over Bluetooth:** see [below](#charging-over-bluetooth).
 - **Two identical Xbox controllers**, one on Bluetooth and one not, may have their readings swapped.
-- **Bluetooth mice, keyboards and headsets:** Windows doesn't say whether they're charging, so WattsLeft works it out from the level rising, as for Xbox controllers. Windows also only updates their level when the device reports it, which some do rarely.
+- **Bluetooth mice, keyboards and headsets:** Windows only updates their level when the device reports it, which some do rarely.
 - **Exclusive fullscreen:** pop-ups can't appear over games running in exclusive fullscreen, so they're held and shown once the game closes. Borderless and windowed modes are fine.
+
+### Charging over Bluetooth
+
+For Xbox controllers, mice, keyboards and headsets on Bluetooth, Windows gives the battery level but not whether the device is charging. WattsLeft works it out from the level:
+
+- **The bolt appears** once the level has risen **2 points** from its lowest. One point isn't enough, because a battery that's been resting can tick up a point on its own: an Xbox controller can go 94%, 95%, 94% without being plugged in.
+- **So it takes a little while.** A device that reports in 1% steps, such as an Xbox controller, shows the bolt a few minutes after it's plugged in. One that reports in 5 or 10% steps shows it at its first step up.
+- **The bolt goes** at 100%, when the level drops, or after 5 minutes without a rise. A device that charges very slowly can lose the bolt between steps.
+- **Over USB or the Xbox Wireless Adapter**, Xbox controllers report charging themselves, so the bolt shows straight away. So do PlayStation, Switch, Steam and 8BitDo controllers, on Bluetooth too, and most devices on a USB receiver; the tables above say which.
+
+This is a guess, and the best one available so far. If you know a way to read the real charging state over Bluetooth, see [Help wanted](../dev/help-wanted.md#features).
 
 ## How batteries are read
 
