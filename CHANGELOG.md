@@ -11,6 +11,12 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-24
+
+### Fixed
+
+- The 0.4.0 release had no download attached. 0.4.1 is the same app, with its zip.
+
 ## [0.4.0] - 2026-10-24
 
 ### Added
@@ -100,7 +106,8 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 - Pop-ups when a controller connects or disconnects, and when its battery reaches 20% and 10%.
 - **Start with Windows**.
 
-[Unreleased]: https://github.com/veloxity343/WattsLeft/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/veloxity343/WattsLeft/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/veloxity343/WattsLeft/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/veloxity343/WattsLeft/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/veloxity343/WattsLeft/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/veloxity343/WattsLeft/compare/v0.1.1...v0.2.0

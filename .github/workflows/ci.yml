@@ -143,12 +143,17 @@ jobs:
           printf '%s\n' "$notes" > release-notes.md
           cat release-notes.md
 
-      # Third-party action, so pinned to a commit; Dependabot keeps it current.
-      - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
-        with:
-          files: dist/*.zip
-          # The changelog section, followed by GitHub's list of merged pull requests and a comparison link.
-          body_path: release-notes.md
-          generate_release_notes: true
-          # Tags like v1.2.0-beta.1 become pre-releases.
-          prerelease: ${{ contains(github.ref_name, '-') }}
+      # Releases are immutable once published (a repository setting), so nothing can be added to one afterwards.
+      # It's made as a draft, the zip attached, and only then published. The notes are the changelog section,
+      # followed by GitHub's list of merged pull requests and a comparison link. Tags like v1.2.0-beta.1 become
+      # pre-releases.
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=()
+          [[ "$GITHUB_REF_NAME" == *-* ]] && prerelease=(--prerelease)
+          gh release create "$GITHUB_REF_NAME" dist/*.zip --repo "$GITHUB_REPOSITORY" --verify-tag --draft \
+            --title "$GITHUB_REF_NAME" --notes-file release-notes.md --generate-notes "${prerelease[@]}"
+          gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name'
