@@ -11,6 +11,8 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-24
+
 ### Added
 
 - **Open folder** in Settings, under **Your data**, shows where WattsLeft keeps your battery history and logs.
@@ -120,7 +122,8 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 - Pop-ups when a controller connects or disconnects, and when its battery reaches 20% and 10%.
 - **Start with Windows**.
 
-[Unreleased]: https://github.com/veloxity343/WattsLeft/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/veloxity343/WattsLeft/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/veloxity343/WattsLeft/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/veloxity343/WattsLeft/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/veloxity343/WattsLeft/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/veloxity343/WattsLeft/compare/v0.3.0...v0.4.0
