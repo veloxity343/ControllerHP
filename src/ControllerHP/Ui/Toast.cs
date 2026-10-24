@@ -19,6 +19,8 @@ internal sealed class ToastManager : IDisposable
 {
     private const int MaxVisible = 4, Margin = 12, Gap = 12;
     private readonly List<ToastWindow> _open = [];
+    /// <summary>Toasts pushed out by newer ones: fading where they are, no longer part of the stack.</summary>
+    private readonly List<ToastWindow> _leaving = [];
     private ToastCorner _corner = ToastCorner.TopRight;
 
     public ToastCorner Corner
@@ -34,13 +36,19 @@ internal sealed class ToastManager : IDisposable
     public void Show(ToastContent content)
     {
         if (_open.Count >= MaxVisible)
+        {
+            // The oldest makes way at once, so the stack never grows past the limit; it fades out in its place.
+            _leaving.Add(_open[0]);
             _open[0].Dismiss();
+            _open.RemoveAt(0);
+        }
 
         var toast = new ToastWindow(content);
         toast.Closed += (_, _) =>
         {
-            _open.Remove(toast);
-            Layout();
+            _leaving.Remove(toast);
+            if (_open.Remove(toast))
+                Layout();
         };
         _open.Add(toast);
         Layout();
@@ -69,9 +77,10 @@ internal sealed class ToastManager : IDisposable
 
     public void Dispose()
     {
-        foreach (var toast in _open.ToList())
+        foreach (var toast in _open.Concat(_leaving).ToList())
             toast.Close();
         _open.Clear();
+        _leaving.Clear();
     }
 }
 
@@ -195,5 +204,12 @@ internal sealed class ToastView(ToastContent content) : Control
         double titleWidth = Math.Min(Draw.Width(content.Title, titleFont, 12.5), Math.Max(0, textRight - textX - messageWidth - gap));
         Draw.Text(g, content.Title, titleFont, 12.5, TitleColor, new Rect(textX, 0, titleWidth + 1, bounds.Height));
         Draw.Text(g, content.Message, Draw.Font(), 12, MessageColor, new Rect(textX + titleWidth + gap, 0, messageWidth + 1, bounds.Height));
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        _glyph?.Dispose();
+        _glyph = null;
     }
 }

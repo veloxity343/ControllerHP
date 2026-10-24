@@ -538,6 +538,7 @@ internal sealed class SettingsWindow : Window
             double width = Math.Min((double.IsInfinity(pageWidth) ? 600 : pageWidth) - PagePadding * 2, MaxWidth_);
             double x = PagePadding, y = PagePadding;
             Control? previous = null;
+            var previousBounds = default(Rect);
             foreach (var item in _items)
             {
                 if (item is UndoBar { Showing: false })
@@ -550,13 +551,15 @@ internal sealed class SettingsWindow : Window
                 if (item == _window._restoreButton)
                 {
                     // Beside the dropdown, or under it if the page is too narrow; hidden while nothing is removed.
+                    // Placed from where this pass put the dropdown, so measuring and arranging agree.
                     item.Measure(Size.Infinity);
                     if (item.IsVisible && previous is not null)
                     {
-                        var at = previous.IsVisible && previous.Bounds.Right + 8 + item.Width <= x + width
-                            ? new Point(previous.Bounds.Right + 8, previous.Bounds.Top + (previous.Bounds.Height - item.Height) / 2)
-                            : !previous.IsVisible ? previous.Bounds.Position : new Point(x, y);
-                        if (previous.IsVisible && at.Y == y)
+                        bool beside = previous.IsVisible && previousBounds.Right + 8 + item.Width <= x + width;
+                        var at = beside
+                            ? new Point(previousBounds.Right + 8, previousBounds.Top + (previousBounds.Height - item.Height) / 2)
+                            : !previous.IsVisible ? previousBounds.Position : new Point(x, y);
+                        if (previous.IsVisible && !beside)
                             y += item.Height + CardGap;
                         if (arrange)
                             item.Arrange(new Rect(at, new Size(item.Width, item.Height)));
@@ -576,11 +579,9 @@ internal sealed class SettingsWindow : Window
                 var bounds = new Rect(x, y, itemWidth, height);
                 if (arrange)
                     item.Arrange(bounds);
-                // Restore removed is placed from the dropdown's bounds, so they're set while measuring too.
-                if (!arrange && item is DropDown)
-                    item.Arrange(bounds);
                 y += height + CardGap;
                 previous = item;
+                previousBounds = bounds;
             }
             // Room below the last item, so the page can scroll it clear of the window edge.
             return y + PagePadding;

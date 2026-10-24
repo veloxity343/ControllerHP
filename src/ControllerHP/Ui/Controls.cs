@@ -1018,8 +1018,8 @@ internal sealed class ListPopup : PopupWindow
     }
 
     /// <summary>
-    /// Opens the list under <paramref name="anchor"/>, at least as wide as it; null when this click is the one
-    /// that just closed the anchor's list.
+    /// Opens the list under <paramref name="anchor"/>, at least as wide as it, or over it when there isn't room
+    /// below on the screen; null when this click is the one that just closed the anchor's list.
     /// </summary>
     public static ListPopup? Open(Control anchor, IReadOnlyList<string> items, int checkedIndex, Palette palette, Action<int> onPick)
     {
@@ -1029,10 +1029,23 @@ internal sealed class ListPopup : PopupWindow
         double textWidth = items.Count == 0 ? 0 : items.Max(i => Draw.Width(i, Draw.Font(), 13));
         popup.Width = Math.Max(anchor.Bounds.Width, textWidth + 56);
         popup.Height = Math.Min(VisibleRows, Math.Max(1, items.Count)) * RowHeight + Inset * 2;
-        if (TopLevel.GetTopLevel(anchor) is Window owner && anchor.PointToScreen(new Point(0, anchor.Bounds.Height + 2)) is var point)
+        if (TopLevel.GetTopLevel(anchor) is Window owner)
         {
             popup._owner = owner;
-            popup.Position = point;
+            var below = anchor.PointToScreen(new Point(0, anchor.Bounds.Height + 2));
+            var above = anchor.PointToScreen(new Point(0, -2));
+            if (owner.Screens.ScreenFromPoint(below) is { } screen)
+            {
+                var area = screen.WorkingArea;
+                int width = (int)Math.Ceiling(popup.Width * screen.Scaling), height = (int)Math.Ceiling(popup.Height * screen.Scaling);
+                int y = below.Y + height <= area.Bottom || above.Y - height < area.Y ? below.Y : above.Y - height;
+                int x = Math.Max(area.X, Math.Min(below.X, area.Right - width));
+                popup.Position = new PixelPoint(x, Math.Max(area.Y, Math.Min(y, area.Bottom - height)));
+            }
+            else
+            {
+                popup.Position = below;
+            }
             popup.Show(owner);
         }
         else

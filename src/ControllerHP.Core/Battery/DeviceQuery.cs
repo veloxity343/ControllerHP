@@ -49,18 +49,10 @@ internal static unsafe partial class DeviceQuery
     public readonly record struct Filter(DevPropKey Key, string? BeginsWith = null, Guid? EqualsGuid = null, bool? EqualsBool = null);
 
     /// <summary>Every object of a type that passes the filters, with the properties asked for.</summary>
-    public static List<DeviceObject> Find(ObjectType type, DevPropKey[] properties, params Filter[] filters) =>
-        Find(type, properties, allProperties: false, filters);
-
-    /// <summary>As <see cref="Find(ObjectType, DevPropKey[], Filter[])"/>; with <paramref name="allProperties"/>,
-    /// every property each object has, for diagnostics.</summary>
-    public static List<DeviceObject> Find(ObjectType type, DevPropKey[] properties, bool allProperties, params Filter[] filters)
+    public static List<DeviceObject> Find(ObjectType type, DevPropKey[] properties, params Filter[] filters)
     {
-        // Every property, or the ones listed: not both.
-        if (allProperties)
-            properties = [];
         using var request = new Request(properties, filters);
-        int hr = DevGetObjects(type, allProperties ? QueryFlagAllProperties : QueryFlagNone, (uint)properties.Length, request.Keys, (uint)filters.Length, request.Filters,
+        int hr = DevGetObjects(type, QueryFlagNone, (uint)properties.Length, request.Keys, (uint)filters.Length, request.Filters,
             out uint count, out DevObject* objects);
         if (hr < 0)
             throw new COMException("Device query failed", hr);
@@ -184,7 +176,7 @@ internal static unsafe partial class DeviceQuery
     }
 
     // The API's structures and constants (devquery.h, devpropdef.h, devfiltertypes.h).
-    private const uint QueryFlagNone = 0, QueryFlagAllProperties = 2;
+    private const uint QueryFlagNone = 0;
     private const uint OperatorEquals = 2, OperatorBeginsWith = 9, OperatorIgnoreCase = 0x00020000;
 
     [StructLayout(LayoutKind.Sequential)]

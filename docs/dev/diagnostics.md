@@ -7,10 +7,10 @@
 | Flag | What it does |
 |---|---|
 | `--list` | Prints what every battery source reports for each connected device, raw values included. The same as the report's battery section, but unmasked: for working at a terminal, or when the tray app won't start. |
-| `--hid-probe` | Dumps the raw HID reports of connected Xbox and PlayStation controllers, and Xbox Bluetooth GATT services. For working out a new controller's report format. |
-| `--preview <file.png>` | Renders every tray icon state, the pop-ups and the device panel, in both modes, to an image. |
-| `--preview-icons <file.png>` | Renders every device in every battery state, on a dark and a light taskbar: each icon large, with its real 16 px tray size beneath. |
-| `--preview-settings <file.png>` | Renders each page of the settings window, in dark and light mode, to an image. Uses sample battery history, so it works without devices. |
+| `--hid-probe` | Dumps the raw HID reports of connected Xbox and PlayStation controllers, and every connected Bluetooth LE device's GATT services. It only listens and reads. For working out a new device's report format. |
+| `--preview-tray <file.png>` | Renders the flyout and the tray menu in dark and light mode, with every kind of pop-up beneath, to an image. |
+| `--preview-settings <file.png> [min]` | Renders each page of the settings window, in dark and light mode, to an image: at its opening width, or its minimum with `min`. Uses sample battery history, so it works without devices. CI runs this on every build. |
+| `--dump-icons <folder>` | Saves every device's tray icon in every battery state, at 16 to 64 px on a dark and a light taskbar, one PNG each. |
 | `--demo` | Shows the sample pop-ups on screen, one after another. |
 
 ## The diagnostics report
@@ -38,7 +38,7 @@ In `%LOCALAPPDATA%\ControllerHP`:
 
 ## Checking a change
 
-There are no automated tests; changes are checked against real devices. In your pull request, say which devices and connections you tried. If you changed how something looks, attach a `--preview` or `--preview-settings` image.
+There are no automated tests; changes are checked against real devices. In your pull request, say which devices and connections you tried. If you changed how something looks, attach a `--preview-tray` or `--preview-settings` image.
 
 ---
 

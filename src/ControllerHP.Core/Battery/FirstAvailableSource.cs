@@ -25,8 +25,11 @@ public sealed class FirstAvailableSource(string name, params IBatterySource[] so
         }
     }
 
+    /// <summary>The first source's readings that has any. Throws only if every source failed, so that isn't taken for "none".</summary>
     public IReadOnlyList<ControllerBattery> Read()
     {
+        Exception? failure = null;
+        bool anyAnswered = false;
         foreach (var source in sources)
         {
             try
@@ -34,12 +37,16 @@ public sealed class FirstAvailableSource(string name, params IBatterySource[] so
                 var readings = source.Read();
                 if (readings.Count > 0)
                     return readings;
+                anyAnswered = true;
             }
             catch (Exception ex)
             {
                 Log.Once($"{source.Name} failed: {ex.GetType().Name}: {ex.Message}");
+                failure ??= ex;
             }
         }
+        if (!anyAnswered && failure is not null)
+            throw new InvalidOperationException($"Every {name} source failed", failure);
         return [];
     }
 

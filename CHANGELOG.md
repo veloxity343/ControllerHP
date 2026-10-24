@@ -39,6 +39,10 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 - ControllerHP no longer ships Windows' 25 MB device and Bluetooth library: it calls Windows directly.
 - The supported devices tables say which devices and connections have been **tested** on real hardware, which are **likely** to work, and which are still **untested**.
 
+### Fixed
+
+- A device no longer shows as disconnected and then connected again, with a pop-up for each, when Windows briefly fails to list or read it.
+
 ## [0.3.0] - 2026-10-21
 
 ### Added

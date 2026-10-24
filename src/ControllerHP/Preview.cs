@@ -6,7 +6,10 @@ using ControllerHP.Ui;
 
 namespace ControllerHP;
 
-/// <summary>Design aids: the flyout and menu rendered off screen, and every icon state as separate PNGs.</summary>
+/// <summary>
+/// Design aids: the flyout, menu, pop-ups and settings pages rendered off screen, every icon state as separate
+/// PNGs, and the sample pop-ups shown for real.
+/// </summary>
 internal static class Preview
 {
     private static ControllerBattery Sample(int? percent, ChargeState power = ChargeState.Discharging) =>
@@ -62,7 +65,7 @@ internal static class Preview
         ("charging", 60, ChargeState.Charging), ("wired", null, ChargeState.Wired), ("unknown", null, ChargeState.Unknown),
     ];
 
-    /// <summary>Every device in every state at 16, 32 and 64 px on dark and light, one PNG each, for comparing renderers.</summary>
+    /// <summary>Every device in every state at 16, 20, 24, 32 and 64 px on dark and light, one PNG each, for comparing renderers.</summary>
     public static void DumpIcons(string folder)
     {
         Directory.CreateDirectory(folder);
@@ -75,7 +78,6 @@ internal static class Preview
                         using var icon = BatteryIcon.Render(battery, light, size);
                         icon.Save(Path.Combine(folder, $"{kind}-{label}-{size}-{(light ? "light" : "dark")}.png"), new PngBitmapEncoderOptions());
                     }
-        App.Exit();
     }
 
     /// <summary>The flyout and menu, dark and light side by side, with the toasts underneath.</summary>
@@ -115,14 +117,13 @@ internal static class Preview
             y += ToastWindow.LogicalHeight + 10;
         }
         sheet.Save(path, new PngBitmapEncoderOptions());
-        App.Exit();
     }
 
     /// <summary>
     /// Each page of the settings window, dark and light side by side, with sample history: at its opening width,
     /// or its minimum with <paramref name="minimum"/>. Shown off screen so its styles and layout apply.
     /// </summary>
-    public static async void WriteSettingsSheet(string path, bool minimum)
+    public static async Task WriteSettingsSheet(string path, bool minimum)
     {
         const int gap = 20, height = 1700;
         var shots = new List<RenderTargetBitmap>();
@@ -161,7 +162,6 @@ internal static class Preview
         sheet.Save(path, new PngBitmapEncoderOptions());
         foreach (var shot in shots)
             shot.Dispose();
-        App.Exit();
     }
 
     /// <summary>

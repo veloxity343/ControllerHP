@@ -339,6 +339,16 @@ internal sealed class TrayController : IDisposable
     private static void LogHistory(IReadOnlyList<ControllerBattery> readings) =>
         Log.Write(readings.Count == 0 ? "no devices" : string.Join(" | ", readings.Select(r => r.Describe())), Log.HistoryFile);
 
+    /// <summary>
+    /// How many reads in a row a failing source's last readings stand in for it. A failed read says nothing about
+    /// what's connected, so its devices don't flicker off and on (with pop-ups) over a passing failure; one that
+    /// keeps failing lets them go.
+    /// </summary>
+    private const int FailedReadsCovered = 3;
+
+    /// <summary>Each source's last good readings, and how many reads have failed since.</summary>
+    private readonly Dictionary<IBatterySource, (IReadOnlyList<ControllerBattery> Readings, int Failures)> _lastRead = [];
+
     /// <summary>Each source covers different devices; overlapping ones are grouped in a <see cref="FirstAvailableSource"/>.</summary>
     private List<ControllerBattery> ReadAllSources()
     {
@@ -347,11 +357,18 @@ internal sealed class TrayController : IDisposable
         {
             try
             {
-                readings.AddRange(source.Read());
+                var read = source.Read();
+                _lastRead[source] = (read, 0);
+                readings.AddRange(read);
             }
             catch (Exception ex)
             {
                 Log.Once($"{source.Name} failed: {ex.GetType().Name}: {ex.Message}");
+                if (_lastRead.TryGetValue(source, out var last) && last.Failures < FailedReadsCovered)
+                {
+                    _lastRead[source] = (last.Readings, last.Failures + 1);
+                    readings.AddRange(last.Readings);
+                }
             }
         }
         // Types turned off in Settings are left out before anything else sees them: no icon, pop-ups or history.
@@ -515,6 +532,9 @@ internal sealed class TraySlot(NotifyIcons tray) : IDisposable
             using var bitmap = BatteryIcon.Render(battery, lightTaskbar, size);
             image = NotifyIcons.ToIcon(bitmap);
         }
+        // Without an image, keep showing the last one, and try again at the next refresh.
+        if (image == IntPtr.Zero)
+            return;
 
         string text = battery?.Describe() ?? "ControllerHP: no devices connected";
         if (battery is not null && timeLeft is not null)

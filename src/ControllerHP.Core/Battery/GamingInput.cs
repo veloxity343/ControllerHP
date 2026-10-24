@@ -90,10 +90,13 @@ internal static unsafe partial class GamingInput
 
     private static PadInfo Read(IntPtr pad)
     {
-        IntPtr controller = Query(pad, IGameController), battery = Query(pad, IGameControllerBatteryInfo), identity = Query(pad, IUnknownId);
+        IntPtr controller = IntPtr.Zero, battery = IntPtr.Zero, identity = IntPtr.Zero;
         IntPtr rawStatics = IntPtr.Zero, raw = IntPtr.Zero, raw2 = IntPtr.Zero, report = IntPtr.Zero;
         try
         {
+            controller = Query(pad, IGameController);
+            battery = Query(pad, IGameControllerBatteryInfo);
+            identity = Query(pad, IUnknownId);
             byte wireless;
             Check(((delegate* unmanaged<IntPtr, byte*, int>)Method(controller, ControllerIsWireless))(controller, &wireless));
             Check(((delegate* unmanaged<IntPtr, IntPtr*, int>)Method(battery, TryGetBatteryReport))(battery, &report));
@@ -176,7 +179,13 @@ internal static unsafe partial class GamingInput
         {
             long added, removed;
             Check(((delegate* unmanaged<IntPtr, IntPtr, long*, int>)Method(statics, GamepadsAdded))(statics, handler.Native, &added));
-            Check(((delegate* unmanaged<IntPtr, IntPtr, long*, int>)Method(statics, GamepadsRemoved))(statics, handler.Native, &removed));
+            int hr = ((delegate* unmanaged<IntPtr, IntPtr, long*, int>)Method(statics, GamepadsRemoved))(statics, handler.Native, &removed);
+            if (hr < 0)
+            {
+                // Half a watch is no use: take the first handler back off before failing.
+                ((delegate* unmanaged<IntPtr, long, int>)Method(statics, GamepadsAdded + 1))(statics, added);
+                Check(hr);
+            }
             handler.Tokens = (added, removed);
             return handler;
         }

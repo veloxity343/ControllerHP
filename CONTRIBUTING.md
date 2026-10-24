@@ -16,7 +16,7 @@ For security problems, follow [SECURITY.md](SECURITY.md) instead of opening an i
 
 The [developer docs](docs/dev/README.md) cover building, the [architecture](docs/dev/architecture.md), the [diagnostic flags](docs/dev/diagnostics.md) and [adding a controller](docs/dev/adding-a-controller.md).
 
-There are no automated tests; changes are checked against real devices. In your pull request, say which devices and connections you tried, and if you changed how something looks, attach a `--preview` or `--preview-settings` image.
+There are no automated tests; changes are checked against real devices. In your pull request, say which devices and connections you tried, and if you changed how something looks, attach a `--preview-tray` or `--preview-settings` image.
 
 ## Pull requests
 

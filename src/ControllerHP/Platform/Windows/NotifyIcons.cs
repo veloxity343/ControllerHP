@@ -148,7 +148,7 @@ internal sealed unsafe partial class NotifyIcons : IDisposable
 
     /// <summary>
     /// A drawn bitmap as an icon handle, for the notification area. The bitmap's pixels are premultiplied;
-    /// an icon's are not.
+    /// an icon's are not. Zero if Windows couldn't make one (it's out of drawing resources).
     /// </summary>
     public static IntPtr ToIcon(Bitmap bitmap)
     {
@@ -170,15 +170,24 @@ internal sealed unsafe partial class NotifyIcons : IDisposable
             Size = (uint)sizeof(BitmapInfoHeader), Width = width, Height = -height, Planes = 1, BitCount = 32,
         };
         IntPtr color = CreateDIBSection(IntPtr.Zero, ref header, 0, out IntPtr bits, IntPtr.Zero, 0);
-        Marshal.Copy(pixels, 0, bits, pixels.Length);
+        // The mask is all zeros: the colour bitmap's alpha decides what shows.
         var mask = new byte[(width + 15) / 16 * 2 * height];
         IntPtr maskBitmap;
         fixed (byte* m = mask)
             maskBitmap = CreateBitmap(width, height, 1, 1, (IntPtr)m);
-        var info = new IconInfo { IsIcon = 1, Mask = maskBitmap, Color = color };
-        IntPtr icon = CreateIconIndirect(ref info);
-        DeleteObject(color);
-        DeleteObject(maskBitmap);
+        IntPtr icon = IntPtr.Zero;
+        if (color != IntPtr.Zero && bits != IntPtr.Zero && maskBitmap != IntPtr.Zero)
+        {
+            Marshal.Copy(pixels, 0, bits, pixels.Length);
+            var info = new IconInfo { IsIcon = 1, Mask = maskBitmap, Color = color };
+            icon = CreateIconIndirect(ref info);
+        }
+        if (icon == IntPtr.Zero)
+            Log.Once("Couldn't make a tray icon image");
+        if (color != IntPtr.Zero)
+            DeleteObject(color);
+        if (maskBitmap != IntPtr.Zero)
+            DeleteObject(maskBitmap);
         return icon;
     }
 

@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using ControllerHP.Battery;
 
@@ -126,7 +127,7 @@ internal sealed class FlyoutContent(Palette palette) : Control
     public IReadOnlyDictionary<string, string> TimeLeft { get; set; } = new Dictionary<string, string>();
     private bool _gearHover;
     /// <summary>Each device's icon, kept while its reading doesn't change.</summary>
-    private readonly Dictionary<string, (ControllerBattery Reading, IImage Image)> _glyphs = [];
+    private readonly Dictionary<string, (ControllerBattery Reading, Bitmap Image)> _glyphs = [];
 
     public event Action? GearClicked;
 
@@ -153,8 +154,15 @@ internal sealed class FlyoutContent(Palette palette) : Control
             return;
         }
 
+        // Icons of devices no longer listed go.
+        foreach (var gone in _glyphs.Keys.Where(id => !Readings.Any(r => r.Id == id)).ToList())
+        {
+            _glyphs[gone].Image.Dispose();
+            _glyphs.Remove(gone);
+        }
+
         const int glyphSize = 32;
-        double pixelScale = (TopLevel.GetTopLevel(this)?.RenderScaling ?? 1);
+        double pixelScale = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1;
         foreach (var reading in Readings)
         {
             // Each device sits on a rounded card, like the tiles in Windows' quick settings.
@@ -172,11 +180,23 @@ internal sealed class FlyoutContent(Palette palette) : Control
     /// <summary>The device's icon at its size in physical pixels, so it's as sharp as the screen allows.</summary>
     private IImage Glyph(ControllerBattery reading, int pixels)
     {
-        if (_glyphs.TryGetValue(reading.Id, out var kept) && kept.Reading == reading && kept.Image.Size.Width == pixels)
-            return kept.Image;
+        if (_glyphs.TryGetValue(reading.Id, out var kept))
+        {
+            if (kept.Reading == reading && kept.Image.PixelSize.Width == pixels)
+                return kept.Image;
+            kept.Image.Dispose();
+        }
         var image = BatteryIcon.Render(reading, palette.Light, pixels);
         _glyphs[reading.Id] = (reading, image);
         return image;
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnDetachedFromVisualTree(e);
+        foreach (var (_, image) in _glyphs.Values)
+            image.Dispose();
+        _glyphs.Clear();
     }
 
     /// <summary>e.g. "62% · 3 h to 20% · Bluetooth", or "85% · Charging · USB" while time left isn't known.</summary>

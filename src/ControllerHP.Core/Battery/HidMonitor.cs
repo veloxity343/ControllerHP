@@ -8,9 +8,9 @@ internal readonly record struct HidInfo(string Path, ushort Vendor, ushort Produ
 /// <summary>
 /// The HID collections plugged in, kept up to date for every source that reads devices over HID. Windows'
 /// configuration manager lists them, and <see cref="DeviceNotices"/> says when something arrives or goes;
-/// each notice is answered by listing them again and comparing, so paths are always spelled as the list spells them (the sources key devices,
-/// and some their history, by path). What a collection is comes from the collection itself, opened with
-/// no access, which costs the device nothing.
+/// each notice is answered by listing them again and comparing, so paths are always spelled as the list
+/// spells them (the sources key devices, and some their history, by path). What a collection is comes from
+/// the collection itself, opened with no access, which costs the device nothing.
 /// </summary>
 internal static partial class HidMonitor
 {
@@ -101,7 +101,14 @@ internal static partial class HidMonitor
 
     private static void RescanLocked()
     {
-        var paths = ListPaths();
+        // A listing that failed says nothing about what's plugged in: keep what's known rather than report every
+        // device gone, and try again shortly.
+        if (ListPaths() is not { } paths)
+        {
+            Log.Once("Listing HID devices failed; trying again");
+            QueueRescan(RetryWait);
+            return;
+        }
         var events = new List<Action>();
         bool retry = false;
         lock (Gate)
@@ -175,8 +182,8 @@ internal static partial class HidMonitor
     [LibraryImport("cfgmgr32.dll", EntryPoint = "CM_Get_Device_Interface_ListW", StringMarshalling = StringMarshalling.Utf16)]
     private static partial uint CM_Get_Device_Interface_List(in Guid interfaceClass, string? deviceId, char[] buffer, uint length, uint flags);
 
-    /// <summary>The HID interfaces present, as the configuration manager spells their paths.</summary>
-    private static List<string> ListPaths()
+    /// <summary>The HID interfaces present, as the configuration manager spells their paths; null if it couldn't list them.</summary>
+    private static List<string>? ListPaths()
     {
         // The list can grow between asking its size and reading it; ask again if so.
         for (int attempt = 0; attempt < 5; attempt++)
@@ -192,7 +199,7 @@ internal static partial class HidMonitor
             // Paths separated by nulls, ending with an empty one.
             return [.. new string(buffer).Split('\0', StringSplitOptions.RemoveEmptyEntries)];
         }
-        return [];
+        return null;
     }
 
     /// <summary>Lists the collections again after <paramref name="wait"/>, unless a listing is already queued.</summary>
