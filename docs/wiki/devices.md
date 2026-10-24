@@ -16,8 +16,8 @@ The Devices page shows each device's battery history and stats, and lets you ren
 
 One line per device, over the last **2 hours**, **6 hours** (the default), **24 hours** or **7 days**.
 
-- While a device is on and ControllerHP is running, its line carries on to *now*, even when the level hasn't changed.
-- A **gap** means the device was off, or ControllerHP wasn't running.
+- While a device is on and WattsLeft is running, its line carries on to *now*, even when the level hasn't changed.
+- A **gap** means the device was off, or WattsLeft wasn't running.
 - A connected device's line ends in a dot with its current level.
 - A very short connection that's too brief to draw as a line shows as a small dot.
 - **Hover** over the chart to see every device's level at that moment, and whether it was charging.
@@ -25,7 +25,7 @@ One line per device, over the last **2 hours**, **6 hours** (the default), **24 
 
 Each device keeps its colour whichever range you pick. Every line is also named in the legend, so you never need to tell devices apart by colour alone.
 
-History builds up from when you install ControllerHP, so the chart starts out short.
+History builds up from when you install WattsLeft, so the chart starts out short.
 
 ## The stats
 
@@ -76,7 +76,7 @@ Two devices of the same model, such as two Xbox controllers, share a name. The D
 
 Choose the device in the dropdown, click **Rename** on its card, type a name and press Enter. Names can be up to 40 characters.
 
-The new name shows everywhere ControllerHP shows that device: the tray tooltip, the panel, pop-ups, the chart and the [status file](using-controllerhp.md#sharing-battery-levels-with-other-apps). It doesn't change the name Windows uses. To go back to the device's own name, rename it again and leave the box empty.
+The new name shows everywhere WattsLeft shows that device: the tray tooltip, the panel, pop-ups, the chart and the [status file](using-wattsleft.md#sharing-battery-levels-with-other-apps). It doesn't change the name Windows uses. To go back to the device's own name, rename it again and leave the box empty.
 
 ## A device's own warning levels
 
@@ -95,26 +95,26 @@ It disappears from the chart, the dropdown and the stats. For a few seconds an *
 Removing **hides** a device; it doesn't delete anything:
 - Its history stays on your PC until it expires after 90 days.
 - **Restore removed**, beside the dropdown on the Devices page, brings it back. The button shows how many are removed, and opens a list to pick from, with **Restore all** when there's more than one.
-- The next time it connects, it comes back by itself. That includes ControllerHP starting while it's connected.
+- The next time it connects, it comes back by itself. That includes WattsLeft starting while it's connected.
 
 ## What's stored on your PC
 
-Nothing leaves your PC: ControllerHP makes no network connections at all.
+Nothing leaves your PC: WattsLeft makes no network connections at all.
 
 | What | Where | Kept for | Typical size |
 |---|---|---|---|
-| Battery history | `%LOCALAPPDATA%\ControllerHP\battery.csv` | 90 days | Up to about 2 MB per heavily used Xbox controller, much less for others |
-| "Still running" time, used to close history neatly after a crash | `%LOCALAPPDATA%\ControllerHP\battery.alive` | Overwritten every 30 seconds | A few bytes |
-| Readable change log, for bug reports | `%LOCALAPPDATA%\ControllerHP\history.log` | 30 days | Under 1 MB |
-| Errors, if any | `%LOCALAPPDATA%\ControllerHP\error.log` | Newest 1 MB | Usually a few KB |
-| Battery levels for other apps, if **Share battery levels** is on | `%LOCALAPPDATA%\ControllerHP\status.json` | Deleted when you turn it off | A few hundred bytes |
-| The last diagnostics report, if you've made one | `%LOCALAPPDATA%\ControllerHP\diagnostics.txt` | Replaced each time | A few KB |
-| Settings | Registry: `HKEY_CURRENT_USER\Software\ControllerHP` | Until you change them | Tiny |
+| Battery history | `%LOCALAPPDATA%\WattsLeft\battery.csv` | 90 days | Up to about 2 MB per heavily used Xbox controller, much less for others |
+| "Still running" time, used to close history neatly after a crash | `%LOCALAPPDATA%\WattsLeft\battery.alive` | Overwritten every 30 seconds | A few bytes |
+| Readable change log, for bug reports | `%LOCALAPPDATA%\WattsLeft\history.log` | 30 days | Under 1 MB |
+| Errors, if any | `%LOCALAPPDATA%\WattsLeft\error.log` | Newest 1 MB | Usually a few KB |
+| Battery levels for other apps, if **Share battery levels** is on | `%LOCALAPPDATA%\WattsLeft\status.json` | Deleted when you turn it off | A few hundred bytes |
+| The last diagnostics report, if you've made one | `%LOCALAPPDATA%\WattsLeft\diagnostics.txt` | Replaced each time | A few KB |
+| Settings | Registry: `HKEY_CURRENT_USER\Software\WattsLeft` | Until you change them | Tiny |
 
-Older entries are trimmed each time ControllerHP starts. A row is written only when a reading changes, so a device sitting at the same level writes nothing.
+Older entries are trimmed each time WattsLeft starts. A row is written only when a reading changes, so a device sitting at the same level writes nothing.
 
-`battery.csv` is plain text, and you can open it in Excel or any spreadsheet. To clear your history, exit ControllerHP and delete it.
+`battery.csv` is plain text, and you can open it in Excel or any spreadsheet. To clear your history, exit WattsLeft and delete it.
 
 ---
 
-[← Using ControllerHP](using-controllerhp.md) · Next: [Supported devices →](supported-devices.md)
+[← Using WattsLeft](using-wattsleft.md) · Next: [Supported devices →](supported-devices.md)

@@ -2,9 +2,9 @@
 
 [← Developer docs](README.md)
 
-Ideas that would make ControllerHP better, which the maintainer can't take on right now, often for lack of the hardware or platform. **These are ideas, not promises:** nothing here is scheduled.
+Ideas that would make WattsLeft better, which the maintainer can't take on right now, often for lack of the hardware or platform. **These are ideas, not promises:** nothing here is scheduled.
 
-**Before you start,** comment on the matching issue, or [open one](https://github.com/veloxity343/ControllerHP/issues/new/choose) if there isn't one. That way, two people don't build the same thing, and we can agree an approach before you spend time on it.
+**Before you start,** comment on the matching issue, or [open one](https://github.com/veloxity343/WattsLeft/issues/new/choose) if there isn't one. That way, two people don't build the same thing, and we can agree an approach before you spend time on it.
 
 Sizes are rough: **small** is an evening or two, **medium** a few weekends, **large** a project in its own right.
 
@@ -28,15 +28,15 @@ Each needs someone who owns the controller, both to work out its format and to t
 
 ## Other operating systems
 
-ControllerHP is Windows-only today. **This is the biggest opportunity, and also the biggest job.**
+WattsLeft is Windows-only today. **This is the biggest opportunity, and also the biggest job.**
 
 The core logic is portable already: the data model (`ControllerBattery`), battery history (`BatteryHistory`) and the stats maths (`BatteryStats`) have no Windows dependencies. So does the logic deciding when to warn, though it's wired to the Windows pop-up today. Everything else is Windows-specific:
 - the battery sources use Windows.Gaming.Input, XInput, Windows' Bluetooth device properties and the Win32 HID API;
-- the interface is on Avalonia, which runs on macOS and Linux too, but the tray icons, the placement of the panel and pop-ups, and some window styling call Windows directly (`src/ControllerHP/Platform/Windows`, `Ui/Appearance.cs`).
+- the interface is on Avalonia, which runs on macOS and Linux too, but the tray icons, the placement of the panel and pop-ups, and some window styling call Windows directly (`src/WattsLeft/Platform/Windows`, `Ui/Appearance.cs`).
 
 So a port would go:
 
-1. **Split the project** (partly done). Everything that isn't interface is already in `ControllerHP.Core`, a library with no UI framework. It still targets Windows, as the sources call Windows' device APIs; the next step is to move the Windows sources behind a platform folder, so the rest (model, history, stats, the makers' protocols, the PlayStation report parsing) builds for any platform and can be tested (see [automated tests](#quality-and-reach)).
+1. **Split the project** (partly done). Everything that isn't interface is already in `WattsLeft.Core`, a library with no UI framework. It still targets Windows, as the sources call Windows' device APIs; the next step is to move the Windows sources behind a platform folder, so the rest (model, history, stats, the makers' protocols, the PlayStation report parsing) builds for any platform and can be tested (see [automated tests](#quality-and-reach)).
 2. **Add a platform's battery sources** (medium), behind the existing `IBatterySource` interface.
 3. **Add a platform's tray** (medium): its tray icons (Avalonia's `TrayIcon`, or the platform's own), and where the panel and pop-ups go. The settings window, panel, pop-ups and menu are Avalonia already, and shared.
 

@@ -32,15 +32,15 @@ The last column says whether each one has been tried on real hardware:
 | Steam Controller (2025) | Its puck | Exact % | Yes | Untested |
 | 8BitDo SF30 Pro, SN30 Pro, Pro 2, Pro 3 (in their own mode) | USB or Bluetooth | Exact %, only while Steam or a game is using it | Yes | Untested |
 
-8BitDo controllers in XInput mode read as Xbox controllers. In their own mode, ControllerHP only listens: switching on the report that carries their battery would stop DirectInput games seeing them, so the level shows only once Steam or a game has done that. A Switch controller is asked once for its device information, which carries the battery, without changing its mode; over USB it isn't read. The Steam Controller's puck is only listened to.
+8BitDo controllers in XInput mode read as Xbox controllers. In their own mode, WattsLeft only listens: switching on the report that carries their battery would stop DirectInput games seeing them, so the level shows only once Steam or a game has done that. A Switch controller is asked once for its device information, which carries the battery, without changing its mode; over USB it isn't read. The Steam Controller's puck is only listened to.
 
-**Have one marked Likely or Untested?** Please help: connect it, run `ControllerHP.exe --list` (see [Reporting a bug](troubleshooting.md#reporting-a-bug)), and post what you see in [Discussions](https://github.com/veloxity343/ControllerHP/discussions), whether it works or not.
+**Have one marked Likely or Untested?** Please help: connect it, run `WattsLeft.exe --list` (see [Reporting a bug](troubleshooting.md#reporting-a-bug)), and post what you see in [Discussions](https://github.com/veloxity343/WattsLeft/discussions), whether it works or not.
 
 The panel and Settings show each controller's connection: USB, Bluetooth or Xbox Wireless Adapter.
 
 ## Bluetooth mice, keyboards and headsets
 
-Any Bluetooth device works **if Windows shows its battery**: open Settings → Bluetooth & devices, and look for a battery level beside it. ControllerHP reads that same level, so a device Windows shows a battery for appears in ControllerHP too, and one it doesn't, doesn't.
+Any Bluetooth device works **if Windows shows its battery**: open Settings → Bluetooth & devices, and look for a battery level beside it. WattsLeft reads that same level, so a device Windows shows a battery for appears in WattsLeft too, and one it doesn't, doesn't.
 
 | Device | Connection | Battery | Charging shown | Tested on hardware |
 |---|---|---|---|---|
@@ -49,7 +49,7 @@ Any Bluetooth device works **if Windows shows its battery**: open Settings → B
 | Headsets, earbuds | Bluetooth (classic) | Exact %, or steps on some models | As above | Untested |
 | Keyboards, mice | Bluetooth (classic) | Exact % | As above | Untested |
 
-Each device is drawn as what it is (a keyboard, mouse, headset or controller), and **Show** in Settings turns whole kinds on or off. ControllerHP works out the kind from:
+Each device is drawn as what it is (a keyboard, mouse, headset or controller), and **Show** in Settings turns whole kinds on or off. WattsLeft works out the kind from:
 1. what the device says it is over Bluetooth;
 2. failing that, the parts Windows installed for it: a keyboard part makes it a keyboard, even when it also has a mouse part for media keys or a touchpad;
 3. failing that, whether it plays audio, which makes it a headset.
@@ -58,7 +58,7 @@ Anything else shows as **Other**, with the Bluetooth sign.
 
 ## Logitech mice, keyboards and headsets
 
-Logitech devices on a **Unifying, Bolt or Lightspeed receiver**, or plugged in by their USB cable, are read the way Logitech's own software reads them: ControllerHP asks each device for its battery, name and type through the receiver, every 30 seconds. It only ever reads; it never changes a setting, and it works alongside G HUB and Logitech Options.
+Logitech devices on a **Unifying, Bolt or Lightspeed receiver**, or plugged in by their USB cable, are read the way Logitech's own software reads them: WattsLeft asks each device for its battery, name and type through the receiver, every 30 seconds. It only ever reads; it never changes a setting, and it works alongside G HUB and Logitech Options.
 
 | Device | Connection | Battery | Charging shown | Tested on hardware |
 |---|---|---|---|---|
@@ -73,7 +73,7 @@ The panel shows them as connected by **USB receiver**. A device that's asleep ke
 
 ## Devices on their makers' receivers
 
-Many wireless mice, keyboards and headsets connect through their maker's own USB receiver (a dongle), and Windows doesn't record their battery. ControllerHP reads these through each maker's own protocol, the way their software does, every 30 seconds. For each one:
+Many wireless mice, keyboards and headsets connect through their maker's own USB receiver (a dongle), and Windows doesn't record their battery. WattsLeft reads these through each maker's own protocol, the way their software does, every 30 seconds. For each one:
 - it only ever sends **read** requests, never anything that changes a setting or the device's mode;
 - it only talks to devices it recognises by their maker and product id;
 - it works alongside the maker's own software.
@@ -115,16 +115,16 @@ Devices that need a mode switched before they'll answer (Razer's BlackShark V2 P
 
 ## Known limitations
 
-- **PlayStation controllers over Bluetooth:** they only report their battery after being switched to their full input report. ControllerHP does this when one connects, as Steam does. While it's in that mode, games that read it through the older DirectInput interface (some emulators and older games) don't see its input. Steam Input, and games with built-in DualSense or DualShock 4 support, are unaffected. See [a game doesn't see my PlayStation controller](troubleshooting.md#a-game-doesnt-see-my-playstation-controller).
-- **PlayStation controllers held by another tool:** if a tool like DS4Windows with HidHide takes exclusive control of a controller, ControllerHP can't read it, and it shows as *battery unknown*.
-- **Xbox controllers over Bluetooth:** Windows gives no charging signal, so ControllerHP works it out. The bolt appears at the first rise in percentage, and clears at 100% or after 5 minutes without a rise.
+- **PlayStation controllers over Bluetooth:** they only report their battery after being switched to their full input report. WattsLeft does this when one connects, as Steam does. While it's in that mode, games that read it through the older DirectInput interface (some emulators and older games) don't see its input. Steam Input, and games with built-in DualSense or DualShock 4 support, are unaffected. See [a game doesn't see my PlayStation controller](troubleshooting.md#a-game-doesnt-see-my-playstation-controller).
+- **PlayStation controllers held by another tool:** if a tool like DS4Windows with HidHide takes exclusive control of a controller, WattsLeft can't read it, and it shows as *battery unknown*.
+- **Xbox controllers over Bluetooth:** Windows gives no charging signal, so WattsLeft works it out. The bolt appears at the first rise in percentage, and clears at 100% or after 5 minutes without a rise.
 - **Two identical Xbox controllers**, one on Bluetooth and one not, may have their readings swapped.
-- **Bluetooth mice, keyboards and headsets:** Windows doesn't say whether they're charging, so ControllerHP works it out from the level rising, as for Xbox controllers. Windows also only updates their level when the device reports it, which some do rarely.
+- **Bluetooth mice, keyboards and headsets:** Windows doesn't say whether they're charging, so WattsLeft works it out from the level rising, as for Xbox controllers. Windows also only updates their level when the device reports it, which some do rarely.
 - **Exclusive fullscreen:** pop-ups can't appear over games running in exclusive fullscreen, so they're held and shown once the game closes. Borderless and windowed modes are fine.
 
 ## How batteries are read
 
-You don't need this to use ControllerHP, but it explains the differences above.
+You don't need this to use WattsLeft, but it explains the differences above.
 
 **Xbox controllers.** Several sources see the same controllers, so the first one that finds any is used:
 
@@ -150,11 +150,11 @@ Connecting and disconnecting are picked up as they happen. A check every 30 seco
 - **Razer's BlackShark V2 Pro (2023) and Barracuda Pro headsets,** which need a mode switched before they'll answer.
 - **Nintendo Switch controllers over USB, and other third-party controllers.**
 - **Bluetooth devices Windows shows no battery for.**
-- **Other systems:** ControllerHP is Windows-only for now.
+- **Other systems:** WattsLeft is Windows-only for now.
 
 Several of these are listed in [Help wanted](../dev/help-wanted.md), with where a contributor could start.
 
-If you'd like a device added, [open a feature request](https://github.com/veloxity343/ControllerHP/issues/new/choose). If you can help test, say so: support for a new device needs someone with the hardware.
+If you'd like a device added, [open a feature request](https://github.com/veloxity343/WattsLeft/issues/new/choose). If you can help test, say so: support for a new device needs someone with the hardware.
 
 ---
 

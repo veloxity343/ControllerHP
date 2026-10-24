@@ -2,15 +2,15 @@
   <img src="docs/images/app-icon.png" width="96" alt="">
 </p>
 
-<h1 align="center">ControllerHP</h1>
+<h1 align="center">WattsLeft</h1>
 
 <p align="center">Battery levels for game controllers, mice, keyboards and headsets, in the Windows taskbar.</p>
 
 <p align="center">
-  <a href="https://github.com/veloxity343/ControllerHP/releases/latest"><img src="https://img.shields.io/github/v/release/veloxity343/ControllerHP" alt="Latest release"></a>
-  <a href="https://github.com/veloxity343/ControllerHP/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/veloxity343/ControllerHP/ci.yml?branch=main" alt="Build status"></a>
+  <a href="https://github.com/veloxity343/WattsLeft/releases/latest"><img src="https://img.shields.io/github/v/release/veloxity343/WattsLeft" alt="Latest release"></a>
+  <a href="https://github.com/veloxity343/WattsLeft/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/veloxity343/WattsLeft/ci.yml?branch=main" alt="Build status"></a>
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4" alt="Windows 10 and 11">
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/veloxity343/ControllerHP" alt="MIT licence"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/veloxity343/WattsLeft" alt="MIT licence"></a>
 </p>
 
 <p align="center">
@@ -33,7 +33,7 @@
 ## Documentation
 
 This page covers the basics. The **[wiki](docs/wiki/README.md)** has the rest:
-- [setting up](docs/wiki/getting-started.md) and what [each setting](docs/wiki/using-controllerhp.md) does;
+- [setting up](docs/wiki/getting-started.md) and what [each setting](docs/wiki/using-wattsleft.md) does;
 - how the [battery stats and health](docs/wiki/devices.md) are worked out, and what's stored on your PC;
 - what each [device and connection](docs/wiki/supported-devices.md) can report;
 - [fixes for common problems](docs/wiki/troubleshooting.md).
@@ -42,9 +42,9 @@ If something isn't working, Troubleshooting is the place to start.
 
 ## Install
 
-1. Download `ControllerHP-x.y.z-win-x64.zip` from [Releases](https://github.com/veloxity343/ControllerHP/releases/latest), about 16 MB. It needs nothing else installed: .NET is built in.
-2. Extract the whole zip somewhere permanent, such as `%LOCALAPPDATA%\Programs\ControllerHP`, and run `ControllerHP.exe`. Keep the files together: the exe needs the DLLs beside it.
-3. If Windows shows **"Windows protected your PC"**, choose **More info → Run anyway**. ControllerHP isn't code-signed, so Windows warns about it until it's widely downloaded.
+1. Download `WattsLeft-x.y.z-win-x64.zip` from [Releases](https://github.com/veloxity343/WattsLeft/releases/latest), about 16 MB. It needs nothing else installed: .NET is built in.
+2. Extract the whole zip somewhere permanent, such as `%LOCALAPPDATA%\Programs\WattsLeft`, and run `WattsLeft.exe`. Keep the files together: the exe needs the DLLs beside it.
+3. If Windows shows **"Windows protected your PC"**, choose **More info → Run anyway**. WattsLeft isn't code-signed, so Windows warns about it until it's widely downloaded.
 
 Requires Windows 10 version 1809 or later. [Getting started](docs/wiki/getting-started.md) covers keeping the icon visible, starting with Windows, updating and uninstalling. See [CHANGELOG.md](CHANGELOG.md) for what's new in each version.
 
@@ -59,7 +59,7 @@ Requires Windows 10 version 1809 or later. [Getting started](docs/wiki/getting-s
 | Switch Pro Controller, Joy-Con | Untested | — | — |
 | 8BitDo (in its own mode) | Untested | Untested | — |
 
-**Tested** means seen working on real hardware. **Likely** means not tried yet, but it uses the same code as a tested one. **Untested** means written from the device's documented format but not yet tried. Have one that's Likely or Untested? [Tell us how it goes](https://github.com/veloxity343/ControllerHP/discussions).
+**Tested** means seen working on real hardware. **Likely** means not tried yet, but it uses the same code as a tested one. **Untested** means written from the device's documented format but not yet tried. Have one that's Likely or Untested? [Tell us how it goes](https://github.com/veloxity343/WattsLeft/discussions).
 
 PlayStation controllers report battery in 10% steps.
 
@@ -74,8 +74,8 @@ See [Supported devices](docs/wiki/supported-devices.md) for what each device and
 ## Help
 
 - **Something not working?** Start with [Troubleshooting](docs/wiki/troubleshooting.md).
-- **Questions** go in [Discussions](https://github.com/veloxity343/ControllerHP/discussions).
-- **Bugs and ideas** go in [Issues](https://github.com/veloxity343/ControllerHP/issues/new/choose), where a short form asks for what's needed to help.
+- **Questions** go in [Discussions](https://github.com/veloxity343/WattsLeft/discussions).
+- **Bugs and ideas** go in [Issues](https://github.com/veloxity343/WattsLeft/issues/new/choose), where a short form asks for what's needed to help.
 - **Security problems:** please report them privately, as described in [SECURITY.md](SECURITY.md).
 
 ## Contributing

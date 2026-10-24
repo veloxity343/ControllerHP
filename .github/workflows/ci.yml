@@ -19,7 +19,7 @@ jobs:
         shell: bash
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
-      PROJECT: src/ControllerHP/ControllerHP.csproj
+      PROJECT: src/WattsLeft/WattsLeft.csproj
     steps:
       - uses: actions/checkout@v7
 
@@ -37,7 +37,7 @@ jobs:
           fi
 
       - name: Build everything
-        run: dotnet build ControllerHP.sln -c Release -p:Version=${{ steps.version.outputs.version }}
+        run: dotnet build WattsLeft.sln -c Release -p:Version=${{ steps.version.outputs.version }}
 
       # One native executable, with .NET compiled in: nothing to install. Avalonia's drawing libraries (Skia,
       # HarfBuzz, ANGLE) are native DLLs that sit beside it.
@@ -52,12 +52,12 @@ jobs:
           $v = "${{ steps.version.outputs.version }}"
           New-Item -ItemType Directory dist | Out-Null
           $files = Get-ChildItem out/app -File | Where-Object { $_.Extension -ne '.pdb' }
-          Compress-Archive -Path $files.FullName -DestinationPath "dist/ControllerHP-$v-win-x64.zip"
+          Compress-Archive -Path $files.FullName -DestinationPath "dist/WattsLeft-$v-win-x64.zip"
           Get-ChildItem out/app, dist | Format-Table Name, Length
 
       - uses: actions/upload-artifact@v7
         with:
-          name: ControllerHP-${{ steps.version.outputs.version }}
+          name: WattsLeft-${{ steps.version.outputs.version }}
           path: dist/*.zip
 
   # Runs what was just built on a clean Windows machine, as a user would: it lists devices (none on the runner)
@@ -81,7 +81,7 @@ jobs:
           foreach ($zip in Get-ChildItem dist/*.zip) {
             $dir = Join-Path $PWD $zip.BaseName
             Expand-Archive $zip.FullName -DestinationPath $dir
-            $exe = Join-Path $dir ControllerHP.exe
+            $exe = Join-Path $dir WattsLeft.exe
             foreach ($run in @(@('--list'), @('--preview-settings', (Join-Path $dir 'settings.png')))) {
               $p = Start-Process $exe -ArgumentList $run -PassThru -WindowStyle Hidden
               if (-not $p.WaitForExit(120000)) {

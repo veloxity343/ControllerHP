@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Question
-    url: https://github.com/veloxity343/ControllerHP/discussions
-    about: Ask how something works or whether ControllerHP can do something.
+    url: https://github.com/veloxity343/WattsLeft/discussions
+    about: Ask how something works or whether WattsLeft can do something.
   - name: Security problem
-    url: https://github.com/veloxity343/ControllerHP/security/advisories/new
+    url: https://github.com/veloxity343/WattsLeft/security/advisories/new
     about: Report it privately instead of in a public issue.

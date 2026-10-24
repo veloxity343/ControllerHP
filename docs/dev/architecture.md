@@ -2,12 +2,12 @@
 
 [← Developer docs](README.md)
 
-ControllerHP is a tray app with no window of its own: it lives in the notification area. The code is in two projects:
+WattsLeft is a tray app with no window of its own: it lives in the notification area. The code is in two projects:
 
-- `src/ControllerHP.Core`: everything that isn't user interface, with no UI framework.
+- `src/WattsLeft.Core`: everything that isn't user interface, with no UI framework.
   - `Battery/`: finding devices and reading their batteries, including each maker's protocol.
   - Battery history and stats, settings, the status file, warning sounds, fullscreen detection, logs (`Log.cs`) and the diagnostics report.
-- `src/ControllerHP`: the tray app, on [Avalonia](https://avaloniaui.net/): everything you see (`Ui/`), the tray logic (`TrayController.cs`, `ControllerNotifier.cs`), the Windows tray icons (`Platform/Windows/NotifyIcons.cs`) and the entry point (`Program.cs`). Releases are compiled to one native executable with Native AOT.
+- `src/WattsLeft`: the tray app, on [Avalonia](https://avaloniaui.net/): everything you see (`Ui/`), the tray logic (`TrayController.cs`, `ControllerNotifier.cs`), the Windows tray icons (`Platform/Windows/NotifyIcons.cs`) and the entry point (`Program.cs`). Releases are compiled to one native executable with Native AOT.
 
 ## From device to tray
 
@@ -62,7 +62,7 @@ The app has no Windows Runtime projection: it calls Windows directly, through a 
 | Devices page | `BatteryHistory.cs`, `BatteryStats.cs` (Core), `Ui/HistoryChart.cs`, `Ui/StatsCard.cs` | Recording and loading battery history, figures, chart, and stat cards, including Remove. |
 | Theming | `Ui/Appearance.cs` | Palettes and Windows 11 styling (rounded corners, dark title bar). The tray menu and panel follow the taskbar's mode; the settings window follows the app mode. |
 | Design aids | `Preview.cs` | `--preview-tray`, `--preview-settings` (CI checks this one), `--dump-icons` and `--demo` render the interface off screen, or show sample pop-ups. |
-| Settings | `Settings.cs` | `HKCU\Software\ControllerHP`. Raises `Changed` on every write, so the menu and the window stay in step. |
+| Settings | `Settings.cs` | `HKCU\Software\WattsLeft`. Raises `Changed` on every write, so the menu and the window stay in step. |
 
 ## Design decisions worth knowing
 

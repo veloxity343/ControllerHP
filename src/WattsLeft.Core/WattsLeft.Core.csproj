@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Everything that isn't user interface: the battery sources and makers' protocols, battery history and
+    stats, settings, the status file, warning sounds, logs and the diagnostics report. It has no UI
+    framework, so the tray app (and any later one) builds on it, and nothing here can come to depend on one.
+  -->
+  <PropertyGroup>
+    <!-- Windows for now: the sources call Windows' device APIs directly. -->
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>WattsLeft</RootNamespace>
+    <!-- The app is compiled to native code: flag anything that wouldn't survive that. -->
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="WattsLeft" />
+  </ItemGroup>
+
+</Project>

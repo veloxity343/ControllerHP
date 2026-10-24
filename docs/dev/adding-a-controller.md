@@ -2,7 +2,7 @@
 
 [← Developer docs](README.md)
 
-Each controller family is an `IBatterySource` in `src/ControllerHP/Battery`. A new family, such as the Nintendo Switch Pro Controller (vendor id `057E`), would usually follow `PlayStationSource`:
+Each controller family is an `IBatterySource` in `src/WattsLeft/Battery`. A new family, such as the Nintendo Switch Pro Controller (vendor id `057E`), would usually follow `PlayStationSource`:
 
 1. **Find the device.** Watch for its HID game-controller interface (usage page `0x01`, usage `0x05`) and filter by vendor and product id.
 2. **Read the battery.** Open the device briefly, read an input report, and parse the battery from it. Don't hold the device open: tools that want exclusive access would be blocked.

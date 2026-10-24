@@ -2,7 +2,7 @@
 
 [← Developer docs](README.md)
 
-`ControllerHP.exe` takes a few flags for checking controllers and rendering the UI. Run them from a terminal in the folder containing the exe. None of them start the tray app or change any settings.
+`WattsLeft.exe` takes a few flags for checking controllers and rendering the UI. Run them from a terminal in the folder containing the exe. None of them start the tray app or change any settings.
 
 | Flag | What it does |
 |---|---|
@@ -16,7 +16,7 @@
 ## The diagnostics report
 
 **Diagnostics** in the tray menu writes `diagnostics.txt` and opens it. It includes:
-- the ControllerHP and Windows versions, and the settings;
+- the WattsLeft and Windows versions, and the settings;
 - the same source output as `--list`;
 - a summary of `battery.csv`;
 - the last 100 lines of `history.log` and `error.log`.
@@ -25,7 +25,7 @@ Bluetooth addresses are masked to their last four characters, so users can post 
 
 ## Logs
 
-In `%LOCALAPPDATA%\ControllerHP`:
+In `%LOCALAPPDATA%\WattsLeft`:
 
 | File | Contents |
 |---|---|
@@ -33,7 +33,7 @@ In `%LOCALAPPDATA%\ControllerHP`:
 | `error.log` | Unhandled errors, and each distinct source failure, logged once. Kept to the newest 1 MB. |
 | `battery.csv` | One row per change per device: time, id, name, percent, charge state. Kept 90 days. |
 | `battery.alive` | The last time the app was known to be running. |
-| `status.json` | Battery levels for other apps, while **Share battery levels** is on. See [Sharing battery levels](../wiki/using-controllerhp.md#sharing-battery-levels-with-other-apps). |
+| `status.json` | Battery levels for other apps, while **Share battery levels** is on. See [Sharing battery levels](../wiki/using-wattsleft.md#sharing-battery-levels-with-other-apps). |
 | `diagnostics.txt` | The last report from **Diagnostics**, overwritten each time. |
 
 ## Checking a change

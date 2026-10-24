@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The tray app, on Avalonia: the tray icons, menu, flyout, pop-ups and settings window. It builds on
+    WattsLeft.Core for everything that isn't interface.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- Windows for now; Avalonia itself runs on macOS and Linux too. -->
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!-- Day-to-day builds use the installed .NET; a native build has .NET compiled in, so it's self-contained. -->
+    <SelfContained Condition="'$(PublishAot)' != 'true'">false</SelfContained>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>WattsLeft</RootNamespace>
+    <!-- WattsLeft.exe, always: Windows keeps a tray icon's place (pinned or in the overflow) and the
+         Start with Windows entry by the program's path. -->
+    <AssemblyName>WattsLeft</AssemblyName>
+    <!-- Released as one native executable, with no .NET to install (see the release workflow). -->
+    <EnableAotAnalyzer>true</EnableAotAnalyzer>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Shown for the exe in Explorer, Task Manager and Startup apps; the tray icons are drawn at runtime. -->
+    <ApplicationIcon>app.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The tray's "no devices" icon. -->
+    <EmbeddedResource Include="app.ico" LogicalName="WattsLeft.app.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WattsLeft.Core\WattsLeft.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <Version>0.3.0</Version>
+    <Product>WattsLeft</Product>
+    <Title>WattsLeft</Title>
+    <Description>Battery meter for game controllers and other devices, in the Windows taskbar.</Description>
+    <Authors>rcheong</Authors>
+    <Copyright>Copyright © 2026 rcheong</Copyright>
+  </PropertyGroup>
+
+</Project>

@@ -1,5 +1,5 @@
 name: Feature request
-description: An idea for ControllerHP, or a controller you'd like supported.
+description: An idea for WattsLeft, or a controller you'd like supported.
 labels: [enhancement]
 body:
   - type: textarea

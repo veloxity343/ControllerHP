@@ -2,7 +2,7 @@
 
 [← Back to the main page](../../README.md) · [User wiki](../wiki/README.md)
 
-For working on ControllerHP itself. To contribute, start with [CONTRIBUTING.md](../../CONTRIBUTING.md).
+For working on WattsLeft itself. To contribute, start with [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
 1. **[Architecture](architecture.md):** how the code is laid out, how readings flow from a device to the tray, and the design decisions behind it.
 2. **[Diagnostics](diagnostics.md):** the command-line flags for checking devices and rendering the UI without hardware.
@@ -11,10 +11,10 @@ For working on ControllerHP itself. To contribute, start with [CONTRIBUTING.md](
 
 ## Building
 
-You need the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). `global.json` pins the feature band. Open `ControllerHP.sln` in Visual Studio or Rider, or:
+You need the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0). `global.json` pins the feature band. Open `WattsLeft.sln` in Visual Studio or Rider, or:
 
 ```bash
-dotnet build ControllerHP.sln
+dotnet build WattsLeft.sln
 ```
 
 The projects also build on Linux (`EnableWindowsTargeting`), but the app itself only runs on Windows. A normal build runs on the .NET 10 runtime; `deploy.sh` builds that from WSL and installs it.
