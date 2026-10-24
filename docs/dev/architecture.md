@@ -66,6 +66,8 @@ The app has no Windows Runtime projection: it calls Windows directly, through a 
 
 ## Design decisions worth knowing
 
+The Windows details the sources rely on, and the quirks they work around, are in [Windows notes](windows-notes.md).
+
 - **Readings are only written when they change.** That keeps `battery.csv` small, and is why the chart holds a level flat until the next row. A heartbeat file (`battery.alive`) lets sessions left open by a crash close at the time the app stopped.
 - **Rates are measured between level changes,** not from connection time. A PlayStation controller can be anywhere inside a 10% step when it connects.
 - **Health excludes charging time and charge cycles.** It compares runtime per charge with the device's own first week, and needs three weeks of history.
