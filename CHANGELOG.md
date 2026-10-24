@@ -11,6 +11,8 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-24
+
 ### Added
 
 - **Updates:** WattsLeft can tell you when there's a new version, and update itself. It asks once, on its first start, whether to check, and **Check for updates** in Settings changes it. While it's on, it asks GitHub once a day which release is the latest. A newer one gets a pop-up, an **Update to WattsLeft x.y.z** item in the right-click menu, and **Update now** in Settings. After asking you, WattsLeft downloads it, checks it against the release's checksum, and restarts as the new version, keeping your settings, history and tray icon's place. The check sends nothing about you or your devices, and while it's off, WattsLeft makes no connections at all. Updating from the app works from this version on.
@@ -110,7 +112,8 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 - Pop-ups when a controller connects or disconnects, and when its battery reaches 20% and 10%.
 - **Start with Windows**.
 
-[Unreleased]: https://github.com/veloxity343/WattsLeft/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/veloxity343/WattsLeft/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/veloxity343/WattsLeft/compare/v0.4.1...v0.5.0
 [0.4.1]: https://github.com/veloxity343/WattsLeft/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/veloxity343/WattsLeft/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/veloxity343/WattsLeft/compare/v0.2.0...v0.3.0
