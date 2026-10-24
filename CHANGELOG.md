@@ -43,6 +43,8 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 ### Fixed
 
 - A device no longer shows as disconnected and then connected again, with a pop-up for each, when Windows briefly fails to list or read it.
+- An Xbox controller or other Bluetooth device no longer shows as charging when its battery ticks up a point while resting. It now takes a rise of 2 points.
+- The Undo bar on the Devices page closes when the removed device is brought back another way, such as with Restore removed.
 
 ## [0.3.0] - 2026-10-21
 

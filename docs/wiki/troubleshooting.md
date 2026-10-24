@@ -63,7 +63,7 @@ If it's still missing, run `WattsLeft.exe --list` (see [Reporting a bug](#report
 
 ## The charging bolt is late or missing on an Xbox controller
 
-**Cause:** over Bluetooth, Windows doesn't say whether an Xbox controller is charging, so WattsLeft works it out from the percentage rising. That takes a minute or two after you plug it in, and it stops showing at 100% or after 5 minutes without a rise.
+**Cause:** over Bluetooth, Windows doesn't say whether an Xbox controller is charging, so WattsLeft works it out from the percentage rising. It waits for a rise of 2 points, since a controller that's been resting can tick up a point on its own, so the bolt shows a few minutes after you plug it in. It stops showing at 100% or after 5 minutes without a rise.
 **Fix:** none needed. Over USB or the Xbox Wireless Adapter, charging shows straight away.
 
 ## The percentage only moves in 10% steps

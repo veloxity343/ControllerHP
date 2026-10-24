@@ -57,6 +57,8 @@ internal sealed class SettingsWindow : Window
     private readonly Note _historyNote = new($"Recorded whenever a device's battery changes, and kept for {BatteryHistory.Kept.Days} days.");
     private readonly List<StatsCard> _statsCards = [];
     private readonly UndoBar _undoBar = new();
+    /// <summary>The device the undo bar would restore.</summary>
+    private string? _undoId;
     /// <summary>Beside the dropdown, while any devices are removed: lists them to restore.</summary>
     private readonly ActionButton _restoreButton = new("Restore removed");
     private List<(string Id, string Name, DateTime When)> _removed = [];
@@ -238,6 +240,9 @@ internal sealed class SettingsWindow : Window
         // Removed devices stay out until they next connect, when the tray app unhides them.
         var hidden = Settings.HiddenControllers;
         var shown = _loadHistory(since).Where(s => !hidden.ContainsKey(s.Id)).ToList();
+        // Restored another way (Restore removed, or it reconnected): there's nothing left to undo.
+        if (_undoBar.Showing && _undoId is not null && !hidden.ContainsKey(_undoId))
+            _undoBar.Dismiss();
         _removed = RemovedControllers(full);
         _restoreButton.Text = $"Restore removed ({_removed.Count})";
         _restoreButton.IsVisible = _removed.Count > 0;
@@ -398,6 +403,7 @@ internal sealed class SettingsWindow : Window
         // The Remove button's card is about to be rebuilt, taking focus with it; keep it on the dropdown, on screen.
         _controllerPicker.Focus();
         Settings.Hide(series.Id);
+        _undoId = series.Id;
         _undoBar.Show($"Removed {series.Name}", () => Settings.Unhide(series.Id));
     }
 

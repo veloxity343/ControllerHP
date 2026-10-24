@@ -963,8 +963,10 @@ internal sealed class UndoBar : ThemedPanel
         ShownChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    private void Dismiss()
+    public void Dismiss()
     {
+        if (!Showing)
+            return;
         _timer.Stop();
         _onUndo = null;
         Showing = false;

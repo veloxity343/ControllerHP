@@ -20,7 +20,7 @@ The last column says whether each one has been tried on real hardware:
 
 | Controller | Connection | Battery | Charging shown | Tested on hardware |
 |---|---|---|---|---|
-| Xbox Wireless Controller (One / Series) | Bluetooth | Exact % | Worked out from the % rising (a minute or two after plugging in) | **Tested** (Series controller) |
+| Xbox Wireless Controller (One / Series) | Bluetooth | Exact % | Worked out from the % rising (a few minutes after plugging in) | **Tested** (Series controller) |
 | Xbox Elite Series 2, Xbox Adaptive Controller | Bluetooth | Exact % | As above | Likely |
 | Xbox Wireless Controller (One / Series) | USB | Exact %, or 4 levels on some setups | Yes | Untested |
 | Xbox Wireless Controller (One / Series) | Xbox Wireless Adapter | Exact %, or 4 levels on some setups | Yes | Untested |
@@ -117,7 +117,7 @@ Devices that need a mode switched before they'll answer (Razer's BlackShark V2 P
 
 - **PlayStation controllers over Bluetooth:** they only report their battery after being switched to their full input report. WattsLeft does this when one connects, as Steam does. While it's in that mode, games that read it through the older DirectInput interface (some emulators and older games) don't see its input. Steam Input, and games with built-in DualSense or DualShock 4 support, are unaffected. See [a game doesn't see my PlayStation controller](troubleshooting.md#a-game-doesnt-see-my-playstation-controller).
 - **PlayStation controllers held by another tool:** if a tool like DS4Windows with HidHide takes exclusive control of a controller, WattsLeft can't read it, and it shows as *battery unknown*.
-- **Xbox controllers over Bluetooth:** Windows gives no charging signal, so WattsLeft works it out. The bolt appears at the first rise in percentage, and clears at 100% or after 5 minutes without a rise.
+- **Xbox controllers over Bluetooth:** Windows gives no charging signal, so WattsLeft works it out. The bolt appears once the percentage has risen 2 points, so a resting controller ticking up a point doesn't count, and clears at 100% or after 5 minutes without a rise.
 - **Two identical Xbox controllers**, one on Bluetooth and one not, may have their readings swapped.
 - **Bluetooth mice, keyboards and headsets:** Windows doesn't say whether they're charging, so WattsLeft works it out from the level rising, as for Xbox controllers. Windows also only updates their level when the device reports it, which some do rarely.
 - **Exclusive fullscreen:** pop-ups can't appear over games running in exclusive fullscreen, so they're held and shown once the game closes. Borderless and windowed modes are fine.

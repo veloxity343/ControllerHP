@@ -12,9 +12,18 @@ internal sealed class ChargeTrends
     /// </summary>
     private static readonly TimeSpan RiseTimeout = TimeSpan.FromMinutes(5);
 
+    /// <summary>
+    /// How far the level has to climb from its low before it counts as charging. A battery that's just been
+    /// resting can tick up a point (an Xbox controller over Bluetooth goes 94, 95, 94), so one step isn't enough;
+    /// devices that report in 5 or 10% steps still show charging on their first step up.
+    /// </summary>
+    private const int MinimumRise = 2;
+
     private sealed class Trend(int percent)
     {
         public int Percent = percent;
+        /// <summary>The level rises are measured from: the lowest since it last dropped or stopped charging.</summary>
+        public int Low = percent;
         public bool Rising;
         public DateTime LastRise;
     }
@@ -33,18 +42,23 @@ internal sealed class ChargeTrends
 
         if (percent > trend.Percent)
         {
-            trend.Rising = true;
             trend.LastRise = now;
+            if (percent - trend.Low >= MinimumRise)
+                trend.Rising = true;
         }
         else if (percent < trend.Percent)
         {
             trend.Rising = false;
+            trend.Low = percent;
         }
         trend.Percent = percent;
 
         // Full means done charging, and a long stall means it was unplugged before the next drop.
         if (trend.Rising && (percent >= 100 || now - trend.LastRise > RiseTimeout))
+        {
             trend.Rising = false;
+            trend.Low = percent;
+        }
         return trend.Rising;
     }
 
