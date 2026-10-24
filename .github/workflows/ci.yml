@@ -115,15 +115,16 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v8
-        with:
-          path: dist
-          merge-multiple: true
-
+      # Checkout first: it clears the workspace, which would delete a download made before it.
       - uses: actions/checkout@v7
         with:
           sparse-checkout: CHANGELOG.md
           sparse-checkout-cone-mode: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
 
       # The release notes are this version's section of CHANGELOG.md. A full release without one stops here
       # rather than publishing empty notes; pre-releases use the Unreleased section.

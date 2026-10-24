@@ -15,7 +15,7 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 
 ### Fixed
 
-- The 0.4.0 release had no download attached. 0.4.1 is the same app, with its zip.
+- The 0.4.0 release had no download attached: the release build lost the zip before attaching it. 0.4.1 is the same app, with its zip.
 
 ## [0.4.0] - 2026-10-24
 
