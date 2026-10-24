@@ -11,11 +11,21 @@ internal static partial class Program
     [STAThread]
     private static int Main(string[] args)
     {
+        // The second half of an update: this is the new version, unpacked, installing itself over the old one.
+        if (args.Length == 3 && args[0] == "--finish-update" && int.TryParse(args[2], out int oldProcess))
+        {
+            UpdateInstall.Finish(args[1], oldProcess);
+            return 0;
+        }
+
         if (args.Contains("--list"))
             return ListDevices(CreateSources());
 
         if (args.Contains("--hid-probe"))
             return ProbeDevices();
+
+        if (args.Contains("--check-updates"))
+            return CheckForUpdates();
 
         // Design aids, rendered off screen: they need Avalonia running, but no tray or sources.
         if (args.Length == 2 && args[0] == "--preview-tray")
@@ -50,6 +60,7 @@ internal static partial class Program
             return 0;
         }
         Migration.Run();
+        UpdateInstall.CleanUp();
         Log.Trim();
         AppDomain.CurrentDomain.UnhandledException += (_, e) => Log.Write($"Unhandled exception: {e.ExceptionObject}");
         var sources = CreateSources();
@@ -128,6 +139,24 @@ internal static partial class Program
         Thread.Sleep(TimeSpan.FromSeconds(1.5));
         Diagnostics.WriteSources(Console.Out, sources);
         return 0;
+    }
+
+    /// <summary>Asks GitHub which release is the latest, as the daily check does, and prints the answer.</summary>
+    private static int CheckForUpdates()
+    {
+        AttachConsole(-1);
+        Console.WriteLine($"This version: {UpdateCheck.Current.ToString(3)}");
+        try
+        {
+            var newer = UpdateCheck.FindNewerAsync().GetAwaiter().GetResult();
+            Console.WriteLine(newer is null ? "This is the latest version." : $"Newer: {newer.Version.ToString(3)} at {newer.Url}");
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"The check failed: {ex.GetType().Name}: {ex.Message}");
+            return 1;
+        }
     }
 
     /// <summary>

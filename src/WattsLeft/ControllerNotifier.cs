@@ -128,6 +128,14 @@ internal sealed class ControllerNotifier : IDisposable
     public void ShowSample() =>
         _toasts.Show(new ToastContent("WattsLeft", "Pop-ups appear here", null, ConnectedAccent));
 
+    /// <summary>
+    /// A newer WattsLeft is out; clicking offers to update. Held during a fullscreen game like a connection
+    /// pop-up, and shown whatever the connection pop-ups setting.
+    /// </summary>
+    public void ShowUpdate(UpdateInfo update) =>
+        Show("update", new ToastContent("WattsLeft", $"Version {update.Version.ToString(3)} is out · click to update", null,
+            ConnectedAccent, () => Updates.Offer(null)), ToastKind.Connection);
+
     /// <summary>Stops following devices without a pop-up: they were removed, not disconnected.</summary>
     public void Forget(IEnumerable<string> ids)
     {

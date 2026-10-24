@@ -7,6 +7,7 @@
 | Flag | What it does |
 |---|---|
 | `--list` | Prints what every battery source reports for each connected device, raw values included. The same as the report's battery section, but unmasked: for working at a terminal, or when the tray app won't start. |
+| `--check-updates` | Asks GitHub which release is the latest, as the daily update check does, and prints whether it's newer than this version. It works whether or not update checks are on, and changes no settings. |
 | `--hid-probe` | Dumps the raw HID reports of connected Xbox and PlayStation controllers, and every connected Bluetooth LE device's GATT services. It only listens and reads. For working out a new device's report format. |
 | `--preview-icons <file.png>` | Renders every kind of device in every battery state, as the panel draws them, in dark and light mode, to an image. It's the picture at the top of the README: run it again after changing an icon. |
 | `--preview-tray <file.png>` | Renders the flyout and the tray menu in dark and light mode, with every kind of pop-up beneath, to an image. |

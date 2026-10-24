@@ -75,6 +75,50 @@ internal static class Settings
         set => Write(nameof(ShareStatus), value ? 1 : 0);
     }
 
+    /// <summary>
+    /// Whether to check GitHub once a day for a newer version: null until the user has been asked, which happens
+    /// once, on the first start.
+    /// </summary>
+    public static bool? CheckForUpdates
+    {
+        get => Read(nameof(CheckForUpdates)) is int value ? value != 0 : null;
+        set
+        {
+            if (value is bool on)
+                Write(nameof(CheckForUpdates), on ? 1 : 0);
+        }
+    }
+
+    /// <summary>When updates were last checked for, and whether GitHub answered.</summary>
+    public static (DateTimeOffset When, bool Answered)? LastUpdateCheck =>
+        Read(nameof(LastUpdateCheck)) is string text && text.Split('\t') is [var when, var answered] &&
+        DateTimeOffset.TryParse(when, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind, out var time)
+            ? (time, answered == "1")
+            : null;
+
+    /// <summary>The newer version the last answer found, if any (kept through a failed check).</summary>
+    public static Version? UpdateAvailable => UpdateCheck.ParseVersion(Read(nameof(UpdateAvailable)) as string) is { } version &&
+        version > UpdateCheck.Current ? version : null;
+
+    /// <summary>The newer version the user has had a pop-up about, so each gets one.</summary>
+    public static Version? UpdateAnnounced
+    {
+        get => UpdateCheck.ParseVersion(Read(nameof(UpdateAnnounced)) as string);
+        set => Write(nameof(UpdateAnnounced), value?.ToString(3) ?? "");
+    }
+
+    /// <summary>Records a check: when, whether GitHub answered, and if it did, the newer version (or none).</summary>
+    public static void RecordUpdateCheck(DateTimeOffset when, bool answered, Version? newer)
+    {
+        using (var key = Registry.CurrentUser.CreateSubKey(KeyPath))
+        {
+            key.SetValue(nameof(LastUpdateCheck), $"{when.ToString("O", System.Globalization.CultureInfo.InvariantCulture)}\t{(answered ? 1 : 0)}");
+            if (answered)
+                key.SetValue(nameof(UpdateAvailable), newer?.ToString(3) ?? "");
+        }
+        Changed?.Invoke();
+    }
+
     /// <summary>Play Windows' battery alarm sound with each battery warning.</summary>
     public static bool WarningSounds
     {

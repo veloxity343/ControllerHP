@@ -12,7 +12,8 @@ namespace WattsLeft.Ui;
 /// <summary>What a toast shows: the device's battery icon, its name, and one line of status.</summary>
 /// <param name="Battery">Drawn as the icon; null draws the app icon, used for "disconnected".</param>
 /// <param name="Accent">Colour of the thin bar on the left edge.</param>
-internal sealed record ToastContent(string Title, string Message, ControllerBattery? Battery, Color Accent);
+/// <param name="Clicked">What clicking it does, besides closing it.</param>
+internal sealed record ToastContent(string Title, string Message, ControllerBattery? Battery, Color Accent, Action? Clicked = null);
 
 /// <summary>Stacks toasts in a corner of the primary screen, newest nearest the corner.</summary>
 internal sealed class ToastManager : IDisposable
@@ -100,8 +101,11 @@ internal sealed partial class ToastWindow : Window
     private DateTime _holdUntil;
     private bool _fadingOut;
 
+    private readonly Action? _clicked;
+
     public ToastWindow(ToastContent content)
     {
+        _clicked = content.Clicked;
         WindowDecorations = WindowDecorations.None;
         ShowInTaskbar = false;
         ShowActivated = false;
@@ -135,6 +139,8 @@ internal sealed partial class ToastWindow : Window
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
+        if (e.InitialPressMouseButton == MouseButton.Left)
+            _clicked?.Invoke();
         Dismiss();
     }
 

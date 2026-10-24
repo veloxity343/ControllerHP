@@ -183,7 +183,7 @@ internal static class Preview
     /// </summary>
     public static async Task WriteSettingsSheet(string path, bool minimum)
     {
-        const int gap = 20, height = 1700;
+        const int gap = 20;
         var shots = new List<RenderTargetBitmap>();
         int pages;
         {
@@ -195,31 +195,64 @@ internal static class Preview
             var window = new SettingsWindow(palette, SampleHistory) { ShowActivated = false };
             window.Position = new PixelPoint(-20000, 0);
             window.Width = minimum ? window.MinWidth : 900;
-            window.Height = height;
+            // Short enough for any screen: a window taller than the screen is cut short by Windows, while its
+            // contents are laid out for the height asked for. The rest of the page is scrolled into view below.
+            window.Height = 800;
             window.Show();
             window.ShowPage(page);
-            // Let layout and the first paint happen before capturing.
-            for (int i = 0; i < 10; i++)
+            await Settle();
+
+            // The whole page, however tall: the window as it shows (the navigation, and the page's top), then the
+            // page drawn whole over it, at its full height.
+            var content = (Avalonia.Controls.Control)window.PageScroller.Content!;
+            int width = (int)window.Bounds.Width, height = (int)Math.Ceiling(Math.Max(window.Bounds.Height, content.Bounds.Height));
+            var shot = new RenderTargetBitmap(new PixelSize(width, height), new Vector(96, 96));
+            using (var g = shot.CreateDrawingContext())
             {
-                await Task.Delay(50);
-                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+                g.FillRectangle(Draw.Brush(palette.Background), new Rect(0, 0, width, height));
+                using (var visible = new RenderTargetBitmap(new PixelSize(width, (int)window.Bounds.Height), new Vector(96, 96)))
+                {
+                    visible.Render(window);
+                    g.DrawImage(visible, new Rect(0, 0, width, window.Bounds.Height));
+                }
+                using var whole = new RenderTargetBitmap(new PixelSize((int)Math.Ceiling(content.Bounds.Width), (int)Math.Ceiling(content.Bounds.Height)), new Vector(96, 96));
+                // Drawn on its real background: text drawn on a transparent one blends badly.
+                if (content is Avalonia.Controls.Panel panel)
+                    panel.Background = Draw.Brush(palette.Background);
+                whole.Render(content);
+                double left = SettingsWindow.PageLeft;
+                g.FillRectangle(Draw.Brush(palette.Background), new Rect(left, 0, content.Bounds.Width, height));
+                g.DrawImage(whole, new Rect(left, 0, content.Bounds.Width, content.Bounds.Height));
             }
-            var shot = new RenderTargetBitmap(new PixelSize((int)window.Width, height), new Vector(96, 96));
-            shot.Render(window);
             shots.Add(shot);
             window.Close();
         }
-        int width = shots[0].PixelSize.Width;
-        using var sheet = new RenderTargetBitmap(new PixelSize(width * 2 + gap, (height + gap) * pages - gap), new Vector(96, 96));
+        int sheetWidth = shots[0].PixelSize.Width;
+        // A row per page, as tall as that page's taller mode.
+        var rows = Enumerable.Range(0, pages).Select(p => Math.Max(shots[p * 2].PixelSize.Height, shots[p * 2 + 1].PixelSize.Height)).ToList();
+        using var sheet = new RenderTargetBitmap(new PixelSize(sheetWidth * 2 + gap, rows.Sum() + gap * (pages - 1)), new Vector(96, 96));
         using (var g = sheet.CreateDrawingContext())
         {
             g.FillRectangle(Brushes.Gray, new Rect(0, 0, sheet.PixelSize.Width, sheet.PixelSize.Height));
             for (int i = 0; i < shots.Count; i++)
-                g.DrawImage(shots[i], new Rect(i % 2 * (width + gap), i / 2 * (height + gap), width, height));
+            {
+                double y = rows.Take(i / 2).Sum() + gap * (i / 2);
+                g.DrawImage(shots[i], new Rect(i % 2 * (sheetWidth + gap), y, shots[i].PixelSize.Width, shots[i].PixelSize.Height));
+            }
         }
         sheet.Save(path, new PngBitmapEncoderOptions());
         foreach (var shot in shots)
             shot.Dispose();
+    }
+
+    /// <summary>Lets layout and painting catch up.</summary>
+    private static async Task Settle()
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            await Task.Delay(50);
+            Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        }
     }
 
     /// <summary>

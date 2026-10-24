@@ -52,13 +52,19 @@ jobs:
           $v = "${{ steps.version.outputs.version }}"
           New-Item -ItemType Directory dist | Out-Null
           $files = Get-ChildItem out/app -File | Where-Object { $_.Extension -ne '.pdb' }
-          Compress-Archive -Path $files.FullName -DestinationPath "dist/WattsLeft-$v-win-x64.zip"
+          $zip = "dist/WattsLeft-$v-win-x64.zip"
+          Compress-Archive -Path $files.FullName -DestinationPath $zip
+          # The zip's SHA-256, which the app checks a downloaded update against before installing it.
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          Set-Content -NoNewline -Encoding ascii -Path "$zip.sha256" -Value "$hash  $(Split-Path $zip -Leaf)"
           Get-ChildItem out/app, dist | Format-Table Name, Length
 
       - uses: actions/upload-artifact@v7
         with:
           name: WattsLeft-${{ steps.version.outputs.version }}
-          path: dist/*.zip
+          path: |
+            dist/*.zip
+            dist/*.zip.sha256
 
   # Runs what was just built on a clean Windows machine, as a user would: it lists devices (none on the runner)
   # and draws every page of the settings window. Catches a build that starts but breaks, such as something the
@@ -79,6 +85,12 @@ jobs:
         run: |
           $failed = $false
           foreach ($zip in Get-ChildItem dist/*.zip) {
+            # The app refuses an update whose checksum doesn't match, so check it here first.
+            $sum = Get-Content -Raw "$($zip.FullName).sha256" -ErrorAction SilentlyContinue
+            if (-not $sum -or $sum.Substring(0, 64) -ne (Get-FileHash $zip.FullName -Algorithm SHA256).Hash.ToLowerInvariant()) {
+              Write-Host "::error::$($zip.Name) has no matching .sha256, which updating from the app needs"
+              $failed = $true
+            }
             $dir = Join-Path $PWD $zip.BaseName
             Expand-Archive $zip.FullName -DestinationPath $dir
             $exe = Join-Path $dir WattsLeft.exe
@@ -154,7 +166,7 @@ jobs:
         run: |
           prerelease=()
           [[ "$GITHUB_REF_NAME" == *-* ]] && prerelease=(--prerelease)
-          gh release create "$GITHUB_REF_NAME" dist/*.zip --repo "$GITHUB_REPOSITORY" --verify-tag --draft \
+          gh release create "$GITHUB_REF_NAME" dist/*.zip dist/*.zip.sha256 --repo "$GITHUB_REPOSITORY" --verify-tag --draft \
             --title "$GITHUB_REF_NAME" --notes-file release-notes.md --generate-notes "${prerelease[@]}"
           gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false
           gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name'

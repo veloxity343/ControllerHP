@@ -201,6 +201,78 @@ internal sealed class Note(string text) : ThemedControl
     public override void Render(DrawingContext g) => Draw.Wrapped(g, text, Draw.Font(), 12, Palette.SubtleText, new Rect(Bounds.Size));
 }
 
+/// <summary>
+/// A card holding a line of status, such as the update check's result, with up to two buttons at its end when
+/// there's something to do about it. The text wraps; at narrow widths the buttons keep their size and the text
+/// takes what's left.
+/// </summary>
+internal sealed class StatusLine : ThemedPanel
+{
+    private const double Inset = 16, Spacing = 8, MinHeight_ = 44;
+    private readonly ActionButton _primary = new("Open") { IsVisible = false }, _secondary = new("Open") { IsVisible = false };
+    private string _text = "";
+    private Action? _onPrimary, _onSecondary;
+
+    public StatusLine()
+    {
+        Children.Add(_secondary);
+        Children.Add(_primary);
+        _primary.Click += (_, _) => _onPrimary?.Invoke();
+        _secondary.Click += (_, _) => _onSecondary?.Invoke();
+    }
+
+    /// <summary>
+    /// Shows <paramref name="text"/>, with a button for each label given: <paramref name="primary"/> at the end,
+    /// <paramref name="secondary"/> before it.
+    /// </summary>
+    public void Show(string text, (string Label, Action Click)? primary = null, (string Label, Action Click)? secondary = null)
+    {
+        _text = text;
+        Set(_primary, primary, out _onPrimary);
+        Set(_secondary, secondary, out _onSecondary);
+        InvalidateMeasure();
+        InvalidateArrange();
+        InvalidateVisual();
+    }
+
+    private static void Set(ActionButton button, (string Label, Action Click)? action, out Action? onClick)
+    {
+        button.IsVisible = action is not null;
+        onClick = action?.Click;
+        if (action is { } a)
+            button.Text = a.Label;
+    }
+
+    private IEnumerable<ActionButton> Buttons => new[] { _secondary, _primary }.Where(b => b.IsVisible);
+
+    private double ButtonsWidth => Buttons.Sum(b => b.Width + Spacing);
+
+    private double TextWidth(double width) => width - Inset * 2 - ButtonsWidth;
+
+    public override double HeightFor(double width) => Math.Max(MinHeight_,
+        Math.Max(Buttons.Select(b => b.Height).DefaultIfEmpty(0).Max(), Draw.TextHeight(_text, Draw.Font(), 12, TextWidth(width))) + 20);
+
+    public override double MinimumWidth => Inset * 2 + ButtonsWidth + 120;
+
+    protected override Size ArrangeOverride(Size size)
+    {
+        double right = size.Width - Inset;
+        foreach (var button in Buttons.Reverse())
+        {
+            right -= button.Width;
+            button.Arrange(new Rect(right, (size.Height - button.Height) / 2, button.Width, button.Height));
+            right -= Spacing;
+        }
+        return size;
+    }
+
+    public override void Render(DrawingContext g)
+    {
+        Fill(g, new Rect(Bounds.Size), 6, Palette.Surface);
+        Draw.Wrapped(g, _text, Draw.Font(), 12, Palette.SubtleText, new Rect(Inset, 0, TextWidth(Bounds.Width), Bounds.Height));
+    }
+}
+
 /// <summary>One entry in the window's left-hand navigation.</summary>
 internal sealed class NavItem : ThemedControl
 {

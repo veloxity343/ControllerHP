@@ -47,6 +47,9 @@ internal sealed class SettingsWindow : Window
     private readonly ToggleSwitch _warningSounds = new();
     private readonly ToggleSwitch _shareStatus = new();
     private readonly ToggleSwitch _startWithWindows = new();
+    private readonly ToggleSwitch _checkUpdates = new();
+    /// <summary>The update check's result, and a way to the new version's page when there is one.</summary>
+    private readonly StatusLine _updateStatus = new();
 
     // The Devices page: each device's battery history, its stats, and removing it.
     private readonly SegmentedControl _range = new(["2 hours", "6 hours", "24 hours", "7 days"], 95) { SelectedIndex = 1 };
@@ -107,6 +110,7 @@ internal sealed class SettingsWindow : Window
 
         Settings.Changed += OnSettingsChanged;
         Appearance.Changed += OnAppearanceChanged;
+        Updates.Changed += ShowUpdateStatus;
     }
 
     /// <summary>The size it opens at, room for every page's widest row and a good stretch of the chart.</summary>
@@ -160,6 +164,12 @@ internal sealed class SettingsWindow : Window
 
     public int PageCount => _pages.Count;
 
+    /// <summary>The scrolling area the pages show in, for the preview to scroll through.</summary>
+    internal ScrollViewer PageScroller => _scroller;
+
+    /// <summary>Where the page area starts, right of the navigation.</summary>
+    internal static double PageLeft => NavWidth;
+
     public void ShowPage(int index)
     {
         _current = index;
@@ -205,6 +215,12 @@ internal sealed class SettingsWindow : Window
         items.Add(new Heading("Other apps", 15));
         items.Add(new Note($"Battery levels in {StatusFile.DisplayPath}, for other apps to read."));
         items.Add(new SettingCard("Share battery levels", "Such as Rainmeter skins, Stream Deck plugins or scripts.", _shareStatus));
+
+        items.Add(new Heading("Updates", 15));
+        items.Add(new SettingCard("Check for updates",
+            "Once a day, from GitHub. WattsLeft tells you when there's a new version, and updates itself when you say so.",
+            _checkUpdates));
+        items.Add(_updateStatus);
 
         items.Add(new Heading("Startup", 15));
         items.Add(new SettingCard("Start with Windows", "Run WattsLeft when you sign in.", _startWithWindows));
@@ -321,6 +337,8 @@ internal sealed class SettingsWindow : Window
         _warningSounds.Checked = Settings.WarningSounds;
         _shareStatus.Checked = Settings.ShareStatus;
         _startWithWindows.Checked = Settings.StartWithWindows;
+        _checkUpdates.Checked = Settings.CheckForUpdates == true;
+        ShowUpdateStatus();
         _loading = false;
     }
 
@@ -368,6 +386,63 @@ internal sealed class SettingsWindow : Window
         };
         _shareStatus.CheckedChanged += (_, _) => Save(() => Settings.ShareStatus = _shareStatus.Checked);
         _startWithWindows.CheckedChanged += (_, _) => Save(() => Settings.StartWithWindows = _startWithWindows.Checked);
+        _checkUpdates.CheckedChanged += (_, _) =>
+        {
+            if (_loading)
+                return;
+            Save(() => Settings.CheckForUpdates = _checkUpdates.Checked);
+            // Turning it on checks straight away, so it's also the way to check now.
+            if (_checkUpdates.Checked && !_sampleData)
+                Updates.CheckNow();
+        };
+    }
+
+    /// <summary>
+    /// What the update check found, under its switch: always the current version first, then whether WattsLeft is
+    /// up to date or has a new version, or why it can't tell.
+    /// </summary>
+    private void ShowUpdateStatus()
+    {
+        string current = $"Current version: v{UpdateCheck.Current.ToString(3)}";
+        void Show(string status, (string, Action)? primary = null, (string, Action)? secondary = null) =>
+            _updateStatus.Show($"{current}\n{status}", primary, secondary);
+
+        if (Settings.CheckForUpdates != true)
+        {
+            Show("Update checks are off, so WattsLeft doesn't contact GitHub.");
+            return;
+        }
+        if (Updates.Available is { } update)
+        {
+            string newer = $"v{update.Version.ToString(3)}";
+            if (Updates.Installing is double done)
+                Show($"WattsLeft has a new version: {newer}. Downloading… {done:P0}, then WattsLeft restarts.");
+            else
+                Show(Updates.InstallError is { } error ? $"WattsLeft has a new version: {newer}. {error}" : $"WattsLeft has a new version: {newer}.",
+                    ("Update now", () => Updates.Offer(this)), ("What's new", () => Updates.OpenPage(update)));
+            return;
+        }
+        if (Updates.Checking)
+        {
+            Show("Checking for a new version…");
+            return;
+        }
+        if (Settings.LastUpdateCheck is not { } last)
+            Show("Not checked yet.");
+        else if (last.Answered)
+            Show($"WattsLeft is up to date. Checked {When(last.When)}.");
+        else
+            Show($"Couldn't reach GitHub {When(last.When)}. WattsLeft will try again later.");
+    }
+
+    /// <summary>"today at 9:41 AM", "yesterday at …", or "on 3 Nov at …".</summary>
+    private static string When(DateTimeOffset time)
+    {
+        var local = time.LocalDateTime;
+        string day = local.Date == DateTime.Today ? "today"
+            : local.Date == DateTime.Today.AddDays(-1) ? "yesterday"
+            : $"on {local:d MMM}";
+        return $"{day} at {local:t}";
     }
 
     /// <summary>A device connected, disconnected or changed level: refresh the Devices page if it's showing.</summary>
@@ -487,6 +562,7 @@ internal sealed class SettingsWindow : Window
         _historyTimer.Stop();
         Settings.Changed -= OnSettingsChanged;
         Appearance.Changed -= OnAppearanceChanged;
+        Updates.Changed -= ShowUpdateStatus;
         base.OnClosed(e);
     }
 

@@ -99,7 +99,7 @@ Removing **hides** a device; it doesn't delete anything:
 
 ## What's stored on your PC
 
-Nothing leaves your PC: WattsLeft makes no network connections at all.
+Nothing about you or your devices leaves your PC. The only connection WattsLeft makes is the [update check](using-wattsleft.md#checking-for-updates), if you turn it on.
 
 | What | Where | Kept for | Typical size |
 |---|---|---|---|

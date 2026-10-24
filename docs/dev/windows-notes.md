@@ -67,6 +67,8 @@ Documented APIs that don't behave as you'd expect.
 - **Releases are immutable once published** (a repository setting). Nothing can be added to or changed in one afterwards, so the workflow makes a draft, attaches the zip, then publishes. A broken published release can't be fixed: release the next patch version instead.
 - **CI's test job** runs the downloaded zip on a clean Windows machine: `--list` and `--preview-settings`. It doesn't run the tray app or see any devices, so try a release candidate on real hardware before tagging.
 - **The release notes are the changelog's section** for that version. A full release without one stops the release job.
+- **Every release needs its `.sha256` file.** Updating from the app downloads `WattsLeft-x.y.z-win-x64.zip.sha256` from the release first, and refuses an update without one or that doesn't match. CI makes it in the Package step and its test job checks it. Releases before 0.5.0 have none, so they can't be updated to from the app.
+- **An update can't overwrite the running exe.** So the app hands over to the new version, unpacked in `%LOCALAPPDATA%\WattsLeft\update`, which waits for the old one to close, copies itself into the old folder (renaming the old files to `.old` first, and putting them back if anything fails), and starts from there. The folder is the same, so the tray icon keeps its place.
 
 ## If something stops working after a Windows update
 

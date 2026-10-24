@@ -85,6 +85,7 @@ Held pop-ups show once the game closes, at most one per device, the latest for e
 | **Pop-up position** | Which corner pop-ups appear in. Choosing one shows a sample there. |
 | **Connection pop-ups** | Turns the Connected and Disconnected pop-ups on or off. |
 | **Battery warnings** | Turns both the low and critical warnings in Settings on or off together. Your warning levels are kept. Devices with [their own levels](devices.md#a-devices-own-warning-levels) keep them. |
+| **Update to WattsLeft x.y.z** | Shown when the [update check](#checking-for-updates) has found a newer version. Asks, then [updates WattsLeft](#updating-from-the-app). |
 | **Start with Windows** | Runs WattsLeft when you sign in. |
 | **Settings** | Opens the settings window. |
 | **Diagnostics** | Writes a report of what WattsLeft sees, for bug reports, and opens it. See [Reporting a bug](troubleshooting.md#reporting-a-bug). |
@@ -108,9 +109,32 @@ Open it from the panel's gear or **Settings** in the right-click menu. It follow
 | **Critical battery** | On, 10% | On or off; 5% to 45%, always below the low level |
 | **Play a sound** | Off | On or off. Plays a chime with each battery warning |
 | **Share battery levels** | Off | On or off. See [below](#sharing-battery-levels-with-other-apps) |
+| **Check for updates** | Your answer on the first start | On or off. Turning it on checks straight away. See [below](#checking-for-updates) |
 | **Start with Windows** | Off | On or off |
 
 Switching a warning off greys out its level until you switch it back on. Lowering the low level below the critical one pushes the critical level down with it.
+
+## Checking for updates
+
+The first time WattsLeft starts, it asks whether to check for updates. Your answer is kept; it doesn't ask again. Change it any time with **Check for updates** in Settings.
+
+While it's on:
+- **Once a day**, WattsLeft asks GitHub which release is the latest. If GitHub can't be reached, it tries again a few hours later.
+- **When there's a newer version**, a pop-up says so, once per version. Until you update, the right-click menu shows **Update to WattsLeft x.y.z**, and Settings shows **Update now** and **What's new** under the switch.
+- **Turning it on** checks straight away, so switching it off and on again is a way to check now.
+- **Under the switch,** Settings shows your current version, then whether WattsLeft is up to date or has a new version, and when it last checked.
+
+### Updating from the app
+
+Click the pop-up, **Update to WattsLeft x.y.z** in the right-click menu, or **Update now** in Settings. WattsLeft asks first; **What's new** in that question opens the release's page on GitHub. If you say yes, it:
+
+1. downloads the new version from the release on GitHub, about 16 MB, showing how far it's got in Settings;
+2. checks the download against the checksum published with the release, and refuses it if they don't match;
+3. closes, puts the new version in its own folder, and starts again. Your settings, battery history and the tray icon's place are kept.
+
+If any step fails, nothing is changed, and you can try again or download it yourself from the release page. If WattsLeft is in a folder it can't change, such as Program Files, it opens the release page instead.
+
+**What's sent:** the daily check is one HTTPS request to github.com, which carries nothing about you or your devices; GitHub sees your IP address, as with any website. WattsLeft reads only the address GitHub points it to, which names the latest version. An update downloads only from that version's release, and only after you say yes. While **Check for updates** is off, WattsLeft makes no connections at all.
 
 ## Sharing battery levels with other apps
 

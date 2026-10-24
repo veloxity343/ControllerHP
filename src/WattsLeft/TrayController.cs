@@ -80,6 +80,32 @@ internal sealed class TrayController : IDisposable
         _poll.Tick += (_, _) => Refresh();
         _poll.Start();
         Refresh();
+
+        Updates.Start(_notifier.ShowUpdate);
+        AskAboutUpdatesOnce();
+    }
+
+    /// <summary>
+    /// On the first start, asks once whether to check for updates. The answer is kept, and Settings changes it;
+    /// closing the question answers no.
+    /// </summary>
+    private static void AskAboutUpdatesOnce()
+    {
+        if (Settings.CheckForUpdates is not null)
+            return;
+        // A moment after start-up, once the tray icon is in place.
+        DispatcherTimer.RunOnce(async () =>
+        {
+            bool check = await ConfirmDialog.AskOnItsOwn("Check for updates?",
+                "WattsLeft can ask GitHub once a day whether there's a newer version, and tell you when there is. " +
+                "It never downloads or installs anything itself.\n\n" +
+                "The check sends nothing about you or your devices, though GitHub sees your IP address, as any website " +
+                "does. You can change this in Settings at any time.",
+                "Check for updates", "Don't check", Appearance.For(Appearance.AppsUseLight()));
+            Settings.CheckForUpdates = check;
+            if (check)
+                Updates.CheckNow();
+        }, TimeSpan.FromSeconds(3));
     }
 
     private void OnControllersChanged(object? sender, EventArgs e) => Dispatcher.UIThread.Post(OnControllersChangedUi);
@@ -386,6 +412,11 @@ internal sealed class TrayController : IDisposable
             items.Add(new MenuEntry("No devices connected", Enabled: false));
         foreach (var reading in _readings)
             items.Add(new MenuEntry(reading.Describe(), Enabled: false));
+        if (Updates.Available is { } update)
+        {
+            items.Add(MenuEntry.Separator);
+            items.Add(new MenuEntry($"Update to WattsLeft {update.Version.ToString(3)}", () => Updates.Offer(null), Enabled: Updates.Installing is null));
+        }
 
         items.Add(MenuEntry.Separator);
         items.Add(new MenuEntry("Refresh now", Refresh));
@@ -479,6 +510,7 @@ internal sealed class TrayController : IDisposable
     public void Dispose()
     {
         _poll.Stop();
+        Updates.Stop();
         _eventTimer.Stop();
         _settleTimer.Stop();
         _notifier.Dispose();

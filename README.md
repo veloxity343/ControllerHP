@@ -31,6 +31,7 @@
 - **Choose what to watch:** turn off whole kinds of device, such as keyboards, in Settings.
 - **Shares battery levels with other apps** if you turn it on, such as Rainmeter skins or scripts, through a file on your PC.
 - **Follows Windows' light or dark mode**, and runs quietly: a check every 30 seconds, nothing sent anywhere.
+- **Tells you when there's a new version,** if you let it (it asks once, on its first start), and updates itself when you say so.
 
 ## Documentation
 

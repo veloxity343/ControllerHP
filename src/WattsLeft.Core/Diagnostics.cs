@@ -99,6 +99,8 @@ internal static partial class Diagnostics
         w.WriteLine($"Warning sounds: {OnOff(Settings.WarningSounds)}");
         w.WriteLine($"Share battery levels: {OnOff(Settings.ShareStatus)}");
         w.WriteLine($"Start with Windows: {OnOff(Settings.StartWithWindows)}");
+        w.WriteLine($"Check for updates: {Settings.CheckForUpdates switch { true => "on", false => "off", null => "not asked yet" }}" +
+            (Settings.LastUpdateCheck is { } check ? $", last {check.When:yyyy-MM-dd HH:mm} ({(check.Answered ? "answered" : "no answer")})" : ""));
         w.WriteLine($"Removed devices: {Settings.HiddenControllers.Count}");
         w.WriteLine($"Renamed devices: {Settings.ControllerNames.Count}");
         w.WriteLine($"Left out of the chart: {Settings.LeftOutOfChart.Count}");
