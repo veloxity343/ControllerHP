@@ -17,7 +17,7 @@
 
 ## Installing
 
-1. Open the [latest release](https://github.com/veloxity343/ControllerHP/releases/latest) and download `ControllerHP-x.y.z-win-x64.zip`. Nothing else needs installing: .NET is built into it, so it keeps working whatever .NET versions come and go.
+1. Open the [latest release](https://github.com/veloxity343/ControllerHP/releases/latest) and download `ControllerHP-x.y.z-win-x64.zip` (about 16 MB). Nothing else needs installing: .NET is built into it, so it keeps working whatever .NET versions come and go.
 2. Extract the whole zip to a folder it can stay in. `%LOCALAPPDATA%\Programs\ControllerHP` is a good choice: paste that into File Explorer's address bar to create it. Keep the files together, as `ControllerHP.exe` needs the DLLs beside it, and don't run it from inside the zip.
 3. Double-click `ControllerHP.exe`. There's no window: ControllerHP lives in the notification area, at the right-hand end of the taskbar.
 
@@ -40,12 +40,12 @@ Windows hides new tray icons in the overflow area (the **^** arrow) by default. 
 
 Right-click the tray icon and tick **Start with Windows**, or turn it on under **Settings** → Startup. It's off by default. It adds ControllerHP to your own startup apps only, not anyone else's on the PC.
 
-If you move `ControllerHP.exe` later, turn this off and on again so Windows starts it from the new place.
+If you move ControllerHP's folder later, turn this off and on again so Windows starts it from the new place.
 
 ## Updating
 
 1. Right-click the tray icon and choose **Exit**.
-2. Download the new release and replace `ControllerHP.exe` with the new one.
+2. Download the new release, delete the old files from ControllerHP's folder, and extract the new zip into the same folder. Keeping the same folder keeps the tray icon where you put it.
 3. Run it.
 
 Your settings and battery history are kept: they're stored separately from the program (see [what's stored](devices.md#whats-stored-on-your-pc)).

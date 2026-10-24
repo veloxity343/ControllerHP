@@ -42,7 +42,7 @@ If something isn't working, Troubleshooting is the place to start.
 
 ## Install
 
-1. Download `ControllerHP-x.y.z-win-x64.zip` from [Releases](https://github.com/veloxity343/ControllerHP/releases/latest). It needs nothing else installed: .NET is built in.
+1. Download `ControllerHP-x.y.z-win-x64.zip` from [Releases](https://github.com/veloxity343/ControllerHP/releases/latest), about 16 MB. It needs nothing else installed: .NET is built in.
 2. Extract the whole zip somewhere permanent, such as `%LOCALAPPDATA%\Programs\ControllerHP`, and run `ControllerHP.exe`. Keep the files together: the exe needs the DLLs beside it.
 3. If Windows shows **"Windows protected your PC"**, choose **More info → Run anyway**. ControllerHP isn't code-signed, so Windows warns about it until it's widely downloaded.
 
