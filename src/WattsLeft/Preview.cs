@@ -80,6 +80,64 @@ internal static class Preview
                     }
     }
 
+    private static readonly (string Label, DeviceKind Kind)[] KindLabels =
+    [
+        ("Controller", DeviceKind.Gamepad), ("Mouse", DeviceKind.Mouse), ("Keyboard", DeviceKind.Keyboard),
+        ("Headset", DeviceKind.Headset), ("Other", DeviceKind.Other),
+    ];
+
+    private static readonly (string Label, int? Percent, ChargeState Power)[] SheetStates =
+    [
+        ("100%", 100, ChargeState.Discharging), ("75%", 75, ChargeState.Discharging), ("50%", 50, ChargeState.Discharging),
+        ("30%", 30, ChargeState.Discharging), ("15%", 15, ChargeState.Discharging), ("Charging", 60, ChargeState.Charging),
+        ("Wired", null, ChargeState.Wired), ("Unknown", null, ChargeState.Unknown),
+    ];
+
+    /// <summary>
+    /// Every kind of device in every battery state, as the flyout draws them, in dark and light mode: the
+    /// README's picture. Drawn at twice the size, so it stays sharp on high-DPI screens.
+    /// </summary>
+    public static void WriteIconSheet(string path)
+    {
+        const double pad = 16, labelWidth = 104, column = 76, icon = 48, row = 66, title = 40, header = 22;
+        const int scale = 2;
+        double width = pad + labelWidth + SheetStates.Length * column + pad;
+        double section = title + header + KindLabels.Length * row + pad / 2;
+        using var sheet = new RenderTargetBitmap(new PixelSize((int)(width * scale), (int)(section * 2 * scale)), new Vector(96 * scale, 96 * scale));
+        using (var g = sheet.CreateDrawingContext())
+        {
+            double top = 0;
+            foreach (var palette in new[] { Palette.Dark, Palette.LightMode })
+            {
+                g.FillRectangle(Draw.Brush(palette.Background), new Rect(0, top, width, section));
+                Draw.Text(g, palette.Light ? "Light mode" : "Dark mode", Draw.Font(semibold: true), 15, palette.Text,
+                    new Rect(pad, top + 8, width - pad * 2, title - 8));
+                double x = pad + labelWidth;
+                foreach (var (label, _, _) in SheetStates)
+                {
+                    Draw.Text(g, label, Draw.Font(), 11.5, palette.SubtleText, new Rect(x, top + title, column, header), TextAlignment.Center);
+                    x += column;
+                }
+                double y = top + title + header;
+                foreach (var (kindLabel, kind) in KindLabels)
+                {
+                    Draw.Text(g, kindLabel, Draw.Font(), 13, palette.Text, new Rect(pad, y, labelWidth, row));
+                    x = pad + labelWidth;
+                    foreach (var (_, percent, power) in SheetStates)
+                    {
+                        var battery = Sample(percent, power) with { Kind = kind };
+                        using var glyph = BatteryIcon.Render(battery, palette.Light, (int)(icon * scale));
+                        g.DrawImage(glyph, new Rect(x + (column - icon) / 2, y + (row - icon) / 2, icon, icon));
+                        x += column;
+                    }
+                    y += row;
+                }
+                top += section;
+            }
+        }
+        sheet.Save(path, new PngBitmapEncoderOptions());
+    }
+
     /// <summary>The flyout and menu, dark and light side by side, with the toasts underneath.</summary>
     public static void WriteTraySheet(string path)
     {

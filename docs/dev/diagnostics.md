@@ -8,6 +8,7 @@
 |---|---|
 | `--list` | Prints what every battery source reports for each connected device, raw values included. The same as the report's battery section, but unmasked: for working at a terminal, or when the tray app won't start. |
 | `--hid-probe` | Dumps the raw HID reports of connected Xbox and PlayStation controllers, and every connected Bluetooth LE device's GATT services. It only listens and reads. For working out a new device's report format. |
+| `--preview-icons <file.png>` | Renders every kind of device in every battery state, as the panel draws them, in dark and light mode, to an image. It's the picture at the top of the README: run it again after changing an icon. |
 | `--preview-tray <file.png>` | Renders the flyout and the tray menu in dark and light mode, with every kind of pop-up beneath, to an image. |
 | `--preview-settings <file.png> [min]` | Renders each page of the settings window, in dark and light mode, to an image: at its opening width, or its minimum with `min`. Uses sample battery history, so it works without devices. CI runs this on every build. |
 | `--dump-icons <folder>` | Saves every device's tray icon in every battery state, at 16 to 64 px on a dark and a light taskbar, one PNG each. |

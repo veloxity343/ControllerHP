@@ -17,7 +17,9 @@
   <a href="#features">Features</a> · <a href="#install">Install</a> · <a href="docs/wiki/README.md">Wiki</a> · <a href="#help">Help</a> · <a href="#contributing">Contributing</a> · <a href="#license">License</a>
 </p>
 
-![Tray icons at each battery level, pop-ups, and the device panel in dark and light mode](docs/images/icon-preview.png)
+<p align="center">
+  <img src="docs/images/device-icons.png" width="620" alt="Every kind of device, a controller, mouse, keyboard, headset and other, at 100% down to 15%, charging, wired and unknown, in dark and light mode">
+</p>
 
 ## Features
 

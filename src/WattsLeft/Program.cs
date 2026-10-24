@@ -20,6 +20,8 @@ internal static partial class Program
         // Design aids, rendered off screen: they need Avalonia running, but no tray or sources.
         if (args.Length == 2 && args[0] == "--preview-tray")
             return RunPreview(args, () => Preview.WriteTraySheet(args[1]));
+        if (args.Length == 2 && args[0] == "--preview-icons")
+            return RunPreview(args, () => Preview.WriteIconSheet(args[1]));
         if (args.Length == 2 && args[0] == "--dump-icons")
             return RunPreview(args, () => Preview.DumpIcons(args[1]));
         if (args.Length is 2 or 3 && args[0] == "--preview-settings")

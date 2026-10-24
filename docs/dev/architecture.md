@@ -61,7 +61,7 @@ The app has no Windows Runtime projection: it calls Windows directly, through a 
 | Settings window | `Ui/SettingsWindow.cs`, `Ui/Controls.cs` | Custom-drawn controls in the app's own palette. The page lays its items out to fit any width down to the minimum. |
 | Devices page | `BatteryHistory.cs`, `BatteryStats.cs` (Core), `Ui/HistoryChart.cs`, `Ui/StatsCard.cs` | Recording and loading battery history, figures, chart, and stat cards, including Remove. |
 | Theming | `Ui/Appearance.cs` | Palettes and Windows 11 styling (rounded corners, dark title bar). The tray menu and panel follow the taskbar's mode; the settings window follows the app mode. |
-| Design aids | `Preview.cs` | `--preview-tray`, `--preview-settings` (CI checks this one), `--dump-icons` and `--demo` render the interface off screen, or show sample pop-ups. |
+| Design aids | `Preview.cs` | `--preview-icons` (the README's picture), `--preview-tray`, `--preview-settings` (CI checks this one), `--dump-icons` and `--demo` render the interface off screen, or show sample pop-ups. |
 | Settings | `Settings.cs` | `HKCU\Software\WattsLeft`. Raises `Changed` on every write, so the menu and the window stay in step. |
 
 ## Design decisions worth knowing
