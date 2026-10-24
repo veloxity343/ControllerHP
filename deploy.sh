@@ -14,10 +14,7 @@ INSTALL_DIR="$(wslpath -u "$LOCALAPPDATA_WIN")/Programs/WattsLeft"
 rm -rf publish
 DOTNET_CLI_TELEMETRY_OPTOUT=1 "$DOTNET" publish src/WattsLeft -c Release -o publish --nologo
 
-# ControllerHP is WattsLeft's old name: stop it too, so the first start can move its settings and history.
-for exe in WattsLeft.exe ControllerHP.exe; do
-  "$WIN/taskkill.exe" /IM "$exe" /F >/dev/null 2>&1 && sleep 1 || true
-done
+"$WIN/taskkill.exe" /IM WattsLeft.exe /F >/dev/null 2>&1 && sleep 1 || true
 # The install folder holds nothing but the app (settings live in the registry, logs and history in
 # %LOCALAPPDATA%\WattsLeft), so it's replaced whole, leaving no files from an older build behind.
 mkdir -p "$INSTALL_DIR"

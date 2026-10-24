@@ -48,18 +48,6 @@ internal static partial class Program
         if (!isFirst)
             return 0;
 
-        // Its old self, ControllerHP, would read devices and write history alongside it, and its settings and
-        // history can't be moved over while it's running.
-        if (Migration.OldAppRunning())
-        {
-            MessageBox(IntPtr.Zero,
-                "ControllerHP is now called WattsLeft, and the old version is still running.\n\n" +
-                "Right-click ControllerHP's tray icon and choose Exit, then start WattsLeft again. Your settings and " +
-                "battery history come with it.",
-                "WattsLeft", 0x40 /* MB_ICONINFORMATION */);
-            return 0;
-        }
-        Migration.Run();
         UpdateInstall.CleanUp();
         Log.Trim();
         AppDomain.CurrentDomain.UnhandledException += (_, e) => Log.Write($"Unhandled exception: {e.ExceptionObject}");
@@ -127,9 +115,6 @@ internal static partial class Program
     [LibraryImport("kernel32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static partial bool AttachConsole(int processId);
-
-    [LibraryImport("user32.dll", EntryPoint = "MessageBoxW", StringMarshalling = StringMarshalling.Utf16)]
-    private static partial int MessageBox(IntPtr owner, string text, string caption, uint type);
 
     /// <summary>Prints what every source sees, for diagnosing which APIs work with a given device.</summary>
     private static int ListDevices(IEnumerable<IBatterySource> sources)

@@ -53,16 +53,6 @@ With **[Check for updates](using-wattsleft.md#checking-for-updates)** on, WattsL
 
 Your settings and battery history are kept: they're stored separately from the program (see [what's stored](devices.md#whats-stored-on-your-pc)).
 
-### Updating from ControllerHP
-
-WattsLeft was called ControllerHP before version 0.4.0.
-
-1. Right-click ControllerHP's tray icon and choose **Exit**.
-2. Extract WattsLeft to a new folder, such as `%LOCALAPPDATA%\Programs\WattsLeft`, and run `WattsLeft.exe`. On its first start it moves your settings, battery history and **Start with Windows** over from ControllerHP.
-3. Delete the old ControllerHP folder.
-
-Windows sees WattsLeft as a new program, so if you'd dragged ControllerHP's icon out beside the clock, drag WattsLeft's there too.
-
 ## Uninstalling
 
 1. Right-click the tray icon, untick **Start with Windows**, then choose **Exit**.

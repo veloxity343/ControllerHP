@@ -11,6 +11,10 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 
 ## [Unreleased]
 
+### Removed
+
+- Moving settings and history over from ControllerHP, WattsLeft's name before 0.4.0, on the first start.
+
 ## [0.5.0] - 2026-10-24
 
 ### Added
