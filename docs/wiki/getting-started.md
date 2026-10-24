@@ -55,6 +55,8 @@ Your settings and battery history are kept: they're stored separately from the p
 
 ## Uninstalling
 
+To find WattsLeft's data folder first, open Settings and choose **Open folder**, under **Your data**.
+
 1. Right-click the tray icon, untick **Start with Windows**, then choose **Exit**.
 2. Delete the folder you put `WattsLeft.exe` in.
 3. Optionally, delete its data too:

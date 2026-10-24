@@ -50,6 +50,7 @@ internal sealed class SettingsWindow : Window
     private readonly ToggleSwitch _checkUpdates = new();
     /// <summary>The update check's result, and a way to the new version's page when there is one.</summary>
     private readonly StatusLine _updateStatus = new();
+    private readonly ActionButton _openDataFolder = new("Open folder");
 
     // The Devices page: each device's battery history, its stats, and removing it.
     private readonly SegmentedControl _range = new(["2 hours", "6 hours", "24 hours", "7 days"], 95) { SelectedIndex = 1 };
@@ -225,6 +226,11 @@ internal sealed class SettingsWindow : Window
         items.Add(new Heading("Startup", 15));
         items.Add(new SettingCard("Start with Windows", "Run WattsLeft when you sign in.", _startWithWindows));
 
+        items.Add(new Heading("Your data", 15));
+        items.Add(new SettingCard("Data folder",
+            @"Battery history and logs, in %LOCALAPPDATA%\WattsLeft. Settings are kept in the registry. Deleting the folder resets the history.",
+            _openDataFolder));
+
         items.Add(_versionNote);
         return items;
     }
@@ -385,6 +391,7 @@ internal sealed class SettingsWindow : Window
                 WarningSound.Play(critical: false);
         };
         _shareStatus.CheckedChanged += (_, _) => Save(() => Settings.ShareStatus = _shareStatus.Checked);
+        _openDataFolder.Click += (_, _) => OpenDataFolder();
         _startWithWindows.CheckedChanged += (_, _) => Save(() => Settings.StartWithWindows = _startWithWindows.Checked);
         _checkUpdates.CheckedChanged += (_, _) =>
         {
@@ -395,6 +402,22 @@ internal sealed class SettingsWindow : Window
             if (_checkUpdates.Checked && !_sampleData)
                 Updates.CheckNow();
         };
+    }
+
+    /// <summary>Shows the data folder in File Explorer, making it first if nothing has been written yet.</summary>
+    private void OpenDataFolder()
+    {
+        if (_sampleData)
+            return;
+        try
+        {
+            Directory.CreateDirectory(Log.Folder);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Log.Folder) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"Opening the data folder failed: {ex.Message}");
+        }
     }
 
     /// <summary>

@@ -111,6 +111,8 @@ Nothing about you or your devices leaves your PC. The only connection WattsLeft 
 | The last diagnostics report, if you've made one | `%LOCALAPPDATA%\WattsLeft\diagnostics.txt` | Replaced each time | A few KB |
 | Settings | Registry: `HKEY_CURRENT_USER\Software\WattsLeft` | Until you change them | Tiny |
 
+**Open folder**, under **Your data** in Settings, opens `%LOCALAPPDATA%\WattsLeft` in File Explorer.
+
 Older entries are trimmed each time WattsLeft starts. A row is written only when a reading changes, so a device sitting at the same level writes nothing.
 
 `battery.csv` is plain text, and you can open it in Excel or any spreadsheet. To clear your history, exit WattsLeft and delete it.

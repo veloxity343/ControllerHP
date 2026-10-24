@@ -111,6 +111,7 @@ Open it from the panel's gear or **Settings** in the right-click menu. It follow
 | **Share battery levels** | Off | On or off. See [below](#sharing-battery-levels-with-other-apps) |
 | **Check for updates** | Your answer on the first start | On or off. Turning it on checks straight away. See [below](#checking-for-updates) |
 | **Start with Windows** | Off | On or off |
+| **Data folder** | | **Open folder** shows where your battery history and logs are kept. See [what's stored](devices.md#whats-stored-on-your-pc) |
 
 Switching a warning off greys out its level until you switch it back on. Lowering the low level below the critical one pushes the critical level down with it.
 

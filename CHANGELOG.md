@@ -11,6 +11,10 @@ Pre-releases (tags like v0.4.0-beta.1) use the Unreleased section.
 
 ## [Unreleased]
 
+### Added
+
+- **Open folder** in Settings, under **Your data**, shows where WattsLeft keeps your battery history and logs.
+
 ### Removed
 
 - Moving settings and history over from ControllerHP, WattsLeft's name before 0.4.0, on the first start.
