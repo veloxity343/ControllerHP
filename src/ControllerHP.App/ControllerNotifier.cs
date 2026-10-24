@@ -128,6 +128,27 @@ internal sealed class ControllerNotifier : IDisposable
     public void ShowSample() =>
         _toasts.Show(new ToastContent("ControllerHP", "Pop-ups appear here", null, ConnectedAccent));
 
+    /// <summary>Stops following devices without a pop-up: they were removed, not disconnected.</summary>
+    public void Forget(IEnumerable<string> ids)
+    {
+        foreach (var id in ids)
+        {
+            _tracked.Remove(id);
+            _held.Remove(id);
+        }
+    }
+
+    /// <summary>
+    /// Follows devices that were connected all along without announcing them: restored after being removed while
+    /// connected. Their battery warnings still apply from here on.
+    /// </summary>
+    public void Adopt(IEnumerable<ControllerBattery> readings)
+    {
+        var settled = DateTime.UtcNow - SettleTime;
+        foreach (var reading in readings)
+            _tracked.TryAdd(reading.Id, new Tracked(reading, settled, announced: true));
+    }
+
     /// <returns>True if a controller is still settling and <see cref="Update"/> should be called again shortly.</returns>
     public bool Update(IReadOnlyList<ControllerBattery> readings)
     {

@@ -17,7 +17,7 @@ internal sealed record ToastContent(string Title, string Message, ControllerBatt
 /// <summary>Stacks toasts in a corner of the primary screen, newest nearest the corner.</summary>
 internal sealed class ToastManager : IDisposable
 {
-    private const int MaxVisible = 4, Margin = 12, Gap = 8;
+    private const int MaxVisible = 4, Margin = 12, Gap = 12;
     private readonly List<ToastWindow> _open = [];
     private ToastCorner _corner = ToastCorner.TopRight;
 

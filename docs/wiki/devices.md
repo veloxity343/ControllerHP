@@ -90,7 +90,7 @@ Overridden levels are used for its warning pop-ups, the time left in the tooltip
 
 If you no longer use a device, such as one you've sold or a friend's, you can remove it from the Devices page: choose it in the dropdown, click **Remove** on its card, and confirm. **Cancel** is selected by default, so pressing Enter or Esc by accident won't remove anything.
 
-It disappears from the chart, the dropdown and the stats. For a few seconds an **Undo** bar appears at the top of the page. If it's connected, it stays in the tray while it's on, because it's still in use.
+It disappears from the chart, the dropdown and the stats. For a few seconds an **Undo** bar appears at the top of the page. If it's connected, it also leaves the tray, the panel and the menu, and gets no pop-ups, until it next connects; its history keeps recording in the meantime, so restoring it leaves no gap.
 
 Removing **hides** a device; it doesn't delete anything:
 - Its history stays on your PC until it expires after 90 days.

@@ -36,12 +36,17 @@ internal sealed class TrayController : IDisposable
     private readonly DispatcherTimer _settleTimer = new() { Interval = ControllerNotifier.SettleTime + TimeSpan.FromMilliseconds(100) };
     private readonly ControllerNotifier _notifier = new();
     private readonly BatteryHistory _history = new();
+    /// <summary>Every device connected, removed ones included: history keeps recording them.</summary>
+    private IReadOnlyList<ControllerBattery> _connected = [];
+    /// <summary>The devices shown: connected, minus any removed, which stay out of the tray until they next connect.</summary>
     private IReadOnlyList<ControllerBattery> _readings = [];
+    private IReadOnlySet<string> _hiddenIds = Settings.HiddenControllers.Keys.ToHashSet();
     /// <summary>Each connected device's time left (to the low level, or to full while charging), when known.</summary>
     private Dictionary<string, string> _timeLeft = [];
     private bool _lightTaskbar = Appearance.SystemUsesLight();
     private Flyout? _flyout;
     private TrayMenu? _menu;
+    private SettingsWindow? _settingsWindow;
     private DateTime _flyoutClosedAt;
     /// <summary>Whether status.json is being kept; null until the settings are first applied.</summary>
     private bool? _shareStatus;
@@ -103,6 +108,7 @@ internal sealed class TrayController : IDisposable
     /// <summary>The taskbar may have switched between light and dark.</summary>
     private void OnSystemSettingChanged()
     {
+        Appearance.RaiseChanged();
         bool light = Appearance.SystemUsesLight();
         if (light == _lightTaskbar)
             return;
@@ -114,20 +120,32 @@ internal sealed class TrayController : IDisposable
 
     private void Refresh()
     {
-        var previous = _readings;
-        _readings = ReadAllSources();
-        if (!_readings.SequenceEqual(previous))
+        var previous = _connected;
+        var previouslyShown = _readings.Select(r => r.Id).ToHashSet();
+        _connected = ReadAllSources();
+        if (!_connected.SequenceEqual(previous))
         {
-            LogHistory(_readings);
-            _history.Record(_readings);
+            LogHistory(_connected);
+            _history.Record(_connected);
 
             // A removed device that connects (newly appears) is in use again: show it again. Only on
             // connecting, so one removed while connected stays hidden until it next connects.
             var hidden = Settings.HiddenControllers;
             var before = previous.Select(r => r.Id).ToHashSet();
-            foreach (var reading in _readings.Where(r => !before.Contains(r.Id) && hidden.ContainsKey(r.Id)))
+            foreach (var reading in _connected.Where(r => !before.Contains(r.Id) && hidden.ContainsKey(r.Id)))
                 Settings.Unhide(reading.Id);
+
+            // An open Devices page shows connection state in its cards, so update it straight away.
+            _settingsWindow?.ReadingsChanged();
         }
+
+        // Removed devices leave the tray, the flyout, the menu and the pop-ups without a "disconnected" pop-up;
+        // one restored while it was connected all along comes back without a "connected" one.
+        _hiddenIds = Settings.HiddenControllers.Keys.ToHashSet();
+        _readings = _hiddenIds.Count == 0 ? _connected : _connected.Where(r => !_hiddenIds.Contains(r.Id)).ToList();
+        var stillConnected = previous.Select(r => r.Id).ToHashSet();
+        _notifier.Forget(_connected.Where(r => _hiddenIds.Contains(r.Id)).Select(r => r.Id));
+        _notifier.Adopt(_readings.Where(r => !previouslyShown.Contains(r.Id) && stillConnected.Contains(r.Id)));
         BatteryHistory.Heartbeat();
 
         _timeLeft = WorkOutTimeLeft();
@@ -208,8 +226,24 @@ internal sealed class TrayController : IDisposable
         menu.ShowAt(point);
     }
 
-    /// <summary>The settings window comes with the next stage of the move to Avalonia.</summary>
-    private static void ShowSettings() { }
+    /// <summary>Opens the settings window, or brings it forward if it's already open.</summary>
+    private void ShowSettings()
+    {
+        if (_settingsWindow is null)
+        {
+            var window = new SettingsWindow();
+            window.Closed += (_, _) =>
+            {
+                if (_settingsWindow == window)
+                    _settingsWindow = null;
+            };
+            _settingsWindow = window;
+            window.Show();
+        }
+        if (_settingsWindow.WindowState == Avalonia.Controls.WindowState.Minimized)
+            _settingsWindow.WindowState = Avalonia.Controls.WindowState.Normal;
+        _settingsWindow.Activate();
+    }
 
     private bool _writingDiagnostics;
 
@@ -355,7 +389,7 @@ internal sealed class TrayController : IDisposable
         bool startWithWindows = Settings.StartWithWindows;
         items.Add(new MenuEntry("Start with Windows", () => Settings.StartWithWindows = !startWithWindows, Checked: startWithWindows));
         items.Add(MenuEntry.Separator);
-        items.Add(new MenuEntry("Settings", ShowSettings, Enabled: false));
+        items.Add(new MenuEntry("Settings", ShowSettings));
         items.Add(new MenuEntry("Diagnostics", WriteDiagnostics));
         items.Add(new MenuEntry("Exit", _exit));
         return items;
@@ -413,6 +447,10 @@ internal sealed class TrayController : IDisposable
                 Refresh();
         }
 
+        // A device removed or restored in the settings window leaves or joins the tray straight away.
+        if (!Settings.HiddenControllers.Keys.ToHashSet().SetEquals(_hiddenIds) && _slots.Count > 0)
+            Refresh();
+
         int limit = Settings.TrayIconLimit;
         if (limit != _iconLimit)
         {
@@ -435,6 +473,7 @@ internal sealed class TrayController : IDisposable
         }
         _flyout?.Close();
         _menu?.Close();
+        _settingsWindow?.Close();
         _history.Record([]); // close every device's session on a clean exit
         if (_shareStatus == true)
             StatusFile.Write([], new Dictionary<string, string>(), running: false);

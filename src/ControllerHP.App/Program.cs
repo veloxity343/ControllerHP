@@ -21,6 +21,12 @@ internal static partial class Program
             return Run(args);
         }
 
+        if (args.Length >= 2 && args[0] == "--preview-settings")
+        {
+            App.Startup = () => Preview.WriteSettingsSheet(args[1], minimum: args.Length > 2 && args[2] == "min");
+            return Run(args);
+        }
+
         if (args.Contains("--demo"))
         {
             App.Startup = Preview.RunToastDemo;

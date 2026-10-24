@@ -15,6 +15,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>ControllerHP</RootNamespace>
+    <!-- ControllerHP.exe, as before: Windows keeps a tray icon's place (pinned or in the overflow) and the
+         Start with Windows entry by the program's path. -->
+    <AssemblyName>ControllerHP</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>..\ControllerHP\app.ico</ApplicationIcon>
   </PropertyGroup>

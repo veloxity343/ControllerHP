@@ -17,7 +17,6 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="ControllerHP" />
-    <InternalsVisibleTo Include="ControllerHP.App" />
   </ItemGroup>
 
 </Project>

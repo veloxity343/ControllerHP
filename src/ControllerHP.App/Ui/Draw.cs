@@ -27,6 +27,22 @@ internal static class Draw
         g.DrawText(formatted, new Point(area.X, area.Y + (area.Height - formatted.Height) / 2));
     }
 
+    /// <summary>Text that wraps onto as many lines as it needs within <paramref name="width"/>: how tall it is.</summary>
+    public static double TextHeight(string text, Typeface font, double size, double width)
+    {
+        var formatted = Format(text, font, size, Colors.Black);
+        formatted.MaxTextWidth = Math.Max(1, width);
+        return formatted.Height;
+    }
+
+    /// <summary>Wrapped text, centred vertically in <paramref name="area"/> while it fits, otherwise from its top.</summary>
+    public static void Wrapped(DrawingContext g, string text, Typeface font, double size, Color color, Rect area)
+    {
+        var formatted = Format(text, font, size, color);
+        formatted.MaxTextWidth = Math.Max(1, area.Width);
+        g.DrawText(formatted, new Point(area.X, area.Y + Math.Max(0, (area.Height - formatted.Height) / 2)));
+    }
+
     public static FormattedText Format(string text, Typeface font, double size, Color color) =>
         new(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, font, size, Brush(color));
 

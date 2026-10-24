@@ -52,6 +52,11 @@ internal static partial class Appearance
 
     public static Palette For(bool light) => light ? Palette.LightMode : Palette.Dark;
 
+    /// <summary>Windows' light or dark mode, or another setting, may have changed.</summary>
+    public static event Action? Changed;
+
+    public static void RaiseChanged() => Changed?.Invoke();
+
     private static bool ReadFlag(string name)
     {
         using var key = Registry.CurrentUser.OpenSubKey(PersonalizeKey);

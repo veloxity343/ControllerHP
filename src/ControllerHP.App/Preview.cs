@@ -118,6 +118,80 @@ internal static class Preview
         App.Exit();
     }
 
+    /// <summary>
+    /// Each page of the settings window, dark and light side by side, with sample history: at its opening width,
+    /// or its minimum with <paramref name="minimum"/>. Shown off screen so its styles and layout apply.
+    /// </summary>
+    public static async void WriteSettingsSheet(string path, bool minimum)
+    {
+        const int gap = 20, height = 1700;
+        var shots = new List<RenderTargetBitmap>();
+        int pages;
+        {
+            var probe = new SettingsWindow(Palette.Dark, SampleHistory);
+            pages = probe.PageCount;
+        }
+        foreach (var (page, palette) in Enumerable.Range(0, pages).SelectMany(p => new[] { (p, Palette.Dark), (p, Palette.LightMode) }))
+        {
+            var window = new SettingsWindow(palette, SampleHistory) { ShowActivated = false };
+            window.Position = new PixelPoint(-20000, 0);
+            window.Width = minimum ? window.MinWidth : 900;
+            window.Height = height;
+            window.Show();
+            window.ShowPage(page);
+            // Let layout and the first paint happen before capturing.
+            for (int i = 0; i < 10; i++)
+            {
+                await Task.Delay(50);
+                Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+            }
+            var shot = new RenderTargetBitmap(new PixelSize((int)window.Width, height), new Vector(96, 96));
+            shot.Render(window);
+            shots.Add(shot);
+            window.Close();
+        }
+        int width = shots[0].PixelSize.Width;
+        using var sheet = new RenderTargetBitmap(new PixelSize(width * 2 + gap, (height + gap) * pages - gap), new Vector(96, 96));
+        using (var g = sheet.CreateDrawingContext())
+        {
+            g.FillRectangle(Brushes.Gray, new Rect(0, 0, sheet.PixelSize.Width, sheet.PixelSize.Height));
+            for (int i = 0; i < shots.Count; i++)
+                g.DrawImage(shots[i], new Rect(i % 2 * (width + gap), i / 2 * (height + gap), width, height));
+        }
+        sheet.Save(path, new PngBitmapEncoderOptions());
+        foreach (var shot in shots)
+            shot.Dispose();
+        App.Exit();
+    }
+
+    /// <summary>
+    /// A day of made-up history: an Xbox pad draining in 1% steps with a disconnected stretch, and a DualSense
+    /// dropping in 10% steps, then charging.
+    /// </summary>
+    private static List<HistorySeries> SampleHistory(DateTime since)
+    {
+        var now = DateTime.Now;
+        var xbox = new List<HistoryPoint>();
+        for (int i = 0; i <= 60; i++)
+            xbox.Add(new(now.AddHours(-22 + i * 0.25), 100 - i, false));
+        xbox.Add(new(now.AddHours(-6.75), null, false));
+        xbox.Add(new(now.AddHours(-4), 40, false));
+        for (int i = 1; i <= 16; i++)
+            xbox.Add(new(now.AddHours(-4 + i * 0.25), 40 - i, false));
+
+        var dualSense = new List<HistoryPoint>();
+        for (int i = 0; i <= 8; i++)
+            dualSense.Add(new(now.AddHours(-18 + i * 1.5), 85 - i * 10, false));
+        for (int i = 1; i <= 7; i++)
+            dualSense.Add(new(now.AddHours(-6 + i * 0.6), 5 + i * 10, true));
+
+        return
+        [
+            new("xbox", "Xbox Wireless Controller", 0, [.. xbox.Where(p => p.Time >= since)]),
+            new("dualsense", "DualSense Wireless Controller", 1, [.. dualSense.Where(p => p.Time >= since)]),
+        ];
+    }
+
     /// <summary>Lays out a control at its size and renders it into the sheet at (x, y); returns its right edge.</summary>
     private static double Place(RenderTargetBitmap sheet, Avalonia.Controls.Control control, double x, double y, double width, double height)
     {
